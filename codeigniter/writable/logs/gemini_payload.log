@@ -1,0 +1,25 @@
+--- Request Payload (2025-10-09 00:54:37) ---
+{
+    "contents": [
+        {
+            "role": "user",
+            "parts": [
+                {
+                    "text": "hello"
+                }
+            ]
+        }
+    ],
+    "generationConfig": {
+        "maxOutputTokens": 15536,
+        "thinkingConfig": {
+            "thinkingBudget": -1
+        }
+    },
+    "tools": [
+        {
+            "googleSearch": {}
+        }
+    ]
+}
+
