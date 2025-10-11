@@ -3,7 +3,7 @@
 
 [fs]
 "/app" = "app"
-"/" = "test"
+"/test" = "test"
 
 
 [[command]]
