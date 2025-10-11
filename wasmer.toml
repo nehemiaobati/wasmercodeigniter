@@ -4,9 +4,10 @@
 [fs]
 "/app" = "app"
 
+
 [[command]]
 name = "run"
 module = "php/php-32:php"
 runner = "wasi"
 [command.annotations.wasi]
-main-args = ["-t", "/app", "-S", "localhost:8080"]
+main-args = ["-t", "/test", "-S", "localhost:8080"]
