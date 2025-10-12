@@ -179,8 +179,8 @@
                                     Services
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="servicesDropdown">
-                                    <li><a class="dropdown-item" href="<?= url_to('crypto.index') ?>">Crypto Data</a></li>
                                     <li><a class="dropdown-item" href="<?= url_to('gemini.index') ?>">Gemini AI</a></li>
+                                    <li><a class="dropdown-item" href="<?= url_to('crypto.index') ?>">Crypto Data</a></li>
                                 </ul>
                             </li>
                             <li class="nav-item"><a class="nav-link" href="<?= url_to('payment.index') ?>">Top Up</a></li>

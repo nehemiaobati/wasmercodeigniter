@@ -49,7 +49,7 @@ $routes->group('', static function ($routes) {
 //--------------------------------------------------------------------
 // These routes require the user to be logged in.
 $routes->group('', ['filter' => 'auth'], static function ($routes) {
-    // Dashboard/Home for logged-in users
+    // Home for logged-in users
     $routes->get('home', 'HomeController::index', ['as' => 'home']);
 
     // Account Routes
