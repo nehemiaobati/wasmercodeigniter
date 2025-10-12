@@ -173,7 +173,7 @@
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav ms-auto text-center">
                         <?php if (session()->get('isLoggedIn')): ?>
-                            <li class="nav-item"><a class="nav-link" href="<?= url_to('home') ?>">Dashboard</a></li>
+                            <li class="nav-item"><a class="nav-link" href="<?= url_to('home') ?>">Home</a></li>
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle" href="#" id="servicesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     Services
