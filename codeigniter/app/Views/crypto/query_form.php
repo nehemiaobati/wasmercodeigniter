@@ -20,7 +20,7 @@
         <div class="col-lg-6">
             <div class="card query-card">
                 <div class="card-body p-4 p-md-5">
-                    <h2 class="card-title fw-bold mb-4">Crypto Service</h2>
+                    <h2 class="card-title fw-bold mb-4">Crypto Data</h2>
                     <form action="<?= url_to('crypto.query') ?>" method="post">
                         <?= csrf_field() ?>
                         <div class="form-floating mb-3">

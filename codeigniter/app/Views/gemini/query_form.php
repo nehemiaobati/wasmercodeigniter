@@ -29,7 +29,7 @@
                  <div class="card-body p-4 p-md-5">
                     <form action="<?= url_to('gemini.generate') ?>" method="post" enctype="multipart/form-data">
                         <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h2 class="card-title fw-bold mb-0">Gemini AI Service</h2>
+                            <h2 class="card-title fw-bold mb-0">Gemini AI</h2>
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" role="switch" id="reportToggle" name="report" value="1">
                                 <label class="form-check-label" for="reportToggle">Report</label>

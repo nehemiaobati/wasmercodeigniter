@@ -196,7 +196,7 @@
                 <div class="col-12">
                     <div class="dashboard-card action-card">
                         <div class="icon"><i class="bi bi-search"></i></div>
-                        <h4>Crypto Data Service</h4>
+                        <h4>Crypto Data</h4>
                         <p class="text-muted">Query real-time balance and transaction data for Bitcoin and Litecoin addresses.</p>
                         <a href="<?= url_to('crypto.index') ?>" class="btn btn-outline-primary">Access Service</a>
                     </div>

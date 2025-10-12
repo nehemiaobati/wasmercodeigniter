@@ -179,7 +179,7 @@
                                     Services
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="servicesDropdown">
-                                    <li><a class="dropdown-item" href="<?= url_to('crypto.index') ?>">Crypto Service</a></li>
+                                    <li><a class="dropdown-item" href="<?= url_to('crypto.index') ?>">Crypto Data</a></li>
                                     <li><a class="dropdown-item" href="<?= url_to('gemini.index') ?>">Gemini AI</a></li>
                                 </ul>
                             </li>
