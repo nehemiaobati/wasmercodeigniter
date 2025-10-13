@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <!-- SEO Meta Tags -->
-    <title><?= esc($pageTitle ?? 'AFRIKENKID - Crypto & AI Services') ?></title>
+    <title><?= esc($pageTitle ?? 'AFRIKENKID') ?></title>
     <meta name="description" content="<?= esc($metaDescription ?? 'Real-time cryptocurrency data and cutting-edge AI insights.') ?>">
 
     <!-- Canonical URL -->
