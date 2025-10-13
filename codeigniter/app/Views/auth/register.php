@@ -91,6 +91,10 @@
                                     <input type="password" class="form-control" id="confirmpassword" name="confirmpassword" placeholder="Confirm Password" required>
                                     <label for="confirmpassword">Confirm Password</label>
                                 </div>
+                                <div class="mb-3 form-check">
+                                    <input type="checkbox" class="form-check-input" id="terms" name="terms" required>
+                                    <label class="form-check-label" for="terms">I agree to the <a href="<?= url_to('terms') ?>" target="_blank">Terms and Conditions</a></label>
+                                </div>
                                 <div class="mb-3">
                                     <div class="g-recaptcha" data-sitekey="<?= config('Recaptcha')->siteKey ?>"></div>
                                 </div>

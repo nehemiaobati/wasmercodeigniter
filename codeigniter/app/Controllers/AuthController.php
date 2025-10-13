@@ -44,6 +44,7 @@ class AuthController extends BaseController
             'email' => 'required|valid_email|is_unique[users.email]',
             'password' => 'required|min_length[8]|max_length[255]',
             'confirmpassword' => 'matches[password]',
+            'terms' => 'required',
         ];
 
         // Validate the submitted data. If validation fails, display the registration form with errors.

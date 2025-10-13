@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+
     <!-- SEO Meta Tags -->
     <title><?= esc($pageTitle ?? 'AFRIKENKID') ?></title>
-    <meta name="description" content="<?= esc($metaDescription ?? 'Real-time cryptocurrency data and cutting-edge AI insights.') ?>">
+    <meta name="description" content="<?= esc($metaDescription ?? 'Cutting-edge AI insights and real-time cryptocurrency data.') ?>">
 
     <!-- Canonical URL -->
     <link rel="canonical" href="<?= esc($canonicalUrl ?? current_url()) ?>">
@@ -17,8 +18,8 @@
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="<?= esc($canonicalUrl ?? current_url()) ?>">
-    <meta property="og:title" content="<?= esc($pageTitle ?? 'AFRIKENKID') ?>">
-    <meta property="og:description" content="<?= esc($metaDescription ?? 'Real-time cryptocurrency data and cutting-edge AI insights.') ?>">
+    <meta property="og:title" content="<?= esc($pageTitle ?? 'AFRIKENKID - AI & Crypto Services') ?>">
+    <meta property="og:description" content="<?= esc($metaDescription ?? 'Cutting-edge AI insights and real-time cryptocurrency data.') ?>">
     <meta property="og:image" content="<?= esc($ogImage ?? base_url('assets/images/default_og_image.jpg')) ?>">
     <meta property="og:site_name" content="<?= esc($siteName ?? 'AFRIKENKID') ?>">
     <meta property="og:locale" content="<?= esc($locale ?? 'en_US') ?>">
@@ -26,21 +27,21 @@
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:url" content="<?= esc($canonicalUrl ?? current_url()) ?>">
-    <meta name="twitter:title" content="<?= esc($pageTitle ?? 'AFRIKENKID') ?>">
-    <meta name="twitter:description" content="<?= esc($metaDescription ?? 'Real-time cryptocurrency data and cutting-edge AI insights.') ?>">
+    <meta name="twitter:title" content="<?= esc($pageTitle ?? 'AFRIKENKID - AI & Crypto Services') ?>">
+    <meta name="twitter:description" content="<?= esc($metaDescription ?? 'Cutting-edge AI insights and real-time cryptocurrency data.') ?>">
     <meta name="twitter:image" content="<?= esc($twitterImage ?? base_url('assets/images/default_twitter_image.jpg')) ?>">
 
     <!-- Structured Data (JSON-LD) -->
     <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "<?= esc($siteName ?? 'AFRIKENKID') ?>",
-      "url": "<?= esc($canonicalUrl ?? current_url()) ?>",
-      "description": "<?= esc($metaDescription ?? 'Real-time cryptocurrency data and cutting-edge AI insights.') ?>"
-    }
+        {
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": "<?= esc($siteName ?? 'AFRIKENKID') ?>",
+            "url": "<?= esc($canonicalUrl ?? current_url()) ?>",
+            "description": "<?= esc($metaDescription ?? 'Cutting-edge AI insights and real-time cryptocurrency data.') ?>"
+        }
     </script>
-    
+
     <!-- Stylesheets -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -69,9 +70,9 @@
         .navbar {
             transition: box-shadow 0.3s ease-in-out;
         }
-        
+
         .navbar.scrolled {
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05) !important;
         }
 
         .navbar-brand {
@@ -93,7 +94,7 @@
         .navbar .dropdown-menu {
             border-radius: 0.5rem;
             border-color: #e9ecef;
-            box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
         }
 
         .navbar .dropdown-item:hover {
@@ -104,7 +105,7 @@
         main {
             flex-grow: 1;
         }
-        
+
         .flash-message-container .alert {
             border-radius: 0.5rem;
             border-left-width: 5px;
@@ -132,11 +133,11 @@
         .footer a:hover {
             color: white;
         }
-        
+
         .footer .list-unstyled li {
             margin-bottom: 0.5rem;
         }
-        
+
         .footer .social-icons a {
             display: inline-flex;
             justify-content: center;
@@ -149,7 +150,7 @@
             font-size: 1.2rem;
             margin-right: 0.5rem;
         }
-        
+
         .footer .social-icons a:hover {
             background-color: var(--primary-color);
         }
@@ -162,6 +163,7 @@
     </style>
     <?= $this->renderSection('styles') ?>
 </head>
+
 <body class="d-flex flex-column min-vh-100">
     <header>
         <nav id="mainNavbar" class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top py-3">
@@ -193,7 +195,9 @@
                                         <li class="nav-item"><a class="dropdown-item" href="<?= url_to('admin.index') ?>">Admin Panel</a></li>
                                     <?php endif; ?>
                                     <li><a class="dropdown-item" href="<?= url_to('account.index') ?>">My Account</a></li>
-                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <hr class="dropdown-divider">
+                                    </li>
                                     <li><a class="dropdown-item" href="<?= url_to('logout') ?>">Logout</a></li>
                                 </ul>
                             </li>
@@ -229,8 +233,8 @@
                 <div class="col-lg-2 col-md-6 mb-4 mb-lg-0">
                     <h5 class="text-uppercase">Services</h5>
                     <ul class="list-unstyled mb-0">
-                        <li><a href="<?= url_to('crypto.index') ?>">Crypto Data</a></li>
                         <li><a href="<?= url_to('gemini.index') ?>">Gemini AI</a></li>
+                        <li><a href="<?= url_to('crypto.index') ?>">Crypto Data</a></li>
                         <li><a href="<?= url_to('payment.index') ?>">Pricing</a></li>
                     </ul>
                 </div>
@@ -243,7 +247,7 @@
                     </ul>
                 </div>
                 <div class="col-lg-3 col-md-6 mb-4 mb-lg-0">
-                     <h5 class="text-uppercase">Legal</h5>
+                    <h5 class="text-uppercase">Legal</h5>
                     <ul class="list-unstyled mb-0">
                         <li><a href="<?= url_to('terms') ?>">Terms of Service</a></li>
                         <li><a href="<?= url_to('privacy') ?>">Privacy Policy</a></li>
@@ -274,4 +278,5 @@
     </script>
     <?= $this->renderSection('scripts') ?>
 </body>
+
 </html>
