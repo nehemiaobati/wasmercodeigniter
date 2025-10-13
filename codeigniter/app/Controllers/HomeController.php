@@ -39,7 +39,7 @@ class HomeController extends BaseController
     public function landing(): string
     {
         $data = [
-            'pageTitle' => 'Welcome to Our Page!',
+            'pageTitle' => 'AFRIKENKID - Innovative Solutions for Your Success',
             'heroTitle' => 'Build Your Dreams with Us',
             'heroSubtitle' => 'We provide innovative solutions to help you succeed.',
         ];
