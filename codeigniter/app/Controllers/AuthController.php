@@ -24,6 +24,7 @@ class AuthController extends BaseController
             return redirect()->to(url_to('home'));
         }
         $data = [];
+        $data['pageTitle'] = 'User Registration';
         return view('auth/register', $data);
     }
 
@@ -111,6 +112,7 @@ class AuthController extends BaseController
     {
         helper(['form']);
         $data = [];
+        $data['pageTitle'] = 'User Login';
         return view('auth/login', $data);
     }
 
