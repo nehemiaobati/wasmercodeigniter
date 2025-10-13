@@ -13,7 +13,7 @@ class Recaptcha extends BaseConfig
     {
         parent::__construct();
 
-        $this->siteKey = env('recaptcha.siteKey');
-        $this->secretKey = env('recaptcha.secretKey');
+        $this->siteKey = env('recaptcha_siteKey');
+        $this->secretKey = env('recaptcha_secretKey');
     }
 }
