@@ -1,6 +1,7 @@
 <?= $this->extend('layouts/default') ?>
 
 <?= $this->section('styles') ?>
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 <style>
     .auth-section {
         min-height: 80vh;
@@ -89,6 +90,9 @@
                                 <div class="form-floating mb-4">
                                     <input type="password" class="form-control" id="confirmpassword" name="confirmpassword" placeholder="Confirm Password" required>
                                     <label for="confirmpassword">Confirm Password</label>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="g-recaptcha" data-sitekey="<?= config('Recaptcha')->siteKey ?>"></div>
                                 </div>
                                 <div class="d-grid">
                                     <button type="submit" class="btn btn-primary btn-lg">Register</button>

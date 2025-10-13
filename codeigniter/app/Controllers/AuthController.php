@@ -52,6 +52,21 @@ class AuthController extends BaseController
             return $response;
         }
 
+        // Get reCAPTCHA response from the form submission.
+        $recaptchaResponse = $this->request->getPost('g-recaptcha-response');
+
+        // Instantiate the RecaptchaService.
+        $recaptchaService = service('recaptchaService');
+
+        // Verify the reCAPTCHA response.
+        if (! $recaptchaService->verify($recaptchaResponse)) {
+            // If reCAPTCHA verification fails, add a validation error and redirect back.
+            $this->validator->setError('recaptcha', 'Please complete the reCAPTCHA.');
+            $response = $this->response;
+            $response->setBody(view('auth/register', ['validation' => $this->validator]));
+            return $response;
+        }
+
         $userModel = new UserModel();
         // Generate a unique token for email verification.
         $token = bin2hex(random_bytes(50));
@@ -122,6 +137,21 @@ class AuthController extends BaseController
             $response->setBody(view('auth/login', [
                 'validation' => $this->validator,
             ]));
+            return $response;
+        }
+
+        // Get reCAPTCHA response from the form submission.
+        $recaptchaResponse = $this->request->getPost('g-recaptcha-response');
+
+        // Instantiate the RecaptchaService.
+        $recaptchaService = service('recaptchaService');
+
+        // Verify the reCAPTCHA response.
+        if (! $recaptchaService->verify($recaptchaResponse)) {
+            // If reCAPTCHA verification fails, add a validation error and redirect back.
+            $this->validator->setError('recaptcha', 'Please complete the reCAPTCHA.');
+            $response = $this->response;
+            $response->setBody(view('auth/login', ['validation' => $this->validator]));
             return $response;
         }
 

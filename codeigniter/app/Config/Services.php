@@ -56,4 +56,13 @@ class Services extends BaseService
 
         return new \App\Libraries\GeminiService();
     }
+
+    public static function recaptchaService($getShared = true): \App\Libraries\RecaptchaService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('recaptchaService');
+        }
+
+        return new \App\Libraries\RecaptchaService();
+    }
 }
