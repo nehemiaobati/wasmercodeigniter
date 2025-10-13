@@ -1,6 +1,7 @@
 <?= $this->extend('layouts/default') ?>
 
 <?= $this->section('styles') ?>
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 <style>
     .contact-card {
         border-radius: 1rem;
@@ -38,6 +39,9 @@
                         <div class="form-floating mb-4">
                             <textarea class="form-control" id="message" name="message" placeholder="Your Message" style="height: 150px" required><?= old('message') ?></textarea>
                             <label for="message">Message</label>
+                        </div>
+                        <div class="mb-3">
+                            <div class="g-recaptcha" data-sitekey="<?= config('Recaptcha')->siteKey ?>"></div>
                         </div>
                         <div class="d-grid">
                             <button type="submit" class="btn btn-primary btn-lg fw-bold">Send Message</button>

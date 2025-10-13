@@ -27,6 +27,19 @@ class ContactController extends BaseController
             return redirect()->back()->withInput()->with('error', $this->validator->getErrors());
         }
 
+        // Get reCAPTCHA response from the form submission.
+        $recaptchaResponse = $this->request->getPost('g-recaptcha-response');
+
+        // Instantiate the RecaptchaService.
+        $recaptchaService = service('recaptchaService');
+
+        // Verify the reCAPTCHA response.
+        if (! $recaptchaService->verify($recaptchaResponse)) {
+            // If reCAPTCHA verification fails, add a validation error and redirect back.
+            $this->validator->setError('recaptcha', 'Please complete the reCAPTCHA.');
+            return redirect()->back()->withInput()->with('error', $this->validator->getErrors());
+        }
+
         $name    = $this->request->getPost('name');
         $email   = $this->request->getPost('email');
         $subject = $this->request->getPost('subject');
