@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Controllers\BaseController;
 use App\Models\UserModel;
+use App\Models\PromptModel;
 use App\Libraries\GeminiService;
 use CodeIgniter\HTTP\RedirectResponse;
 use App\Entities\User; // Import the User entity
@@ -12,6 +13,7 @@ class GeminiController extends BaseController
 {
     protected UserModel $userModel;
     protected GeminiService $geminiService;
+    protected PromptModel $promptModel;
 
     /**
      * Constructor.
@@ -21,16 +23,21 @@ class GeminiController extends BaseController
     {
         $this->userModel = new UserModel();
         $this->geminiService = service('geminiService');
+        $this->promptModel = new PromptModel();
     }
 
     public function index(): string
     {
+        $userId = (int) session()->get('userId');
+        $prompts = $this->promptModel->where('user_id', $userId)->findAll();
+
         $data = [
-            'title' => 'Gemini AI Query',
-            'result' => session()->getFlashdata('result'),
-            'error' => session()->getFlashdata('error')
+            'title'   => 'Gemini AI Query',
+            'result'  => session()->getFlashdata('result'),
+            'error'   => session()->getFlashdata('error'),
+            'prompts' => $prompts,
         ];
-        return view('gemini/query_form', $data); // View name updated
+        return view('gemini/query_form', $data);
     }
 
     public function generate(): RedirectResponse
@@ -115,5 +122,54 @@ class GeminiController extends BaseController
         }
 
         return redirect()->back()->withInput()->with('result', $response['result']);
+    }
+
+    public function addPrompt(): RedirectResponse
+    {
+        $userId = (int) session()->get('userId');
+        if ($userId <= 0) {
+            return redirect()->to(url_to('gemini.index'))->with('error', 'You must be logged in to add a prompt.');
+        }
+
+        $validation = $this->validate([
+            'title'       => 'required|max_length[255]',
+            'prompt_text' => 'required',
+        ]);
+
+        if (!$validation) {
+            return redirect()->to(url_to('gemini.index'))->withInput()->with('errors', $this->validator->getErrors());
+        }
+
+        $data = [
+            'user_id'     => $userId,
+            'title'       => $this->request->getPost('title'),
+            'prompt_text' => $this->request->getPost('prompt_text'),
+        ];
+
+        if ($this->promptModel->save($data)) {
+            return redirect()->to(url_to('gemini.index'))->with('success', 'Prompt saved successfully.');
+        }
+
+        return redirect()->to(url_to('gemini.index'))->with('error', 'Failed to save the prompt.');
+    }
+
+    public function deletePrompt($id): RedirectResponse
+    {
+        $userId = (int) session()->get('userId');
+        if ($userId <= 0) {
+            return redirect()->to(url_to('gemini.index'))->with('error', 'You must be logged in to delete a prompt.');
+        }
+
+        $prompt = $this->promptModel->find($id);
+
+        if (!$prompt || (int) $prompt->user_id !== $userId) {
+            return redirect()->to(url_to('gemini.index'))->with('error', 'You are not authorized to delete this prompt.');
+        }
+
+        if ($this->promptModel->delete($id)) {
+            return redirect()->to(url_to('gemini.index'))->with('success', 'Prompt deleted successfully.');
+        }
+
+        return redirect()->to(url_to('gemini.index'))->with('error', 'Failed to delete the prompt.');
     }
 }

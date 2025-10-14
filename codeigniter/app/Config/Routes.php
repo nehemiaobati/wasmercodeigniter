@@ -82,6 +82,8 @@ $routes->group('', ['filter' => 'auth'], static function ($routes) {
     $routes->group('gemini', static function ($routes) {
         $routes->get('/', 'GeminiController::index', ['as' => 'gemini.index']);
         $routes->post('generate', 'GeminiController::generate', ['as' => 'gemini.generate', 'filter' => 'balance']);
+        $routes->post('prompts/add', 'GeminiController::addPrompt', ['as' => 'gemini.prompts.add']);
+        $routes->post('prompts/delete/(:num)', 'GeminiController::deletePrompt/$1', ['as' => 'gemini.prompts.delete']);
     });
 
 });

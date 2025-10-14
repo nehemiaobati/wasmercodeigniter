@@ -27,7 +27,7 @@
         <div class="col-lg-7">
             <div class="card query-card">
                  <div class="card-body p-4 p-md-5">
-                    <form action="<?= url_to('gemini.generate') ?>" method="post" enctype="multipart/form-data">
+                    <form id="geminiForm" action="<?= url_to('gemini.generate') ?>" method="post" enctype="multipart/form-data">
                         <div class="d-flex justify-content-between align-items-center mb-4">
                             <h2 class="card-title fw-bold mb-0">Gemini AI</h2>
                             <div class="form-check form-switch">
@@ -36,9 +36,39 @@
                             </div>
                         </div>
                         <?= csrf_field() ?>
+
+                        <?php if (!empty($prompts)): ?>
+                        <div class="row g-2 mb-3 align-items-center">
+                            <div class="col">
+                                <div class="form-floating">
+                                    <select class="form-select" id="savedPrompts" aria-label="Saved Prompts">
+                                        <option selected disabled>Select a saved prompt...</option>
+                                        <?php foreach ($prompts as $p): ?>
+                                            <option value="<?= esc($p->prompt_text) ?>" data-id="<?= $p->id ?>"><?= esc($p->title) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <label for="savedPrompts">Saved Prompts</label>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" id="usePromptBtn" class="btn btn-outline-secondary">Use</button>
+                            </div>
+                            <div class="col-auto">
+                                <!-- CORRECTED: Removed nested form, changed button to type="button" -->
+                                <button type="button" id="deletePromptBtn" class="btn btn-outline-danger" disabled>Delete</button>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+
                         <div class="form-floating mb-3">
                             <textarea id="prompt" name="prompt" class="form-control" placeholder="Enter your prompt" style="height: 150px" required><?= old('prompt') ?></textarea>
                             <label for="prompt">Your Prompt</label>
+                        </div>
+
+                        <div class="d-flex justify-content-end mb-3">
+                            <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#savePromptModal">
+                                <i class="bi bi-plus-circle"></i> Save New Prompt
+                            </button>
                         </div>
 
                         <div id="mediaInputContainer" class="mb-2">
@@ -73,24 +103,103 @@
         <?php endif; ?>
     </div>
 </div>
+
+<!-- Save Prompt Modal -->
+<div class="modal fade" id="savePromptModal" tabindex="-1" aria-labelledby="savePromptModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="savePromptModalLabel">Save New Prompt</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="<?= url_to('gemini.prompts.add') ?>" method="post">
+                <?= csrf_field() ?>
+                <div class="modal-body">
+                    <div class="form-floating mb-3">
+                        <input type="text" class="form-control" id="promptTitle" name="title" placeholder="Prompt Title" required>
+                        <label for="promptTitle">Prompt Title</label>
+                    </div>
+                    <div class="form-floating">
+                        <textarea class="form-control" placeholder="Prompt Text" id="promptText" name="prompt_text" style="height: 100px" required></textarea>
+                        <label for="promptText">Prompt Text</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Save Prompt</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const addBtn = document.getElementById('addMediaBtn');
-        const container = document.getElementById('mediaInputContainer');
+document.addEventListener('DOMContentLoaded', function() {
+    // --- Main Form and Prompt Elements ---
+    const geminiForm = document.getElementById('geminiForm');
+    const mainPromptTextarea = document.getElementById('prompt');
+    const submitButton = geminiForm.querySelector('button[type="submit"]');
 
-        // Function to add a new file input row
-        function addMediaInputRow() {
-            const mediaRows = container.querySelectorAll('.media-input-row');
-            if (mediaRows.length >= 6) {
-                // Optionally disable the add button if the limit is reached
-                addBtn.disabled = true;
-                addBtn.style.display = 'none'; // Hide the button
-                return; // Stop adding more rows
+    // --- Saved Prompts Elements ---
+    const savedPromptsSelect = document.getElementById('savedPrompts');
+    const usePromptBtn = document.getElementById('usePromptBtn');
+    const deletePromptBtn = document.getElementById('deletePromptBtn');
+
+    if (savedPromptsSelect) {
+        let selectedPromptId = null;
+
+        savedPromptsSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            selectedPromptId = selectedOption.getAttribute('data-id');
+            deletePromptBtn.disabled = !selectedPromptId;
+        });
+
+        if (usePromptBtn) {
+            usePromptBtn.addEventListener('click', function() {
+                const selectedOption = savedPromptsSelect.options[savedPromptsSelect.selectedIndex];
+                if (selectedOption && selectedOption.value) {
+                    mainPromptTextarea.value = selectedOption.value;
+                }
+            });
+        }
+
+        if (deletePromptBtn) {
+            deletePromptBtn.addEventListener('click', function() {
+                if (!selectedPromptId || this.disabled) return;
+
+                if (confirm('Are you sure you want to delete this prompt?')) {
+                    const deleteUrl = `<?= rtrim(url_to('gemini.prompts.delete', 0), '0') ?>${selectedPromptId}`;
+                    geminiForm.action = deleteUrl;
+                    geminiForm.submit();
+                }
+            });
+        }
+    }
+
+    // --- Media File Input Management ---
+    const addMediaBtn = document.getElementById('addMediaBtn');
+    const mediaContainer = document.getElementById('mediaInputContainer');
+    const maxMediaFiles = 6;
+
+    const updateMediaButtons = () => {
+        const mediaRows = mediaContainer.querySelectorAll('.media-input-row');
+        // Manage 'Add' button visibility
+        addMediaBtn.style.display = mediaRows.length < maxMediaFiles ? 'block' : 'none';
+        addMediaBtn.disabled = mediaRows.length >= maxMediaFiles;
+
+        // Manage 'Remove' button visibility
+        mediaRows.forEach((row, index) => {
+            const removeBtn = row.querySelector('.remove-media-btn');
+            if (removeBtn) {
+                removeBtn.style.display = mediaRows.length > 1 ? 'inline-block' : 'none';
             }
+        });
+    };
 
+    if (addMediaBtn && mediaContainer) {
+        addMediaBtn.addEventListener('click', function() {
             const newRow = document.createElement('div');
             newRow.className = 'mb-3 media-input-row';
             newRow.innerHTML = `
@@ -99,99 +208,50 @@
                     <button type="button" class="btn btn-outline-danger remove-media-btn">Remove</button>
                 </div>
             `;
-            container.appendChild(newRow);
-            
-            // Show remove button on the first input if it's hidden
-            const firstRemoveBtn = container.querySelector('.media-input-row:first-child .remove-media-btn');
-            if(firstRemoveBtn) {
-                firstRemoveBtn.style.display = 'inline-block';
-            }
-        }
-
-        // Add button event listener
-        addBtn.addEventListener('click', function() {
-            addMediaInputRow();
-            // Re-check button state after adding a row
-            const mediaRows = container.querySelectorAll('.media-input-row');
-            if (mediaRows.length >= 6) {
-                addBtn.disabled = true;
-                addBtn.style.display = 'none';
-            }
+            mediaContainer.appendChild(newRow);
+            updateMediaButtons();
         });
 
-        // Event delegation for remove buttons
-        container.addEventListener('click', function(event) {
+        mediaContainer.addEventListener('click', function(event) {
             if (event.target.classList.contains('remove-media-btn')) {
-                // Remove the entire parent row
-                const removedRow = event.target.closest('.media-input-row');
-                removedRow.remove();
-                
-                // Check if the add button should be re-enabled/shown
-                const mediaRows = container.querySelectorAll('.media-input-row');
-                if (mediaRows.length < 6) {
-                    addBtn.disabled = false;
-                    addBtn.style.display = 'block'; // Show the button
-                }
-
-                // If only one input row is left, hide its remove button
-                if (mediaRows.length === 1) {
-                    const lastRemoveBtn = mediaRows[0].querySelector('.remove-media-btn');
-                    if(lastRemoveBtn) {
-                        lastRemoveBtn.style.display = 'none';
-                    }
-                }
+                event.target.closest('.media-input-row').remove();
+                updateMediaButtons();
             }
         });
 
-        // Initial check for button state on page load
-        const initialMediaRows = container.querySelectorAll('.media-input-row');
-        if (initialMediaRows.length >= 6) {
-            addBtn.disabled = true;
-            addBtn.style.display = 'none';
-        }
-    });
+        // Initial check on page load
+        updateMediaButtons();
+    }
 
-    // Add interactive status for generation
-    const form = document.querySelector('form');
-    const submitButton = form.querySelector('button[type="submit"]');
-    const originalButtonText = submitButton.innerHTML; // Store original text if needed later
+    // --- Form Submission Loading State ---
+    if (geminiForm && submitButton) {
+        geminiForm.addEventListener('submit', function(event) {
+            // Check if the action is for deletion; if so, don't show loading state
+            if (this.action.includes('delete')) {
+                return;
+            }
 
-    form.addEventListener('submit', function(event) {
-        // Prevent default submission to add loading state first
-        event.preventDefault();
+            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...';
+            submitButton.disabled = true;
+            // The form will now submit as usual
+        });
+    }
 
-        // Disable the button and show loading state
-        submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...';
-        submitButton.disabled = true;
-
-        // Submit the form programmatically
-        form.submit();
-    });
-
-    // Copy to clipboard functionality
+    // --- Copy to Clipboard Functionality ---
     const copyBtn = document.getElementById('copy-response-btn');
     const responseContent = document.getElementById('ai-response-content');
 
     if (copyBtn && responseContent) {
         copyBtn.addEventListener('click', function() {
-            const textToCopy = responseContent.innerText;
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                // Success feedback
+            navigator.clipboard.writeText(responseContent.innerText).then(() => {
                 const originalText = copyBtn.innerText;
                 copyBtn.innerText = 'Copied!';
-                setTimeout(() => {
-                    copyBtn.innerText = originalText;
-                }, 2000); // Reset text after 2 seconds
+                setTimeout(() => { copyBtn.innerText = originalText; }, 2000);
             }).catch(err => {
                 console.error('Failed to copy text: ', err);
-                // Optionally provide user feedback for failure
-                const originalText = copyBtn.innerText;
-                copyBtn.innerText = 'Failed!';
-                setTimeout(() => {
-                    copyBtn.innerText = originalText;
-                }, 2000);
             });
         });
     }
+});
 </script>
 <?= $this->endSection() ?>

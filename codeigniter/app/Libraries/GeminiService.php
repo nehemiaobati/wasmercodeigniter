@@ -68,9 +68,12 @@ class GeminiService
         $client = \Config\Services::curlrequest();
 
         try {
-            $response = $client->setBody($requestBody)
-                               ->setHeader('Content-Type', 'application/json')
-                               ->post("https://generativelanguage.googleapis.com/v1beta/models/{$modelId}:{$generateContentApi}?key={$this->apiKey}");
+            $response = $client->request('post', "https://generativelanguage.googleapis.com/v1beta/models/{$modelId}:{$generateContentApi}?key={$this->apiKey}", [
+                'body' => $requestBody,
+                'headers' => [
+                    'Content-Type' => 'application/json',
+                ],
+            ]);
 
             $responseBody = $response->getBody();
             $responseData = json_decode($responseBody, true);

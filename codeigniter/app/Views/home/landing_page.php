@@ -21,7 +21,7 @@
         overflow: hidden;
         position: relative;
     }
-    
+
     .hero-content {
         position: relative;
         z-index: 1;
@@ -39,7 +39,7 @@
         animation: fadeInUp 1s ease-out 0.5s;
         animation-fill-mode: both;
     }
-    
+
     .hero-buttons .btn {
         animation: fadeInUp 1s ease-out 1s;
         animation-fill-mode: both;
@@ -59,16 +59,49 @@
         margin-bottom: 1.5rem;
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
     }
-    
+
     .feature-card {
         transition: transform 0.3s ease, box-shadow 0.3s ease;
         border: 0;
     }
-    
+
     .feature-card:hover {
         transform: translateY(-10px);
-        box-shadow: 0 1rem 2rem rgba(0,0,0,0.15) !important;
+        box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.15) !important;
     }
+
+    /* New Custom Development Section Styling */
+    .custom-dev-section {
+        background-color: var(--light-bg);
+        border-radius: 0.75rem;
+    }
+
+    .custom-dev-section .list-unstyled i {
+        color: var(--primary-color);
+        margin-right: 10px;
+    }
+
+    .process-step {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 1.5rem;
+    }
+
+    .process-number {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        background-color: #e7f1ff;
+        border-radius: 50%;
+        width: 45px;
+        height: 45px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 15px;
+    }
+
 
     /* How It Works Section Styling */
     .how-it-works {
@@ -99,15 +132,29 @@
 
     /* Animations for engagement */
     @keyframes fadeInDown {
-        from { opacity: 0; transform: translateY(-20px); }
-        to { opacity: 1; transform: translateY(0); }
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     @keyframes fadeInUp {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
-    
+
     .fade-in-section {
         opacity: 0;
         transform: translateY(20px);
@@ -144,18 +191,18 @@
                 <div class="col-lg-4 col-md-6">
                     <div class="card h-100 shadow-sm feature-card">
                         <div class="card-body p-4">
-                            <div class="feature-icon"><i class="bi bi-search"></i></div>
-                            <h3 class="fs-4 fw-bold">Real-Time Crypto Data</h3>
-                            <p class="text-muted">Instantly query Bitcoin and Litecoin addresses for balance and transaction history. Get accurate, up-to-the-minute data directly from the blockchain.</p>
+                            <div class="feature-icon"><i class="bi bi-robot"></i></div>
+                            <h3 class="fs-4 fw-bold">Generative AI with Gemini</h3>
+                            <p class="text-muted">Leverage Google's powerful Gemini API. Generate creative text, analyze data, or interact with a state-of-the-art AI, all within our platform.</p>
                         </div>
                     </div>
                 </div>
                 <div class="col-lg-4 col-md-6">
                     <div class="card h-100 shadow-sm feature-card">
                         <div class="card-body p-4">
-                            <div class="feature-icon"><i class="bi bi-robot"></i></div>
-                            <h3 class="fs-4 fw-bold">Generative AI with Gemini</h3>
-                            <p class="text-muted">Leverage Google's powerful Gemini API. Generate creative text, analyze data, or interact with a state-of-the-art AI, all within our platform.</p>
+                            <div class="feature-icon"><i class="bi bi-search"></i></div>
+                            <h3 class="fs-4 fw-bold">Real-Time Crypto Data</h3>
+                            <p class="text-muted">Instantly query Bitcoin and Litecoin addresses for balance and transaction history. Get accurate, up-to-the-minute data directly from the blockchain.</p>
                         </div>
                     </div>
                 </div>
@@ -168,6 +215,54 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- NEW: Custom Web Development Section -->
+    <section id="custom-development" class="py-5 my-5 custom-dev-section">
+        <div class="container fade-in-section">
+            <div class="text-center mb-5">
+                <h2 class="display-5 fw-bold">Need a Tailored Solution?</h2>
+                <p class="lead">Beyond our ready-to-use tools, we build bespoke web applications to solve your unique business challenges.</p>
+            </div>
+            <div class="row g-5 align-items-center">
+                <div class="col-lg-6">
+                    <h3 class="fw-bold mb-4">What We Offer</h3>
+                    <ul class="list-unstyled fs-5">
+                        <li class="mb-3"><i class="bi bi-check2-circle"></i> Custom Web Applications</li>
+                        <li class="mb-3"><i class="bi bi-check2-circle"></i> CodeIgniter & PHP Development</li>
+                        <li class="mb-3"><i class="bi bi-check2-circle"></i> Third-Party API Integrations</li>
+                        <li class="mb-3"><i class="bi bi-check2-circle"></i> Website Performance Optimization</li>
+                    </ul>
+                </div>
+                <div class="col-lg-6">
+                    <h3 class="fw-bold mb-4">Our Proven Process</h3>
+                    <div class="process-step">
+                        <div class="process-number">1</div>
+                        <div>
+                            <h5 class="fw-bold">Consultation</h5>
+                            <p class="text-muted">We start by understanding your vision, goals, and technical requirements in a free, no-obligation meeting.</p>
+                        </div>
+                    </div>
+                    <div class="process-step">
+                        <div class="process-number">2</div>
+                        <div>
+                            <h5 class="fw-bold">Proposal &amp; Planning</h5>
+                            <p class="text-muted">You receive a detailed project proposal, including timeline, deliverables, and a transparent quote.</p>
+                        </div>
+                    </div>
+                    <div class="process-step">
+                        <div class="process-number">3</div>
+                        <div>
+                            <h5 class="fw-bold">Development &amp; Launch</h5>
+                            <p class="text-muted">We build your application with clean, efficient code and deploy it to a secure, scalable server environment.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center mt-5">
+                <a href="<?= url_to('contact.form') ?>" class="btn btn-primary btn-lg fw-bold">Book a Free Consultation</a>
             </div>
         </div>
     </section>
@@ -204,7 +299,7 @@
 
     <!-- Final CTA Section -->
     <section id="cta" class="py-5 mb-5 text-center cta-section">
-         <div class="fade-in-section">
+        <div class="fade-in-section">
             <div class="row justify-content-center">
                 <div class="col-lg-8">
                     <h2 class="display-5 fw-bold mb-3">Ready to Dive In?</h2>
@@ -220,23 +315,23 @@
 
 <?= $this->section('scripts') ?>
 <script>
-document.addEventListener("DOMContentLoaded", function() {
-    // Simple fade-in animation on scroll for sections
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('is-visible');
-                observer.unobserve(entry.target);
-            }
+    document.addEventListener("DOMContentLoaded", function() {
+        // Simple fade-in animation on scroll for sections
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('is-visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, {
+            threshold: 0.1
         });
-    }, {
-        threshold: 0.1
-    });
 
-    const sections = document.querySelectorAll('.fade-in-section');
-    sections.forEach(section => {
-        observer.observe(section);
+        const sections = document.querySelectorAll('.fade-in-section');
+        sections.forEach(section => {
+            observer.observe(section);
+        });
     });
-});
 </script>
 <?= $this->endSection() ?>
