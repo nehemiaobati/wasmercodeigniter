@@ -157,7 +157,7 @@ class App extends BaseConfig
      * secure, the user will be redirected to a secure version of the page
      * and the HTTP Strict Transport Security (HSTS) header will be set.
      */
-    public bool $forceGlobalSecureRequests = false;
+    public bool $forceGlobalSecureRequests = true;
 
     /**
      * --------------------------------------------------------------------------
@@ -180,7 +180,10 @@ class App extends BaseConfig
      *
      * @var array<string, string>
      */
-    public array $proxyIPs = [];
+    //public array $proxyIPs = [];
+    // In app/Config/App.php
+
+     public array $proxyIPs = ['*' => 'X-Forwarded-For'];    
 
     /**
      * --------------------------------------------------------------------------
