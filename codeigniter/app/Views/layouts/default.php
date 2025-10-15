@@ -14,7 +14,7 @@
 
     <!-- Robots Meta Tag -->
     <meta name="robots" content="<?= esc($robotsMeta ?? 'index, follow') ?>">
-    <link rel="icon" href="<?= base_url('public/favicon.ico') ?>" type="image/x-icon">
+    <link rel="icon" href="<?= base_url('favicon.ico') ?>" type="image/x-icon">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
