@@ -20,7 +20,7 @@
         font-weight: 700;
         color: var(--dark-gray);
     }
-    
+
     .dashboard-header .lead {
         color: var(--text-muted);
     }
@@ -29,11 +29,11 @@
         background-color: var(--card-bg);
         border: 1px solid var(--card-border);
         border-radius: 0.75rem;
-        box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.05);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
         transition: all 0.3s ease-in-out;
         height: 100%;
     }
-    
+
     .balance-card .card-body {
         display: flex;
         flex-direction: column;
@@ -48,7 +48,7 @@
         color: var(--success-green);
         line-height: 1.2;
     }
-    
+
     .balance-card .text-muted {
         font-size: 1.1rem;
         margin-bottom: 1.5rem;
@@ -64,12 +64,12 @@
     .details-card .list-group-item:first-child {
         border-top: 0;
     }
-    
+
     .details-card .list-group-item strong {
         display: inline-block;
         min-width: 120px;
     }
-    
+
     .details-card .list-group-item i {
         color: var(--primary-accent);
         margin-right: 10px;
@@ -83,7 +83,7 @@
         text-align: center;
         padding: 2rem;
     }
-    
+
     .action-card .icon {
         font-size: 3rem;
         color: var(--primary-accent);
@@ -94,7 +94,7 @@
         font-weight: 600;
         margin-bottom: 0.5rem;
     }
-    
+
     .action-card p {
         flex-grow: 1;
         margin-bottom: 1.5rem;
@@ -171,15 +171,15 @@
             <div class="row g-4">
                 <!-- Low Balance Alert -->
                 <?php if (isset($balance) && (float)$balance < 100): ?>
-                <div class="col-12">
-                    <div class="low-balance-alert d-flex align-items-center">
-                        <i class="bi bi-exclamation-triangle-fill fs-3 me-3"></i>
-                        <div>
-                            <h5 class="fw-bold">Low Balance</h5>
-                            Your balance is running low. Add funds to ensure uninterrupted access to services.
+                    <div class="col-12">
+                        <div class="low-balance-alert d-flex align-items-center">
+                            <i class="bi bi-exclamation-triangle-fill fs-3 me-3"></i>
+                            <div>
+                                <h5 class="fw-bold">Low Balance</h5>
+                                Your balance is running low. Add funds to ensure uninterrupted access to services.
+                            </div>
                         </div>
                     </div>
-                </div>
                 <?php endif; ?>
 
                 <!-- Gemini API Card -->
