@@ -6,8 +6,8 @@ use CodeIgniter\Config\BaseConfig;
 
 class Email extends BaseConfig
 {
-    public string $fromEmail  = 'afrikenkid@gmail.com';
-    public string $fromName   = 'AFRIKENKID';
+    public string $fromEmail;
+    public string $fromName;
     public string $recipients = '';
 
     /**
@@ -28,22 +28,22 @@ class Email extends BaseConfig
     /**
      * SMTP Server Hostname
      */
-    public string $SMTPHost = 'smtp.gmail.com';
+    public string $SMTPHost;
 
     /**
      * SMTP Username
      */
-    public string $SMTPUser = 'afrikenkid@gmail.com';
+    public string $SMTPUser;
 
     /**
      * SMTP Password
      */
-    public string $SMTPPass = 'elisuxghjblgsjki';
+    public string $SMTPPass;
 
     /**
      * SMTP Port
      */
-    public int $SMTPPort = 587;
+    public int $SMTPPort;
 
     /**
      * SMTP Timeout (in seconds)
@@ -62,7 +62,7 @@ class Email extends BaseConfig
      *             to the server. 'ssl' means implicit SSL. Connection on port
      *             465 should set this to ''.
      */
-    public string $SMTPCrypto = 'tls';
+    public string $SMTPCrypto;
 
     /**
      * Enable word-wrap
@@ -118,4 +118,17 @@ class Email extends BaseConfig
      * Enable notify message from server
      */
     public bool $DSN = false;
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        $this->fromEmail = env('email_fromEmail', 'afrikenkid@gmail.com');
+        $this->fromName = env('email_fromName', 'AFRIKENKID');
+        $this->SMTPHost = env('email_SMTPHost', 'smtp.gmail.com');
+        $this->SMTPUser = env('email_SMTPUser', 'afrikenkid@gmail.com');
+        $this->SMTPPass = env('email_SMTPPass');
+        $this->SMTPPort = (int) env('email_SMTPPort', 587);
+        $this->SMTPCrypto = env('email_SMTPCrypto', 'tls');
+    }
 }
