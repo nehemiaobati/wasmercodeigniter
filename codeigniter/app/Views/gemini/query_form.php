@@ -17,7 +17,8 @@
         white-space: pre-wrap;
         word-wrap: break-word;
         border: 1px solid #dee2e6;
-        min-height: 100px; /* Ensure pre has height for the cursor */
+        min-height: 100px;
+        /* Ensure pre has height for the cursor */
     }
 
     /* Saved Prompts Enhancement */
@@ -61,8 +62,15 @@
     }
 
     @keyframes blink {
-        from, to { color: transparent; }
-        50% { color: var(--primary-color); }
+
+        from,
+        to {
+            color: transparent;
+        }
+
+        50% {
+            color: var(--primary-color);
+        }
     }
 
     @keyframes fadeIn {
@@ -70,6 +78,7 @@
             opacity: 0;
             transform: translateY(-10px);
         }
+
         to {
             opacity: 1;
             transform: translateY(0);
@@ -196,7 +205,9 @@
         const geminiForm = document.getElementById('geminiForm');
         const mainPromptTextarea = document.getElementById('prompt');
         if (mainPromptTextarea) {
-            mainPromptTextarea.focus({ preventScroll: true });
+            mainPromptTextarea.focus({
+                preventScroll: true
+            });
         }
         const submitButton = geminiForm.querySelector('button[type="submit"]');
 
@@ -238,10 +249,10 @@
                         const tempForm = document.createElement('form');
                         tempForm.method = 'post';
                         tempForm.action = deleteUrl;
-                        
+
                         const csrfField = geminiForm.querySelector('input[name="<?= csrf_token() ?>"]');
-                        if(csrfField) {
-                           tempForm.appendChild(csrfField.cloneNode());
+                        if (csrfField) {
+                            tempForm.appendChild(csrfField.cloneNode());
                         }
 
                         document.body.appendChild(tempForm);
@@ -265,7 +276,7 @@
                 const removeBtn = row.querySelector('.remove-media-btn');
                 removeBtn.style.display = (mediaRows.length > 1) ? 'inline-block' : 'none';
             });
-             // Also hide the first remove button if there is only one empty input
+            // Also hide the first remove button if there is only one empty input
             if (mediaRows.length === 1) {
                 const firstInput = mediaRows[0].querySelector('input[type="file"]');
                 const firstRemoveBtn = mediaRows[0].querySelector('.remove-media-btn');
@@ -294,7 +305,7 @@
                     updateMediaButtons();
                 }
             });
-             mediaContainer.addEventListener('change', function(event) {
+            mediaContainer.addEventListener('change', function(event) {
                 if (event.target.matches('input[type="file"]')) {
                     const removeBtn = event.target.closest('.media-input-row').querySelector('.remove-media-btn');
                     if (event.target.files.length > 0) {
@@ -318,12 +329,14 @@
                 mediaUploadArea.addEventListener(eventName, () => mediaUploadArea.classList.remove('dragover'), false);
             });
             mediaUploadArea.addEventListener('drop', e => {
-                 const firstInput = mediaContainer.querySelector('input[type="file"]');
-                 if(firstInput.files.length === 0) { // If the first input is empty, use it
+                const firstInput = mediaContainer.querySelector('input[type="file"]');
+                if (firstInput.files.length === 0) { // If the first input is empty, use it
                     firstInput.files = e.dataTransfer.files;
-                    const changeEvent = new Event('change', { bubbles: true });
+                    const changeEvent = new Event('change', {
+                        bubbles: true
+                    });
                     firstInput.dispatchEvent(changeEvent);
-                 }
+                }
             }, false);
 
             updateMediaButtons();
@@ -348,13 +361,16 @@
 
             // 1. Scroll to the results card
             setTimeout(() => {
-                resultsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                resultsCard.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
             }, 100);
 
             // 2. Artificially stream the response
             let index = 0;
             responseElement.classList.add('typing');
-            
+
             function type() {
                 if (index < fullText.length) {
                     responseElement.textContent += fullText.charAt(index);
@@ -365,7 +381,7 @@
                     if (copyBtn) copyBtn.disabled = false; // Enable copy button when done
                 }
             }
-            
+
             setTimeout(type, 500); // Start typing after a short delay
 
             // --- Copy to Clipboard Functionality ---
@@ -374,7 +390,9 @@
                     navigator.clipboard.writeText(fullText).then(() => {
                         const originalHtml = copyBtn.innerHTML;
                         copyBtn.innerHTML = '<i class="bi bi-check-lg"></i> Copied!';
-                        setTimeout(() => { copyBtn.innerHTML = originalHtml; }, 2000);
+                        setTimeout(() => {
+                            copyBtn.innerHTML = originalHtml;
+                        }, 2000);
                     }).catch(err => console.error('Failed to copy text: ', err));
                 });
             }
