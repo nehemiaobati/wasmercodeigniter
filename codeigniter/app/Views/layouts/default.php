@@ -161,6 +161,32 @@
             padding-top: 1rem;
             margin-top: 2rem;
         }
+
+        /* Centrally Managed Pagination Styling */
+        .pagination {
+            --bs-pagination-padding-x: 0.85rem;
+            --bs-pagination-padding-y: 0.45rem;
+            --bs-pagination-font-size: 0.95rem;
+            --bs-pagination-border-width: 0;
+            --bs-pagination-border-radius: 0.375rem;
+            --bs-pagination-hover-color: var(--primary-color);
+            --bs-pagination-hover-bg: #e9ecef;
+            --bs-pagination-active-color: #fff;
+            --bs-pagination-active-bg: var(--primary-color);
+            --bs-pagination-disabled-color: #6c757d;
+            --bs-pagination-disabled-bg: #fff;
+        }
+        .pagination .page-item {
+            margin: 0 4px;
+        }
+        .pagination .page-link {
+            border-radius: var(--bs-pagination-border-radius) !important;
+            transition: all 0.2s ease-in-out;
+        }
+        .pagination .page-item.active .page-link {
+            box-shadow: 0 4px 8px rgba(13, 110, 253, 0.2);
+            transform: translateY(-2px);
+        }
     </style>
     <?= $this->renderSection('styles') ?>
 </head>
