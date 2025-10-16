@@ -192,51 +192,59 @@
 </head>
 
 <body class="d-flex flex-column min-vh-100">
-    <header>
-        <nav id="mainNavbar" class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top py-3">
-            <div class="container">
-                <a class="navbar-brand fs-4" href="<?= url_to('welcome') ?>"><i class="bi bi-box"></i> AFRIKENKID</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav ms-auto text-center">
-                        <?php if (session()->get('isLoggedIn')): ?>
-                            <li class="nav-item"><a class="nav-link" href="<?= url_to('home') ?>">Home</a></li>
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" href="#" id="servicesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    Services
-                                </a>
-                                <ul class="dropdown-menu" aria-labelledby="servicesDropdown">
-                                    <li><a class="dropdown-item" href="<?= url_to('gemini.index') ?>">Gemini AI</a></li>
-                                    <li><a class="dropdown-item" href="<?= url_to('crypto.index') ?>">Crypto Data</a></li>
-                                </ul>
-                            </li>
-                            <li class="nav-item"><a class="nav-link" href="<?= url_to('payment.index') ?>">Top Up</a></li>
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="bi bi-person-circle"></i> <?= esc(session()->get('username')) ?>
-                                </a>
-                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                                    <?php if (session()->get('is_admin')): ?>
-                                        <li class="nav-item"><a class="dropdown-item" href="<?= url_to('admin.index') ?>">Admin Panel</a></li>
-                                    <?php endif; ?>
-                                    <li><a class="dropdown-item" href="<?= url_to('account.index') ?>">My Account</a></li>
-                                    <li>
-                                        <hr class="dropdown-divider">
-                                    </li>
-                                    <li><a class="dropdown-item" href="<?= url_to('logout') ?>">Logout</a></li>
-                                </ul>
-                            </li>
-                        <?php else: ?>
-                            <li class="nav-item"><a class="nav-link" href="<?= url_to('login') ?>">Login</a></li>
-                            <li class="nav-item"><a class="btn btn-primary text-white ms-lg-2 px-3" href="<?= url_to('register') ?>">Register</a></li>
-                        <?php endif; ?>
-                    </ul>
-                </div>
+    
+    <nav id="mainNavbar" class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top py-3">
+        <div class="container">
+            <a class="navbar-brand fs-4" href="<?= url_to('welcome') ?>"><i class="bi bi-box"></i> AFRIKENKID</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto text-center">
+                    <?php if (session()->get('isLoggedIn')): ?>
+                        <li class="nav-item"><a class="nav-link" href="<?= url_to('home') ?>">Home</a></li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="servicesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Services
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="servicesDropdown">
+                                <li><a class="dropdown-item" href="<?= url_to('gemini.index') ?>">Gemini AI</a></li>
+                                <li><a class="dropdown-item" href="<?= url_to('crypto.index') ?>">Crypto Data</a></li>
+                            </ul>
+                        </li>
+                        <li class="nav-item"><a class="nav-link" href="<?= url_to('payment.index') ?>">Top Up</a></li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-person-circle"></i> <?= esc(session()->get('username')) ?>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                <?php if (session()->get('is_admin')): ?>
+                                    <li class="nav-item"><a class="dropdown-item" href="<?= url_to('admin.index') ?>">Admin Panel</a></li>
+                                <?php endif; ?>
+                                <li><a class="dropdown-item" href="<?= url_to('account.index') ?>">My Account</a></li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li><a class="dropdown-item" href="<?= url_to('logout') ?>">Logout</a></li>
+                            </ul>
+                        </li>
+                    <?php else: ?>
+                        <!-- Responsive Auth Buttons -->
+                        <li class="nav-item d-lg-none">
+                            <div class="d-flex justify-content-center gap-2 mt-3 mb-2">
+                                <a class="btn btn-outline-primary w-100" href="<?= url_to('login') ?>">Login</a>
+                                <a class="btn btn-primary w-100" href="<?= url_to('register') ?>">Register</a>
+                            </div>
+                        </li>
+                        <li class="nav-item d-none d-lg-flex align-items-center">
+                            <a class="nav-link" href="<?= url_to('login') ?>">Login</a>
+                            <a class="btn btn-primary text-white ms-2" href="<?= url_to('register') ?>">Register</a>
+                        </li>
+                    <?php endif; ?>
+                </ul>
             </div>
-        </nav>
-    </header>
+        </div>
+    </nav>
 
     <main>
         <div class="container my-4 flash-message-container">
