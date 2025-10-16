@@ -176,13 +176,16 @@
             --bs-pagination-disabled-color: #6c757d;
             --bs-pagination-disabled-bg: #fff;
         }
+
         .pagination .page-item {
             margin: 0 4px;
         }
+
         .pagination .page-link {
             border-radius: var(--bs-pagination-border-radius) !important;
             transition: all 0.2s ease-in-out;
         }
+
         .pagination .page-item.active .page-link {
             box-shadow: 0 4px 8px rgba(13, 110, 253, 0.2);
             transform: translateY(-2px);
@@ -192,7 +195,7 @@
 </head>
 
 <body class="d-flex flex-column min-vh-100">
-    
+
     <nav id="mainNavbar" class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top py-3">
         <div class="container">
             <a class="navbar-brand fs-4" href="<?= url_to('welcome') ?>"><i class="bi bi-box"></i> AFRIKENKID</a>
