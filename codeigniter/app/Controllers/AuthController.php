@@ -79,8 +79,6 @@ class AuthController extends BaseController
             'balance'  => 30, // Set initial balance for new users.
             'verification_token' => $token,
         ];
-        // Save the new user data to the database.
-        $userModel->save($data);
 
         // Prepare and send the email verification message.
         $emailService = service('email');
@@ -94,8 +92,10 @@ class AuthController extends BaseController
         ]);
         $emailService->setMessage($message);
 
-        // If email sending is successful, redirect to login with a success message.
+        // If email sending is successful, save the user and redirect to login with a success message.
         if ($emailService->send()) {
+            // Save the new user data to the database.
+            $userModel->save($data);
             return redirect()->to(url_to('login'))->with('success', 'Registration successful. Please check your email to verify your account.');
         }
 
