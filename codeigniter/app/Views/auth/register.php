@@ -109,7 +109,7 @@
                         <div class="illustration-content text-center">
                              <i class="bi bi-person-plus-fill" style="font-size: 4rem; margin-bottom: 1rem;"></i>
                             <h4>Join Our Platform</h4>
-                            <p>Sign up to get immediate access to our AI-powered tools crypto data services.</p>
+                            <p>Sign up to get immediate access to our AI-powered tools and crypto data services.</p>
                         </div>
                     </div>
                 </div>
