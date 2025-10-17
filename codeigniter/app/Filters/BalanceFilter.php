@@ -40,7 +40,7 @@ class BalanceFilter implements FilterInterface
 
         // Define the minimum required balance for crypto operations.
         // This value can be made configurable if needed.
-        $requiredBalance = 10.0; 
+        $requiredBalance = 1.0; 
         
         if ($user->balance < $requiredBalance) {
             // Redirect to the main payment page if balance is insufficient using url_to() and set an alert

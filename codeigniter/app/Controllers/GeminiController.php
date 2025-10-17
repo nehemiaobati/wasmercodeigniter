@@ -47,14 +47,6 @@ class GeminiController extends BaseController
             return redirect()->back()->withInput()->with('error', ['User not logged in or invalid user ID. Cannot deduct balance.']);
         }
         
-        /** @var User|null $user */
-        $user = $this->userModel->find($userId);
-        $deductionAmount = 10;
-
-        if (!$user || $user->balance < $deductionAmount) {
-            return redirect()->back()->withInput()->with('error', ['Insufficient balance. Please top up your account.']);
-        }
-
         $inputText = $this->request->getPost('prompt');
         $isReport = $this->request->getPost('report') === '1';
 
@@ -109,19 +101,67 @@ class GeminiController extends BaseController
             return redirect()->back()->withInput()->with('error', ['Prompt or supported media is required.']);
         }
 
-        $response = $this->geminiService->generateContent($parts);
+        $apiResponse = $this->geminiService->generateContent($parts);
 
-        if (isset($response['error'])) {
-            return redirect()->back()->withInput()->with('error', ['error' => $response['error']]);
+        if (isset($apiResponse['error'])) {
+            return redirect()->back()->withInput()->with('error', ['error' => $apiResponse['error']]);
         }
 
-        if ($this->userModel->deductBalance($userId, $deductionAmount)) {
-            session()->setFlashdata('success', "{$deductionAmount} units deducted for your AI query.");
+        // --- Token-based Pricing Logic in KSH ---
+        $deductionAmount = 10.00; // Default fallback cost in KSH
+        $costMessage = "A default charge of KSH " . number_format($deductionAmount, 2) . " has been applied for your AI query.";
+        define('USD_TO_KSH_RATE', 129);
+
+        // Check if usage metadata is available for precise cost calculation
+        if (isset($apiResponse['usage']['totalTokenCount'], $apiResponse['usage']['promptTokenCount'], $apiResponse['usage']['candidatesTokenCount'])) {
+            $totalTokens = (int) $apiResponse['usage']['totalTokenCount'];
+            $inputTokens = (int) $apiResponse['usage']['promptTokenCount'];
+            $outputTokens = (int) $apiResponse['usage']['candidatesTokenCount'];
+
+            $inputPricePerMillion = 0.0;
+            $outputPricePerMillion = 0.0;
+            
+            // Pricing for gemini-2.5-pro model
+            if ($totalTokens <= 200000) { // <= 200K tokens pricing tier
+                $inputPricePerMillion = 3.25;  // $1.25 per 1,000,000 tokens
+                $outputPricePerMillion = 12.00; // $10.00 per 1,000,000 tokens
+            } else { // > 200K tokens pricing tier
+                $inputPricePerMillion = 2.50;  // $2.50 per 1,000,000 tokens
+                $outputPricePerMillion = 17.00; // $15.00 per 1,000,000 tokens
+            }
+
+            $inputCostUSD = ($inputTokens / 1000000) * $inputPricePerMillion;
+            $outputCostUSD = ($outputTokens / 1000000) * $outputPricePerMillion;
+            $totalCostUSD = $inputCostUSD + $outputCostUSD;
+            
+            // Convert USD cost to KSH
+            $costInKSH = $totalCostUSD * USD_TO_KSH_RATE;
+            
+            // Ensure a minimum charge of KES 0.01 for any successful API call with usage data.
+            $deductionAmount = max(0.01, $costInKSH);
+            $costMessage = "KSH " . number_format($deductionAmount, 2) . " deducted for your AI query based on token usage.";
+        }
+        
+        /** @var User|null $user */
+        $user = $this->userModel->find($userId);
+
+        // Check if the user has enough balance for the calculated cost
+        if (bccomp((string) $user->balance, (string) $deductionAmount, 2) < 0) {
+            log_message('error', "User {$userId} had insufficient balance for a query that already ran. Cost: {$deductionAmount}, Balance: {$user->balance}.");
+            session()->setFlashdata('error', 'Your query was processed, but your balance was insufficient to cover the full cost. Please top up your account.');
+            return redirect()->back()->withInput()->with('result', $apiResponse['result']);
+        }
+
+        // Deduct the calculated KSH amount from the user's balance
+        $newBalance = bcsub((string) $user->balance, (string) $deductionAmount, 2);
+        if ($this->userModel->update($userId, ['balance' => $newBalance])) {
+            session()->setFlashdata('success', $costMessage);
         } else {
-            log_message('error', 'Failed to update user balance after successful AI query for user ID: ' . $userId);
+            log_message('error', 'Failed to update user balance for user ID: ' . $userId . '. Deduction amount was: KSH ' . $deductionAmount);
+            session()->setFlashdata('error', 'Could not update your balance after the query. Please contact support.');
         }
 
-        return redirect()->back()->withInput()->with('result', $response['result']);
+        return redirect()->back()->withInput()->with('result', $apiResponse['result']);
     }
 
     public function addPrompt(): RedirectResponse
