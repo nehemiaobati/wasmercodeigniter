@@ -87,6 +87,7 @@ class CryptoController extends BaseController
             // --- Balance Check ---
             $userId = (int) session()->get('userId');
             if ($userId > 0) {
+                /** @var \App\Entities\User|null $user */
                 $user = $this->userModel->find($userId);
                 if (! $user) {
                     $errors[] = 'User not found.';

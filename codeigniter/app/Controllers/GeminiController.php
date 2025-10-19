@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace App\Controllers;
 
@@ -10,6 +8,7 @@ use App\Libraries\GeminiService;
 use App\Libraries\MemoryService;
 use App\Models\PromptModel;
 use App\Models\UserModel;
+use App\Models\UserSettingsModel; // Add this line
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\Files\UploadedFile;
 use Parsedown;
@@ -36,6 +35,11 @@ class GeminiController extends BaseController
      * @var PromptModel
      */
     protected PromptModel $promptModel;
+
+    /**
+     * @var UserSettingsModel
+     */
+    protected UserSettingsModel $userSettingsModel; // Add this property
 
     /**
      * Supported MIME types for file uploads.
@@ -83,13 +87,14 @@ class GeminiController extends BaseController
      */
     public function __construct()
     {
-        $this->userModel     = new UserModel();
-        $this->geminiService = service('geminiService');
-        $this->promptModel   = new PromptModel();
+        $this->userModel         = new UserModel();
+        $this->geminiService     = service('geminiService');
+        $this->promptModel       = new PromptModel();
+        $this->userSettingsModel = new UserSettingsModel(); // Add this line
     }
 
     /**
-     * Displays the main query form with user's saved prompts.
+     * Displays the main query form with user's saved prompts and settings.
      *
      * @return string The rendered view.
      */
@@ -98,11 +103,24 @@ class GeminiController extends BaseController
         $userId  = (int) session()->get('userId');
         $prompts = $this->promptModel->where('user_id', $userId)->findAll();
 
+        // Fetch or create user setting for Assistant Mode
+        $userSetting = $this->userSettingsModel->where('user_id', $userId)->first();
+        if (!$userSetting) {
+            $this->userSettingsModel->save([
+                'user_id' => $userId,
+                'assistant_mode_enabled' => true, // Default to enabled for new users
+            ]);
+            $assistantModeEnabled = true;
+        } else {
+            $assistantModeEnabled = $userSetting->assistant_mode_enabled;
+        }
+
         $data = [
             'title'   => 'Gemini AI Query',
             'result'  => session()->getFlashdata('result'),
             'error'   => session()->getFlashdata('error'),
             'prompts' => $prompts,
+            'assistant_mode_enabled' => $assistantModeEnabled, // Pass setting to view
         ];
         return view('gemini/query_form', $data);
     }
@@ -123,8 +141,13 @@ class GeminiController extends BaseController
             return redirect()->back()->withInput()->with('error', 'User not logged in or invalid user ID.');
         }
 
-        $inputText       = (string) $this->request->getPost('prompt');
+        // --- Save Assistant Mode Setting ---
         $isAssistantMode = $this->request->getPost('assistant_mode') === '1';
+        $this->userSettingsModel->where('user_id', $userId)->set(['assistant_mode_enabled' => $isAssistantMode])->update();
+        // --- End Save Setting ---
+
+        $inputText       = (string) $this->request->getPost('prompt');
+        // $isAssistantMode = $this->request->getPost('assistant_mode') === '1'; // This line is now redundant
 
         // 1. Prepare the prompt and context
         $contextData = $this->_prepareContext($userId, $inputText, $isAssistantMode);
@@ -417,5 +440,38 @@ class GeminiController extends BaseController
         }
 
         return redirect()->to(url_to('gemini.index'))->with('error', 'Failed to delete the prompt.');
+    }
+
+    /**
+     * Updates the assistant mode setting for the current user.
+     * Handles PUT requests for AJAX toggling.
+     *
+     * @return \CodeIgniter\HTTP\ResponseInterface
+     */
+    public function updateAssistantMode(): \CodeIgniter\HTTP\ResponseInterface
+    {
+        $userId = (int) session()->get('userId');
+        if ($userId <= 0) {
+            return $this->response->setStatusCode(401)->setJSON(['message' => 'Unauthorized. Please log in.']);
+        }
+
+        // Get JSON payload from request body
+        $data = $this->request->getJSON(true); // true to get as associative array
+
+        // Validate input
+        if (!isset($data['assistant_mode']) || !is_bool($data['assistant_mode'])) {
+            return $this->response->setStatusCode(400)->setJSON(['message' => 'Invalid input. "assistant_mode" must be a boolean.']);
+        }
+
+        $isAssistantModeEnabled = $data['assistant_mode'];
+
+        // Update the setting
+        $updated = $this->userSettingsModel->where('user_id', $userId)->set(['assistant_mode_enabled' => $isAssistantModeEnabled])->update();
+
+        if ($updated) {
+            return $this->response->setJSON(['message' => 'Assistant mode updated successfully.', 'assistant_mode_enabled' => $isAssistantModeEnabled]);
+        } else {
+            return $this->response->setStatusCode(500)->setJSON(['message' => 'Failed to update assistant mode.']);
+        }
     }
 }

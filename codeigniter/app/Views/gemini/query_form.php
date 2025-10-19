@@ -137,7 +137,7 @@
                         </h4>
                         <div class="form-check form-switch fs-5 p-0 d-flex justify-content-between align-items-center">
                             <label class="form-check-label" for="assistantModeToggle">Assistant Mode</label>
-                            <input class="form-check-input" type="checkbox" role="switch" id="assistantModeToggle" name="assistant_mode" value="1" <?= old('assistant_mode', '1') === '1' ? 'checked' : '' ?>>
+                            <input class="form-check-input" type="checkbox" role="switch" id="assistantModeToggle" name="assistant_mode" value="1" <?= old('assistant_mode', $assistant_mode_enabled ? '1' : '0') === '1' ? 'checked' : '' ?>>
                         </div>
                         <small class="text-muted d-block mt-1">Enables memory and context for conversational queries.</small>
                         
@@ -397,6 +397,42 @@
                 }).catch(err => {
                     console.error('Failed to copy text: ', err);
                 });
+            });
+        }
+
+        // --- AJAX handler for Assistant Mode Toggle ---
+        const assistantModeToggle = document.getElementById('assistantModeToggle');
+        const csrfToken = document.querySelector('input[name="<?= csrf_token() ?>"]').value; // Get CSRF token
+
+        if (assistantModeToggle) {
+            assistantModeToggle.addEventListener('change', async function() {
+                const isChecked = this.checked;
+                const url = `<?= url_to('gemini.settings.update_assistant_mode') ?>`;
+
+                try {
+                    const response = await fetch(url, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken
+                        },
+                        body: JSON.stringify({ assistant_mode: isChecked })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error('Failed to update assistant mode:', errorData.message || response.statusText);
+                        // Optionally, revert the toggle or show an error message to the user
+                        // For now, just log to console
+                    } else {
+                        const successData = await response.json();
+                        console.log('Assistant mode updated:', successData.message);
+                        // Optionally, provide user feedback here
+                    }
+                } catch (error) {
+                    console.error('Error updating assistant mode:', error);
+                    // Handle network errors
+                }
             });
         }
     });

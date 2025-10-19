@@ -84,6 +84,8 @@ $routes->group('', ['filter' => 'auth'], static function ($routes) {
         $routes->post('generate', 'GeminiController::generate', ['as' => 'gemini.generate', 'filter' => 'balance']);
         $routes->post('prompts/add', 'GeminiController::addPrompt', ['as' => 'gemini.prompts.add']);
         $routes->post('prompts/delete/(:num)', 'GeminiController::deletePrompt/$1', ['as' => 'gemini.prompts.delete']);
+        // Add new route for updating assistant mode
+        $routes->put('settings/assistant-mode', 'GeminiController::updateAssistantMode', ['as' => 'gemini.settings.update_assistant_mode', 'filter' => 'auth']);
     });
 
 });
