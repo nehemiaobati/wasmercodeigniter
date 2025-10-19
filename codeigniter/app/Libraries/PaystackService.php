@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Libraries;
 
@@ -48,7 +48,7 @@ class PaystackService
      * @param string|null $currency    The currency of the transaction (e.g., 'KES'). Defaults to class property.
      * @return array The API response from Paystack.
      */
-    public function initializeTransaction(string $email, int $amount, string $callbackUrl, string $currency = null): array
+    public function initializeTransaction(string $email, int $amount, string $callbackUrl, ?string $currency = null): array
     {
         $url = $this->baseUrl . '/transaction/initialize';
         $fields = [

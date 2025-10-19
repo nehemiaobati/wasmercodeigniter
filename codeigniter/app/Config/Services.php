@@ -3,6 +3,8 @@
 namespace Config;
 
 use CodeIgniter\Config\BaseService;
+use App\Libraries\EmbeddingService;
+use App\Libraries\MemoryService;
 
 /**
  * Services Configuration file.
@@ -64,5 +66,23 @@ class Services extends BaseService
         }
 
         return new \App\Libraries\RecaptchaService();
+    }
+
+    public static function embedding($getShared = true): EmbeddingService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('embedding');
+        }
+        return new EmbeddingService();
+    }
+
+    public static function memory(int $userId, $getShared = false): MemoryService
+    {
+        // This service is user-specific, so it should not be shared.
+        if ($getShared) {
+             // You could implement a user-specific pool if needed, but for now, we create a new instance.
+            return static::getSharedInstance('memory', $userId);
+        }
+        return new MemoryService($userId);
     }
 }

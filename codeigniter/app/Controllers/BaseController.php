@@ -11,8 +11,22 @@ use Psr\Log\LoggerInterface;
 
 abstract class BaseController extends Controller
 {
+    /**
+     * The request object.
+     * @var IncomingRequest|CLIRequest|RequestInterface
+     */
     protected $request;
+
+    /**
+     * An array of helpers to be loaded automatically.
+     * @var array
+     */
     protected $helpers = [];
+
+    /**
+     * The CodeIgniter session service.
+     * @var \CodeIgniter\Session\Session
+     */
     protected \CodeIgniter\Session\Session $session;
 
     public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger): void

@@ -170,7 +170,7 @@
         <div class="col-lg-5">
             <div class="row g-4">
                 <!-- Low Balance Alert -->
-                <?php if (isset($balance) && (float)$balance < 100): ?>
+                <?php if (isset($balance) && (float)$balance < 10): ?>
                 <div class="col-12">
                     <div class="low-balance-alert d-flex align-items-center">
                         <i class="bi bi-exclamation-triangle-fill fs-3 me-3"></i>

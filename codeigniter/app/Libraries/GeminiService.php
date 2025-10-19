@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Libraries;
 
@@ -14,12 +14,65 @@ class GeminiService
     protected $apiKey;
 
     /**
+     * The model ID to use for API calls.
+     * @var string
+     */
+    protected string $modelId = "gemini-flash-latest"; // Centralize model ID
+
+    /**
      * Constructor.
      * Initializes the service and retrieves the Gemini API key from environment variables.
      */
     public function __construct()
     {
         $this->apiKey = env('GEMINI_API_KEY') ?? getenv('GEMINI_API_KEY');
+    }
+
+    /**
+     * Counts the number of tokens in a given set of content parts.
+     *
+     * @param array $parts An array of content parts (text and/or inlineData for files).
+     * @return array An associative array with 'status' (bool) and 'totalTokens' (int) or 'error' (string).
+     */
+    public function countTokens(array $parts): array
+    {
+        if (!$this->apiKey) {
+            return ['status' => false, 'error' => 'GEMINI_API_KEY not set in .env file.'];
+        }
+
+        $countTokensApi = "countTokens";
+        $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$this->modelId}:{$countTokensApi}?key={$this->apiKey}";
+
+        $requestPayload = ["contents" => [["parts" => $parts]]];
+        $requestBody = json_encode($requestPayload);
+        $client = \Config\Services::curlrequest();
+
+        try {
+            $response = $client->request('POST', $apiUrl, [
+                'body' => $requestBody,
+                'headers' => ['Content-Type' => 'application/json'],
+                'timeout' => 10,
+            ]);
+
+            $statusCode = $response->getStatusCode();
+            $responseBody = $response->getBody();
+
+            if ($statusCode !== 200) {
+                $errorData = json_decode($responseBody, true);
+                $errorMessage = $errorData['error']['message'] ?? 'Unknown API error during token count.';
+                log_message('error', "Gemini API countTokens Error: Status {$statusCode} - {$errorMessage}");
+                return ['status' => false, 'error' => $errorMessage];
+            }
+
+            $responseData = json_decode($responseBody, true);
+            $totalTokens = $responseData['totalTokens'] ?? 0;
+
+            return ['status' => true, 'totalTokens' => $totalTokens];
+
+        } catch (\Exception $e) {
+            log_message('error', 'Gemini API countTokens Exception: ' . $e->getMessage());
+            return ['status' => false, 'error' => 'Could not connect to the AI service to estimate cost.'];
+        }
     }
 
     /**
@@ -35,8 +88,7 @@ class GeminiService
             return ['error' => 'GEMINI_API_KEY not set in .env file.'];
         }
 
-        $modelId = "gemini-flash-lite-latest";
-        $generateContentApi = "streamGenerateContent";
+        $generateContentApi = "generateContent"; // Changed to non-streaming endpoint
 
         $requestPayload = [
             "contents" => [
@@ -46,10 +98,7 @@ class GeminiService
                 ]
             ],
             "generationConfig" => [
-                "maxOutputTokens" => 8536,
-                "thinkingConfig" => [
-                    "thinkingBudget" => -1,
-                ],
+                "maxOutputTokens" => 65192,
             ],
             "tools" => [
                 [
@@ -58,58 +107,54 @@ class GeminiService
             ],
         ];
 
-        $requestBody = json_encode($requestPayload, JSON_PRETTY_PRINT);
-
-        // Logs the full request payload. Consider disabling or restricting in production.
-        $logFilePath = WRITEPATH . 'logs/gemini_payload.log';
-        file_put_contents($logFilePath, "--- Request Payload (" . date('Y-m-d H:i:s') . ") ---\n", FILE_APPEND);
-        file_put_contents($logFilePath, $requestBody . "\n\n", FILE_APPEND);
-
+        $requestBody = json_encode($requestPayload);
         $client = \Config\Services::curlrequest();
 
         try {
-            $response = $client->request('post', "https://generativelanguage.googleapis.com/v1beta/models/{$modelId}:{$generateContentApi}?key={$this->apiKey}", [
+            // Added timeout and connect_timeout options
+            $response = $client->request('POST', "https://generativelanguage.googleapis.com/v1beta/models/{$this->modelId}:{$generateContentApi}?key={$this->apiKey}", [
                 'body' => $requestBody,
                 'headers' => [
                     'Content-Type' => 'application/json',
                 ],
+                'timeout' => 30, // 30 seconds timeout
+                'connect_timeout' => 10, // 10 seconds connect timeout
             ]);
 
             $responseBody = $response->getBody();
-            $responseData = json_decode($responseBody, true);
-
-            if ($response->getStatusCode() !== 200) {
-                $errorMessage = $responseData['error']['message'] ?? 'Unknown API error';
+            $statusCode = $response->getStatusCode();
+            
+            if ($statusCode !== 200) {
+                $errorData = json_decode($responseBody, true);
+                $errorMessage = $errorData['error']['message'] ?? 'Unknown API error';
+                log_message('error', "Gemini API Error: Status {$statusCode} - {$errorMessage} | Response: {$responseBody}");
                 return ['error' => $errorMessage];
             }
 
-            $processedText = '';
-            $usageMetadata = null;
+            // Process non-streamed response
+            $responseData = json_decode($responseBody, true);
 
-            if (is_array($responseData)) {
-                foreach ($responseData as $chunk) {
-                    if (isset($chunk['candidates']) && is_array($chunk['candidates'])) {
-                        foreach ($chunk['candidates'] as $candidate) {
-                            if (isset($candidate['content']['parts']) && is_array($candidate['content']['parts'])) {
-                                foreach ($candidate['content']['parts'] as $part) {
-                                    if (isset($part['text'])) {
-                                        $processedText .= $part['text'];
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    // Capture usage metadata, which is typically in the last chunk of a streamed response
-                    if (isset($chunk['usageMetadata'])) {
-                        $usageMetadata = $chunk['usageMetadata'];
-                    }
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                log_message('error', 'Gemini API Response JSON Decode Error: ' . json_last_error_msg() . ' | Response: ' . $responseBody);
+                return ['error' => 'Failed to decode API response.'];
+            }
+
+            $processedText = '';
+            if (isset($responseData['candidates'][0]['content']['parts'])) {
+                foreach ($responseData['candidates'][0]['content']['parts'] as $part) {
+                    $processedText .= $part['text'] ?? '';
                 }
+            }
+
+            $usageMetadata = $responseData['usageMetadata'] ?? null;
+
+            if (empty($processedText) && $usageMetadata === null) {
+                return ['error' => 'Received an empty or invalid response from the AI.'];
             }
 
             return ['result' => $processedText, 'usage' => $usageMetadata];
 
         } catch (\Exception $e) {
-            // Log the exception and return an error structure
             log_message('error', 'Gemini API Request Exception: ' . $e->getMessage());
             return ['error' => 'An error occurred while processing your request: ' . $e->getMessage()];
         }

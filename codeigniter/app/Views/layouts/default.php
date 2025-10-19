@@ -187,6 +187,33 @@
             box-shadow: 0 4px 8px rgba(13, 110, 253, 0.2);
             transform: translateY(-2px);
         }
+        
+        /* Mobile Navbar Improvements */
+        @media (max-width: 991.98px) {
+            .navbar-collapse {
+                padding: 1rem;
+            }
+            .navbar .nav-item {
+                margin-bottom: 0.5rem;
+            }
+            .navbar .dropdown-menu {
+                width: 100%;
+                text-align: center;
+                border: 1px solid #dee2e6;
+                box-shadow: none;
+                background-color: var(--light-gray);
+                margin-top: 0.5rem !important;
+            }
+            .navbar .dropdown-menu-end {
+                right: auto;
+                left: 0;
+            }
+            .navbar .auth-buttons-mobile {
+                border-top: 1px solid #dee2e6;
+                padding-top: 1rem;
+                margin-top: 0.5rem;
+            }
+        }
     </style>
     <?= $this->renderSection('styles') ?>
 </head>
@@ -200,7 +227,7 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto text-center">
+                <ul class="navbar-nav ms-auto">
                     <?php if (session()->get('isLoggedIn')): ?>
                         <li class="nav-item"><a class="nav-link" href="<?= url_to('home') ?>">Home</a></li>
                         <li class="nav-item dropdown">
@@ -219,7 +246,7 @@
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                                 <?php if (session()->get('is_admin')): ?>
-                                    <li class="nav-item"><a class="dropdown-item" href="<?= url_to('admin.index') ?>">Admin Panel</a></li>
+                                    <li><a class="dropdown-item" href="<?= url_to('admin.index') ?>">Admin Panel</a></li>
                                 <?php endif; ?>
                                 <li><a class="dropdown-item" href="<?= url_to('account.index') ?>">My Account</a></li>
                                 <li>
@@ -230,15 +257,15 @@
                         </li>
                     <?php else: ?>
                         <!-- Responsive Auth Buttons -->
-                        <li class="nav-item d-lg-none">
-                            <div class="d-flex justify-content-center gap-2 mt-3 mb-2">
+                        <li class="nav-item d-lg-none auth-buttons-mobile">
+                            <div class="d-flex justify-content-center gap-2">
                                 <a class="btn btn-outline-primary w-100" href="<?= url_to('login') ?>">Login</a>
                                 <a class="btn btn-primary w-100" href="<?= url_to('register') ?>">Register</a>
                             </div>
                         </li>
                         <li class="nav-item d-none d-lg-flex align-items-center">
-                            <a class="nav-link" href="<?= url_to('login') ?>">Login</a>
-                            <a class="btn btn-primary text-white ms-2" href="<?= url_to('register') ?>">Register</a>
+                            <a class="btn btn-outline-primary" href="<?= url_to('login') ?>">Login</a>
+                            <a class="btn btn-primary ms-2" href="<?= url_to('register') ?>">Register</a>
                         </li>
                     <?php endif; ?>
                 </ul>

@@ -49,9 +49,7 @@ class AuthController extends BaseController
 
         // Validate the submitted data. If validation fails, display the registration form with errors.
         if (! $this->validate($rules)) {
-            $response = $this->response;
-            $response->setBody(view('auth/register', ['validation' => $this->validator]));
-            return $response;
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
         // Get reCAPTCHA response from the form submission.
@@ -63,10 +61,7 @@ class AuthController extends BaseController
         // Verify the reCAPTCHA response.
         if (! $recaptchaService->verify($recaptchaResponse)) {
             // If reCAPTCHA verification fails, add a validation error and redirect back.
-            $this->validator->setError('recaptcha', 'Please complete the reCAPTCHA.');
-            $response = $this->response;
-            $response->setBody(view('auth/register', ['validation' => $this->validator]));
-            return $response;
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
         $userModel = new UserModel();
@@ -136,11 +131,7 @@ class AuthController extends BaseController
 
         // Validate the submitted login data. If validation fails, display the login form with errors.
         if (! $this->validate($rules)) {
-            $response = $this->response;
-            $response->setBody(view('auth/login', [
-                'validation' => $this->validator,
-            ]));
-            return $response;
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
         // Get reCAPTCHA response from the form submission.
@@ -152,10 +143,7 @@ class AuthController extends BaseController
         // Verify the reCAPTCHA response.
         if (! $recaptchaService->verify($recaptchaResponse)) {
             // If reCAPTCHA verification fails, add a validation error and redirect back.
-            $this->validator->setError('recaptcha', 'Please complete the reCAPTCHA.');
-            $response = $this->response;
-            $response->setBody(view('auth/login', ['validation' => $this->validator]));
-            return $response;
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
         $userModel = new UserModel();
