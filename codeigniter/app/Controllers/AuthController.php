@@ -23,8 +23,11 @@ class AuthController extends BaseController
         if ($this->session->has('isLoggedIn')) {
             return redirect()->to(url_to('home'));
         }
-        $data = [];
-        $data['pageTitle'] = 'User Registration';
+        $data = [
+            'pageTitle' => 'Register | Afrikenkid',
+            'metaDescription' => 'Create your Afrikenkid account to access generative AI tools, real-time crypto data queries, and simple, secure payment options in Kenya and Africa.',
+            'canonicalUrl' => url_to('register'), // Added this line
+        ];
         return view('auth/register', $data);
     }
 
@@ -107,8 +110,11 @@ class AuthController extends BaseController
     public function login(): string
     {
         helper(['form']);
-        $data = [];
-        $data['pageTitle'] = 'User Login';
+        $data = [
+            'pageTitle' => 'Login | Afrikenkid',
+            'metaDescription' => 'Log in to your Afrikenkid account to manage your balance and use our suite of AI and cryptocurrency tools.',
+            'canonicalUrl' => url_to('login'), // Added this line
+        ];
         return view('auth/login', $data);
     }
 
@@ -222,7 +228,12 @@ class AuthController extends BaseController
     public function forgotPasswordForm(): string
     {
         helper(['form']);
-        return view('auth/forgot_password');
+        $data = [
+            'pageTitle' => 'Forgot Password | Afrikenkid',
+            'metaDescription' => 'Reset your Afrikenkid account password. Enter your email to receive a password reset link.',
+            'canonicalUrl' => url_to('auth.forgotPasswordForm'), // Added this line
+        ];
+        return view('auth/forgot_password', $data);
     }
 
     /**

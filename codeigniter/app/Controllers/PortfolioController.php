@@ -11,7 +11,12 @@ class PortfolioController extends BaseController
 {
     public function index(): string
     {
-        return view('portfolio/portfolio_view'); // View name updated
+        $data = [
+            'pageTitle' => 'Nehemia Obati | Software Developer Portfolio',
+            'metaDescription' => 'The professional portfolio of Nehemia Obati, a full-stack software developer specializing in PHP (CodeIgniter), Python, and cloud solutions for clients in Kenya and beyond.',
+            'canonicalUrl' => url_to('portfolio.index'), // Added this line
+        ];
+        return view('portfolio/portfolio_view', $data);
     }
 
     public function sendEmail(): RedirectResponse

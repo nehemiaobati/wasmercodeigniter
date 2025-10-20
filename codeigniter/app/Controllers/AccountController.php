@@ -37,6 +37,10 @@ class AccountController extends BaseController
 
         // Pass user data to the view.
         $data['user'] = $user;
+        
+        $data['pageTitle'] = 'My Account | Afrikenkid';
+        $data['metaDescription'] = 'Manage your Afrikenkid profile, view your account balance, and see your full transaction history.';
+        $data['canonicalUrl'] = url_to('account.index');
 
         // Retrieve paginated transactions for the user, ordered by creation date.
         // Displays 5 transactions per page.

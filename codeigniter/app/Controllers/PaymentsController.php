@@ -25,6 +25,9 @@ class PaymentsController extends BaseController
     public function index(): string
     {
         $data = [
+            'pageTitle' => 'Add Funds | Afrikenkid',
+            'metaDescription' => 'Securely add funds to your Afrikenkid account using Mobile Money (Safaricom, Airtel) or Credit Card via our secure payment gateway.',
+            'canonicalUrl' => url_to('payment.index'),
             'email' => session()->get('userEmail') ?? '',
             'errors' => session()->getFlashdata('errors'),
         ];

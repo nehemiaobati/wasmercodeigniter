@@ -6,41 +6,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <!-- SEO Meta Tags -->
-    <title><?= esc($pageTitle ?? 'AFRIKENKID') ?></title>
-    <meta name="description" content="<?= esc($metaDescription ?? 'Cutting-edge AI insights and real-time cryptocurrency data.') ?>">
+    <title><?= esc($pageTitle ?? 'AFRIKENKID | Generative AI & Crypto Data') ?></title>
+    <meta name="description" content="<?= esc($metaDescription ?? 'Explore generative AI and real-time crypto data with Afrikenkid. Query Bitcoin & Litecoin, and interact with advanced AI. Pay easily with Mobile Money or Credit Card.') ?>">
+    <meta name="keywords" content="Generative AI, Cryptocurrency, Bitcoin, Litecoin, Crypto Query, AI Insights, Kenya, Africa, Mobile Money, Safaricom, M-Pesa, Airtel Money, Paystack">
+    
+    <!-- Geo-targeting for Kenya -->
+    <meta name="geo.region" content="KE">
+    <meta name="geo.placename" content="Nairobi">
+    <meta name="geo.position" content="-1.286389;36.817223">
+    <meta name="ICBM" content="-1.286389, 36.817223">
 
     <!-- Canonical URL -->
     <link rel="canonical" href="<?= esc($canonicalUrl ?? current_url()) ?>">
 
     <!-- Robots Meta Tag -->
-    <meta name="robots" content="<?= esc($robotsMeta ?? 'index, follow') ?>">
+    <meta name="robots" content="index, follow">
     <link rel="icon" href="<?= base_url('favicon.ico') ?>" type="image/x-icon">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="<?= esc($canonicalUrl ?? current_url()) ?>">
-    <meta property="og:title" content="<?= esc($pageTitle ?? 'AFRIKENKID - AI & Crypto Services') ?>">
-    <meta property="og:description" content="<?= esc($metaDescription ?? 'Cutting-edge AI insights and real-time cryptocurrency data.') ?>">
-    <meta property="og:image" content="<?= esc($ogImage ?? base_url('assets/images/default_og_image.jpg')) ?>">
-    <meta property="og:site_name" content="<?= esc($siteName ?? 'AFRIKENKID') ?>">
-    <meta property="og:locale" content="<?= esc($locale ?? 'en_US') ?>">
+    <meta property="og:title" content="<?= esc($pageTitle ?? 'AFRIKENKID | Generative AI & Crypto Data') ?>">
+    <meta property="og:description" content="<?= esc($metaDescription ?? 'Explore generative AI and real-time crypto data with Afrikenkid. Query Bitcoin & Litecoin, and interact with advanced AI. Pay easily with Mobile Money or Credit Card.') ?>">
+    <meta property="og:image" content="<?= base_url('assets/images/afrikenkid_og_image.jpg') ?>">
+    <meta property="og:site_name" content="AFRIKENKID">
+    <meta property="og:locale" content="en_US">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:url" content="<?= esc($canonicalUrl ?? current_url()) ?>">
-    <meta name="twitter:title" content="<?= esc($pageTitle ?? 'AFRIKENKID - AI & Crypto Services') ?>">
-    <meta name="twitter:description" content="<?= esc($metaDescription ?? 'Cutting-edge AI insights and real-time cryptocurrency data.') ?>">
-    <meta name="twitter:image" content="<?= esc($twitterImage ?? base_url('assets/images/default_twitter_image.jpg')) ?>">
+    <meta name="twitter:title" content="<?= esc($pageTitle ?? 'AFRIKENKID | Generative AI & Crypto Data') ?>">
+    <meta name="twitter:description" content="<?= esc($metaDescription ?? 'Explore generative AI and real-time crypto data with Afrikenkid. Query Bitcoin & Litecoin, and interact with advanced AI. Pay easily with Mobile Money or Credit Card.') ?>">
+    <meta name="twitter:image" content="<?= base_url('assets/images/afrikenkid_twitter_image.jpg') ?>">
 
     <!-- Structured Data (JSON-LD) -->
     <script type="application/ld+json">
-        {
-            "@context": "https://schema.org",
-            "@type": "WebSite",
-            "name": "<?= esc($siteName ?? 'AFRIKENKID') ?>",
-            "url": "<?= esc($canonicalUrl ?? current_url()) ?>",
-            "description": "<?= esc($metaDescription ?? 'Cutting-edge AI insights and real-time cryptocurrency data.') ?>"
+    {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "AFRIKENKID",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Web",
+        "description": "<?= esc($metaDescription ?? 'A platform offering generative AI insights and real-time cryptocurrency data queries, with payment options including Mobile Money and Credit Cards for the African market.') ?>",
+        "url": "<?= esc($canonicalUrl ?? current_url()) ?>",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "KES"
         }
+    }
     </script>
 
     <!-- Stylesheets -->

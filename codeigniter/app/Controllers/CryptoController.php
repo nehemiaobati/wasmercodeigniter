@@ -50,7 +50,9 @@ class CryptoController extends BaseController
     public function index(): string
     {
         $data = [
-            'title' => 'Crypto Query',
+            'pageTitle' => 'Cryptocurrency Data Query | Afrikenkid',
+            'metaDescription' => 'Query real-time balance and transaction history for Bitcoin (BTC) and Litecoin (LTC) addresses on the Afrikenkid platform.',
+            'canonicalUrl' => url_to('crypto.index'),
             'result' => session()->getFlashdata('result'),
             'errors' => session()->getFlashdata('errors')
         ];

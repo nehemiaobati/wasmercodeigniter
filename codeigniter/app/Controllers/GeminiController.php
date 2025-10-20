@@ -116,7 +116,9 @@ class GeminiController extends BaseController
         }
 
         $data = [
-            'title'   => 'Gemini AI Query',
+            'pageTitle'   => 'Gemini AI Studio | Afrikenkid',
+            'metaDescription' => 'Access Google\'s powerful Gemini AI. Craft prompts, attach media, and generate content with assistant-level context and memory.',
+            'canonicalUrl' => url_to('gemini.index'),
             'result'  => session()->getFlashdata('result'),
             'error'   => session()->getFlashdata('error'),
             'prompts' => $prompts,
