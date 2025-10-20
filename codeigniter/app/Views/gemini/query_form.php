@@ -121,7 +121,7 @@
 <?= $this->section('content') ?>
 <div class="container my-5">
     <div class="text-center mb-5">
-        <h1 class="fw-bold"><i class="bi bi-stars text-primary"></i> Gemini AI Studio</h1>
+        <h1 class="fw-bold"><i class="bi bi-stars text-primary"></i> Gemini AI</h1>
         <p class="text-muted lead">Craft your prompts, attach media, and generate content with assistant-level context.</p>
     </div>
 
