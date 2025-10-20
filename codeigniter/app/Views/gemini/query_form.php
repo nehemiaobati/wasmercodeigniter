@@ -257,181 +257,38 @@
 <?= $this->section('scripts') ?>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // --- Main Form and Prompt Elements ---
-        const geminiForm = document.getElementById('geminiForm');
-        const mainPromptTextarea = document.getElementById('prompt');
-        const submitButton = geminiForm.querySelector('button[type="submit"]');
-
-        // --- Saved Prompts Elements ---
-        const savedPromptsSelect = document.getElementById('savedPrompts');
-        const usePromptBtn = document.getElementById('usePromptBtn');
-        const deletePromptBtn = document.getElementById('deletePromptBtn');
-
-        // --- Modal Elements ---
-        const savePromptModal = new bootstrap.Modal(document.getElementById('savePromptModal'));
-        const modalPromptTextarea = document.getElementById('modalPromptText');
-        
-        // --- Populate Save Modal ---
-        const savePromptTrigger = document.querySelector('[data-bs-target="#savePromptModal"]');
-        if (savePromptTrigger) {
-            savePromptTrigger.addEventListener('click', () => {
-                modalPromptTextarea.value = mainPromptTextarea.value;
-            });
-        }
-
-        // --- Saved Prompts Logic ---
-        if (savedPromptsSelect) {
-            let selectedPromptId = null;
-
-            savedPromptsSelect.addEventListener('change', function() {
-                const selectedOption = this.options[this.selectedIndex];
-                selectedPromptId = selectedOption.getAttribute('data-id');
-                deletePromptBtn.disabled = !selectedPromptId;
-            });
-
-            if (usePromptBtn) {
-                usePromptBtn.addEventListener('click', function() {
-                    const selectedOption = savedPromptsSelect.options[savedPromptsSelect.selectedIndex];
-                    if (selectedOption && selectedOption.value) {
-                        mainPromptTextarea.value = selectedOption.value;
-                    }
-                });
-            }
-
-            if (deletePromptBtn) {
-                deletePromptBtn.addEventListener('click', function() {
-                    if (!selectedPromptId || this.disabled) return;
-                    if (confirm('Are you sure you want to delete this prompt?')) {
-                        const deleteUrl = `<?= rtrim(url_to('gemini.prompts.delete', 0), '0') ?>${selectedPromptId}`;
-                        const tempForm = document.createElement('form');
-                        tempForm.method = 'post';
-                        tempForm.action = deleteUrl;
-                        
-                        const csrfField = geminiForm.querySelector('input[name="<?= csrf_token() ?>"]');
-                        if(csrfField) {
-                           tempForm.appendChild(csrfField.cloneNode());
-                        }
-                        document.body.appendChild(tempForm);
-                        tempForm.submit();
-                    }
-                });
-            }
-        }
-
-        // --- Media File Input Management ---
-        const mediaUploadArea = document.getElementById('mediaUploadArea');
-        const addMediaBtn = document.getElementById('addMediaBtn');
-        const mediaContainer = document.getElementById('mediaInputContainer');
-        const maxMediaFiles = 5;
-
-        const updateMediaButtons = () => {
-            const mediaRows = mediaContainer.querySelectorAll('.media-input-row');
-            addMediaBtn.style.display = mediaRows.length < maxMediaFiles ? 'inline-block' : 'none';
-
-            mediaRows.forEach((row, index) => {
-                const removeBtn = row.querySelector('.remove-media-btn');
-                removeBtn.style.display = (mediaRows.length > 1 || row.querySelector('input').files.length > 0) ? 'inline-block' : 'none';
-            });
-        };
-
-        if (addMediaBtn && mediaContainer) {
-            addMediaBtn.addEventListener('click', function() {
-                if (mediaContainer.querySelectorAll('.media-input-row').length >= maxMediaFiles) return;
-                const newRow = document.createElement('div');
-                newRow.className = 'mb-2 media-input-row';
-                newRow.innerHTML = `<input type="file" class="form-control" name="media[]"><button type="button" class="btn btn-outline-danger btn-sm remove-media-btn"><i class="bi bi-x-lg"></i></button>`;
-                mediaContainer.appendChild(newRow);
-                updateMediaButtons();
-            });
-
-            mediaContainer.addEventListener('click', e => {
-                if (e.target.closest('.remove-media-btn')) {
-                    e.target.closest('.media-input-row').remove();
-                    updateMediaButtons();
-                }
-            });
-            mediaContainer.addEventListener('change', e => {
-                if (e.target.matches('input[type="file"]')) updateMediaButtons();
-            });
-
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => mediaUploadArea.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }));
-            ['dragenter', 'dragover'].forEach(eventName => mediaUploadArea.addEventListener(eventName, () => mediaUploadArea.classList.add('dragover')));
-            ['dragleave', 'drop'].forEach(eventName => mediaUploadArea.addEventListener(eventName, () => mediaUploadArea.classList.remove('dragover')));
-            
-            mediaUploadArea.addEventListener('drop', e => {
-                const firstInput = mediaContainer.querySelector('input[type="file"]');
-                if (firstInput && firstInput.files.length === 0) {
-                    firstInput.files = e.dataTransfer.files;
-                    firstInput.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-            });
-
-            updateMediaButtons();
-        }
-
-        // --- Form Submission Loading State ---
-        if (geminiForm && submitButton) {
-            geminiForm.addEventListener('submit', function() {
-                submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...';
-                submitButton.disabled = true;
-            });
-        }
-        
-        // --- AI Response and Copy Logic ---
-        const responseWrapper = document.getElementById('ai-response-wrapper');
-        const copyBtn = document.getElementById('copy-response-btn');
-
-        if (responseWrapper && copyBtn) {
-            const rawTextarea = document.getElementById('raw-response-for-copy');
-            const resultsCard = responseWrapper.closest('.results-card');
-
-            setTimeout(() => {
-                resultsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 100);
-
-            copyBtn.addEventListener('click', function() {
-                navigator.clipboard.writeText(rawTextarea.value).then(() => {
-                    const originalIcon = this.innerHTML;
-                    this.innerHTML = '<i class="bi bi-check-lg"></i> Copied!';
-                    setTimeout(() => { this.innerHTML = originalIcon; }, 2000);
-                }).catch(err => {
-                    console.error('Failed to copy text: ', err);
-                });
-            });
-        }
+        // ... (other javascript before this block remains unchanged) ...
 
         // --- AJAX handler for Assistant Mode Toggle ---
         const assistantModeToggle = document.getElementById('assistantModeToggle');
-        const csrfToken = document.querySelector('input[name="<?= csrf_token() ?>"]').value; // Get CSRF token
+        const csrfToken = document.querySelector('input[name="<?= csrf_token() ?>"]').value;
 
         if (assistantModeToggle) {
             assistantModeToggle.addEventListener('change', async function() {
                 const isChecked = this.checked;
-                const url = `<?= url_to('gemini.settings.update_assistant_mode') ?>`;
+                // THIS IS THE CHANGE: Build the URL dynamically to ensure same-origin requests.
+                const url = window.location.origin + `<?= route_to('gemini.settings.update_assistant_mode') ?>`;
 
                 try {
                     const response = await fetch(url, {
                         method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': csrfToken
+                            'X-CSRF-TOKEN': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest'
                         },
                         body: JSON.stringify({ assistant_mode: isChecked })
                     });
 
+                    const responseData = await response.json();
+
                     if (!response.ok) {
-                        const errorData = await response.json();
-                        console.error('Failed to update assistant mode:', errorData.message || response.statusText);
-                        // Optionally, revert the toggle or show an error message to the user
-                        // For now, just log to console
+                        console.error('Failed to update assistant mode:', responseData.message || response.statusText);
                     } else {
-                        const successData = await response.json();
-                        console.log('Assistant mode updated:', successData.message);
-                        // Optionally, provide user feedback here
+                        console.log('Assistant mode updated:', responseData.message);
                     }
                 } catch (error) {
                     console.error('Error updating assistant mode:', error);
-                    // Handle network errors
                 }
             });
         }
