@@ -76,11 +76,10 @@ class GeminiService
     }
 
     /**
-     * Sends a request to the Gemini API to generate content based on text and media parts.
+     * Sends a request to the Gemini API with a retry mechanism for transient errors.
      *
      * @param array $parts An array of content parts (text and/or inlineData for files).
      * @return array An associative array with either a 'result' string and 'usage' data on success, or an 'error' string on failure.
-     * @throws \Exception If an error occurs during the API request processing.
      */
     public function generateContent(array $parts): array
     {
@@ -88,75 +87,80 @@ class GeminiService
             return ['error' => 'GEMINI_API_KEY not set in .env file.'];
         }
 
-        $generateContentApi = "generateContent"; // Changed to non-streaming endpoint
+        $generateContentApi = "generateContent";
+        $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$this->modelId}:{$generateContentApi}?key={$this->apiKey}";
 
         $requestPayload = [
-            "contents" => [
-                [
-                    "role" => "user",
-                    "parts" => $parts
-                ]
-            ],
-            "generationConfig" => [
-                "maxOutputTokens" => 65192,
-            ],
-            "tools" => [
-                [
-                    "googleSearch" => (object)[]
-                ]
-            ],
+            "contents" => [["role" => "user", "parts" => $parts]],
+            "generationConfig" => ["maxOutputTokens" => 8192], // Adjusted for flash model
         ];
 
-        $requestBody = json_encode($requestPayload);
-        $client = \Config\Services::curlrequest();
+        $maxRetries = 3;
+        $initialDelay = 1; // seconds
 
-        try {
-            // Added timeout and connect_timeout options
-            $response = $client->request('POST', "https://generativelanguage.googleapis.com/v1beta/models/{$this->modelId}:{$generateContentApi}?key={$this->apiKey}", [
-                'body' => $requestBody,
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                ],
-                'timeout' => 30, // 30 seconds timeout
-                'connect_timeout' => 10, // 10 seconds connect timeout
-            ]);
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            try {
+                $client = \Config\Services::curlrequest();
+                $response = $client->request('POST', $apiUrl, [
+                    'body' => json_encode($requestPayload),
+                    'headers' => ['Content-Type' => 'application/json'],
+                    'timeout' => 90, // Increased timeout to 90 seconds for large files
+                    'connect_timeout' => 15,
+                ]);
 
-            $responseBody = $response->getBody();
-            $statusCode = $response->getStatusCode();
-            
-            if ($statusCode !== 200) {
-                $errorData = json_decode($responseBody, true);
-                $errorMessage = $errorData['error']['message'] ?? 'Unknown API error';
-                log_message('error', "Gemini API Error: Status {$statusCode} - {$errorMessage} | Response: {$responseBody}");
-                return ['error' => $errorMessage];
-            }
+                $statusCode = $response->getStatusCode();
+                $responseBody = $response->getBody();
 
-            // Process non-streamed response
-            $responseData = json_decode($responseBody, true);
-
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                log_message('error', 'Gemini API Response JSON Decode Error: ' . json_last_error_msg() . ' | Response: ' . $responseBody);
-                return ['error' => 'Failed to decode API response.'];
-            }
-
-            $processedText = '';
-            if (isset($responseData['candidates'][0]['content']['parts'])) {
-                foreach ($responseData['candidates'][0]['content']['parts'] as $part) {
-                    $processedText .= $part['text'] ?? '';
+                // If the status is 503, it's a server error, so we should retry.
+                if ($statusCode === 503) {
+                    throw new \Exception("Service Unavailable (503) - Retrying...", 503);
                 }
+
+                // If the status is not 200, it's a client or other server error, fail immediately.
+                if ($statusCode !== 200) {
+                    $errorData = json_decode($responseBody, true);
+                    $errorMessage = $errorData['error']['message'] ?? 'Unknown API error';
+                    log_message('error', "Gemini API Error: Status {$statusCode} - {$errorMessage} | Response: {$responseBody}");
+                    return ['error' => $errorMessage];
+                }
+
+                $responseData = json_decode($responseBody, true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    log_message('error', 'Gemini API Response JSON Decode Error: ' . json_last_error_msg() . ' | Response: ' . $responseBody);
+                    return ['error' => 'Failed to decode API response.'];
+                }
+
+                $processedText = '';
+                if (isset($responseData['candidates'][0]['content']['parts'])) {
+                    foreach ($responseData['candidates'][0]['content']['parts'] as $part) {
+                        $processedText .= $part['text'] ?? '';
+                    }
+                }
+
+                $usageMetadata = $responseData['usageMetadata'] ?? null;
+
+                if (empty($processedText) && $usageMetadata === null) {
+                    return ['error' => 'Received an empty or invalid response from the AI.'];
+                }
+
+                // Success, return the result
+                return ['result' => $processedText, 'usage' => $usageMetadata];
+
+            } catch (\Exception $e) {
+                // LOG THE TECHNICAL ERROR for debugging
+                log_message('error', "Gemini API Request Attempt {$attempt} failed: " . $e->getMessage());
+
+                // If this was the last attempt, RETURN A USER-FRIENDLY ERROR to the UI
+                if ($attempt === $maxRetries) {
+                    return ['error' => 'The AI service is currently unavailable or the request timed out. Please try again in a few moments.'];
+                }
+
+                // Wait before the next attempt (exponential backoff)
+                sleep($initialDelay * pow(2, $attempt - 1));
             }
-
-            $usageMetadata = $responseData['usageMetadata'] ?? null;
-
-            if (empty($processedText) && $usageMetadata === null) {
-                return ['error' => 'Received an empty or invalid response from the AI.'];
-            }
-
-            return ['result' => $processedText, 'usage' => $usageMetadata];
-
-        } catch (\Exception $e) {
-            log_message('error', 'Gemini API Request Exception: ' . $e->getMessage());
-            return ['error' => 'An error occurred while processing your request: ' . $e->getMessage()];
         }
+        
+        // This should not be reached, but as a fallback
+        return ['error' => 'An unexpected error occurred after multiple retries.'];
     }
 }
