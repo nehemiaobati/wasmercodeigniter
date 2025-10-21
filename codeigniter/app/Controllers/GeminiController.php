@@ -10,6 +10,7 @@ use App\Models\PromptModel;
 use App\Models\UserModel;
 use App\Models\UserSettingsModel;
 use CodeIgniter\HTTP\RedirectResponse;
+use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\HTTP\Files\UploadedFile;
 use Parsedown;
 
@@ -57,12 +58,6 @@ class GeminiController extends BaseController
      * @var int
      */
     private const MAX_FILE_SIZE = 10 * 1024 * 1024;
-
-    /**
-     * Maximum total size for all uploaded files (50 MB).
-     * @var int
-     */
-    private const TOTAL_MAX_FILE_SIZE = 50 * 1024 * 1024;
 
     /**
      * USD to KSH conversion rate.
@@ -128,6 +123,93 @@ class GeminiController extends BaseController
     }
 
     /**
+     * Handles a single, asynchronous file upload and stores it temporarily in a user-specific directory.
+     *
+     * @return ResponseInterface A JSON response indicating success or failure.
+     */
+    public function uploadMedia(): ResponseInterface
+    {
+        $userId = (int) session()->get('userId');
+        if ($userId <= 0) {
+            return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Authentication required.']);
+        }
+
+        $validationRules = [
+            'file' => [
+                'label' => 'File',
+                'rules' => 'uploaded[file]'
+                    . '|max_size[file,' . (self::MAX_FILE_SIZE / 1024) . ']'
+                    . '|mime_in[file,' . implode(',', self::SUPPORTED_MIME_TYPES) . ']',
+            ],
+        ];
+
+        if (!$this->validate($validationRules)) {
+            return $this->response
+                ->setStatusCode(400)
+                ->setJSON(['status' => 'error', 'message' => $this->validator->getErrors()['file']]);
+        }
+
+        $file = $this->request->getFile('file');
+
+        if (!$file->isValid() || $file->hasMoved()) {
+            return $this->response
+                ->setStatusCode(400)
+                ->setJSON(['status' => 'error', 'message' => 'Invalid file upload.']);
+        }
+
+        $userTempPath = WRITEPATH . 'uploads/gemini_temp/' . $userId . '/';
+        if (!is_dir($userTempPath)) {
+            mkdir($userTempPath, 0777, true);
+        }
+
+        $fileName = $file->getRandomName();
+        $file->move($userTempPath, $fileName);
+
+        return $this->response
+            ->setStatusCode(200)
+            ->setJSON([
+                'status' => 'success',
+                'file_id' => $fileName,
+                'original_name' => $file->getClientName(),
+                'csrf_token' => csrf_hash(),
+            ]);
+    }
+
+    /**
+     * Deletes a single temporary file from the current user's temporary directory.
+     *
+     * @return ResponseInterface
+     */
+    public function deleteMedia(): ResponseInterface
+    {
+        $userId = (int) session()->get('userId');
+        if ($userId <= 0) {
+            return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Authentication required.']);
+        }
+
+        $fileId = $this->request->getPost('file_id');
+        if (empty($fileId)) {
+            return $this->response->setStatusCode(400)->setJSON(['status' => 'error', 'message' => 'File ID is missing.']);
+        }
+        
+        $sanitizedId = basename($fileId);
+        $filePath = WRITEPATH . 'uploads/gemini_temp/' . $userId . '/' . $sanitizedId;
+
+        if (file_exists($filePath) && is_file($filePath)) {
+            if (unlink($filePath)) {
+                return $this->response->setStatusCode(200)->setJSON([
+                    'status' => 'success', 
+                    'message' => 'File deleted.',
+                    'csrf_token' => csrf_hash(),
+                ]);
+            }
+            return $this->response->setStatusCode(500)->setJSON(['status' => 'error', 'message' => 'Could not delete the file.']);
+        }
+
+        return $this->response->setStatusCode(404)->setJSON(['status' => 'error', 'message' => 'File not found.']);
+    }
+
+    /**
      * Processes the user's prompt, generates content via Gemini API,
      * and handles the response.
      *
@@ -143,20 +225,20 @@ class GeminiController extends BaseController
             return redirect()->back()->withInput()->with('error', 'User not logged in or invalid user ID.');
         }
 
-        // --- Save Assistant Mode Setting ---
         $isAssistantMode = $this->request->getPost('assistant_mode') === '1';
         $this->userSettingsModel->where('user_id', $userId)->set(['assistant_mode_enabled' => $isAssistantMode])->update();
-        // --- End Save Setting ---
 
-        $inputText       = (string) $this->request->getPost('prompt');
+        $inputText = (string) $this->request->getPost('prompt');
+        $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
 
-        // 1. Prepare the prompt and context
+        // 1. Prepare context
         $contextData = $this->_prepareContext($userId, $inputText, $isAssistantMode);
         $finalPrompt = $contextData['finalPrompt'];
-
-        // 2. Handle file uploads
-        $uploadResult = $this->_handleFileUploads();
+        
+        // 2. Handle pre-uploaded files
+        $uploadResult = $this->_handlePreUploadedFiles($uploadedFileIds, $userId);
         if (isset($uploadResult['error'])) {
+            $this->_cleanupTempFiles($uploadedFileIds, $userId); // Clean up even on error
             return redirect()->back()->withInput()->with('error', $uploadResult['error']);
         }
         $parts = $uploadResult['parts'];
@@ -166,24 +248,29 @@ class GeminiController extends BaseController
         }
 
         if (empty($parts)) {
+            $this->_cleanupTempFiles($uploadedFileIds, $userId);
             return redirect()->back()->withInput()->with('error', 'Prompt or supported media is required.');
         }
 
-        // 3. Check user balance against estimated cost
+        // 3. Balance Check
         $balanceCheck = $this->_checkBalanceAgainstCost($user, $parts);
         if (isset($balanceCheck['error'])) {
+            $this->_cleanupTempFiles($uploadedFileIds, $userId);
             return redirect()->back()->withInput()->with('error', $balanceCheck['error']);
         }
 
-        // 4. Generate content via API
+        // 4. Generate content
         $apiResponse = $this->geminiService->generateContent($parts);
         $this->_logApiPayload($apiResponse);
+        
+        // 5. Cleanup files immediately after API call
+        $this->_cleanupTempFiles($uploadedFileIds, $userId);
 
         if (isset($apiResponse['error'])) {
             return redirect()->back()->withInput()->with('error', $apiResponse['error']);
         }
 
-        // 5. Process the API response and deduct cost
+        // 6. Process API response and deduct cost
         $this->_processApiResponse($user, $apiResponse, $isAssistantMode, $contextData);
 
         $parsedown  = new Parsedown();
@@ -228,42 +315,62 @@ class GeminiController extends BaseController
 
         return $contextData;
     }
-
+    
     /**
-     * Handles and validates file uploads from the request.
+     * Processes an array of pre-uploaded temporary file IDs from a user-specific directory.
      *
-     * @return array<string, mixed>
+     * @param array $fileIds An array of sanitized temporary file names.
+     * @param int $userId The ID of the current user.
+     * @return array<string, mixed> An array containing the API 'parts' or an 'error'.
      */
-    private function _handleFileUploads(): array
+    private function _handlePreUploadedFiles(array $fileIds, int $userId): array
     {
-        $uploadedFiles = $this->request->getFileMultiple('media') ?: [];
-        $totalFileSize = 0;
-        $parts         = [];
+        $parts = [];
+        $userTempPath = WRITEPATH . 'uploads/gemini_temp/' . $userId . '/';
 
-        foreach ($uploadedFiles as $file) {
-            if (! $file instanceof UploadedFile || ! $file->isValid()) {
-                continue;
+        foreach ($fileIds as $fileId) {
+            $sanitizedId = basename($fileId);
+            $filePath = $userTempPath . $sanitizedId;
+
+            if (!file_exists($filePath) || !is_file($filePath)) {
+                log_message('error', "User {$userId}'s temporary file not found: {$filePath}");
+                return ['error' => "An uploaded file could not be processed. Please try uploading again."];
             }
 
-            $mimeType = $file->getMimeType();
-            if (! in_array($mimeType, self::SUPPORTED_MIME_TYPES, true)) {
-                return ['error' => "Unsupported file type: {$mimeType}."];
+            $mimeType = mime_content_type($filePath);
+            if ($mimeType === false || !in_array($mimeType, self::SUPPORTED_MIME_TYPES, true)) {
+                return ['error' => "Unsupported file type detected for: " . esc($sanitizedId)];
             }
 
-            if ($file->getSize() > self::MAX_FILE_SIZE) {
-                return ['error' => 'A file exceeds the 10 MB size limit.'];
+            $fileContents = file_get_contents($filePath);
+            if ($fileContents === false) {
+                 return ['error' => "Could not read file: " . esc($sanitizedId)];
             }
-
-            $totalFileSize += $file->getSize();
-            if ($totalFileSize > self::TOTAL_MAX_FILE_SIZE) {
-                return ['error' => 'Total file size exceeds the 50 MB limit.'];
-            }
-
-            $base64Content = base64_encode(file_get_contents($file->getTempName()));
-            $parts[]       = ['inlineData' => ['mimeType' => $mimeType, 'data' => $base64Content]];
+            
+            $base64Content = base64_encode($fileContents);
+            $parts[] = ['inlineData' => ['mimeType' => $mimeType, 'data' => $base64Content]];
         }
 
         return ['parts' => $parts];
+    }
+    
+    /**
+     * Deletes temporary files from the specified user's directory.
+     *
+     * @param array $fileIds An array of sanitized temporary file names to delete.
+     * @param int $userId The ID of the current user.
+     * @return void
+     */
+    private function _cleanupTempFiles(array $fileIds, int $userId): void
+    {
+        $userTempPath = WRITEPATH . 'uploads/gemini_temp/' . $userId . '/';
+        foreach ($fileIds as $fileId) {
+            $sanitizedId = basename($fileId);
+            $filePath = $userTempPath . $sanitizedId;
+            if (file_exists($filePath) && is_file($filePath)) {
+                unlink($filePath);
+            }
+        }
     }
 
     /**
@@ -349,10 +456,10 @@ class GeminiController extends BaseController
             ];
         }
 
-        // Pricing for Gemini 2.5 Pro
-        $isTierOne = $inputTokens <= 200000;
-        $inputPricePerMillion  = $isTierOne ? 3.25 : 4.50;
-        $outputPricePerMillion = $isTierOne ? 12.00 : 17.00;
+        // Pricing for Gemini 1.5 Pro
+        $isTierOne = $inputTokens <= 128000;
+        $inputPricePerMillion  = $isTierOne ? 3.50 : 7.00;
+        $outputPricePerMillion = $isTierOne ? 10.50 : 21.00;
 
         $inputCostUSD  = ($inputTokens / 1000000) * $inputPricePerMillion;
         $outputCostUSD = ($outputTokens / 1000000) * $outputPricePerMillion;

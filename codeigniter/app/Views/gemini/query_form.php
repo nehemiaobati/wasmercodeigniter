@@ -51,17 +51,29 @@
         background-color: #e9ecef;
         border-color: var(--primary-color);
     }
-
-    .media-input-row {
+    
+    #file-progress-container .progress-item {
         display: flex;
         align-items: center;
-        gap: 0.75rem;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
         animation: fadeIn 0.3s ease-in-out;
     }
-
-    .media-input-row .form-control {
+    #file-progress-container .progress {
+        height: 10px;
         flex-grow: 1;
     }
+    #file-progress-container .file-name {
+        font-size: 0.9rem;
+        color: #6c757d;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 150px;
+    }
+     #file-progress-container .status-icon {
+        font-size: 1.2rem;
+     }
 
     /* Typing cursor animation */
     #ai-response-content.typing::after {
@@ -177,16 +189,10 @@
                         </div>
 
                         <div id="mediaUploadArea" class="mb-4">
-                            <p class="text-muted text-center mb-3"><i class="bi bi-paperclip"></i> Attach files (optional)</p>
-                            <div id="mediaInputContainer">
-                                <div class="mb-2 media-input-row">
-                                    <input type="file" class="form-control" name="media[]">
-                                    <button type="button" class="btn btn-outline-danger btn-sm remove-media-btn" style="display: none;"><i class="bi bi-x-lg"></i></button>
-                                </div>
-                            </div>
-                            <div class="text-center mt-3">
-                                <button type="button" id="addMediaBtn" class="btn btn-secondary btn-sm"><i class="bi bi-plus-circle"></i> Add File</button>
-                            </div>
+                            <input type="file" id="media-input-trigger" multiple class="d-none">
+                            <label for="media-input-trigger" class="btn btn-secondary w-100"><i class="bi bi-paperclip"></i> Attach Files or Drag & Drop</label>
+                            <div id="file-progress-container" class="mt-3"></div>
+                            <div id="uploaded-files-container"></div>
                         </div>
 
                         <div class="d-grid">
@@ -257,29 +263,146 @@
 <?= $this->section('scripts') ?>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // --- Main Form and Prompt Elements ---
         const geminiForm = document.getElementById('geminiForm');
         const mainPromptTextarea = document.getElementById('prompt');
         const submitButton = geminiForm.querySelector('button[type="submit"]');
+        let csrfToken = geminiForm.querySelector('input[name="<?= csrf_token() ?>"]').value;
+        const csrfInput = geminiForm.querySelector('input[name="<?= csrf_token() ?>"]');
+        const uploadUrl = '<?= url_to('gemini.upload_media') ?>';
+        const deleteUrl = '<?= url_to('gemini.delete_media') ?>';
 
-        // --- Saved Prompts Elements ---
+        // --- AJAX File Upload Logic ---
+        const mediaInput = document.getElementById('media-input-trigger');
+        const mediaUploadArea = document.getElementById('mediaUploadArea');
+        const progressContainer = document.getElementById('file-progress-container');
+        const uploadedFilesContainer = document.getElementById('uploaded-files-container');
+        
+        const handleFiles = (files) => {
+            [...files].forEach(uploadFile);
+        };
+
+        mediaInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+            e.target.value = ''; // Reset input to allow re-uploading the same file
+        });
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            mediaUploadArea.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); });
+        });
+        ['dragenter', 'dragover'].forEach(eventName => mediaUploadArea.addEventListener(eventName, () => mediaUploadArea.classList.add('dragover')));
+        ['dragleave', 'drop'].forEach(eventName => mediaUploadArea.addEventListener(eventName, () => mediaUploadArea.classList.remove('dragover')));
+        
+        mediaUploadArea.addEventListener('drop', e => handleFiles(e.dataTransfer.files));
+        
+        const uploadFile = (file) => {
+            const fileId = `file-${Math.random().toString(36).substr(2, 9)}`;
+            const progressItem = document.createElement('div');
+            progressItem.className = 'progress-item';
+            progressItem.id = fileId;
+            progressItem.innerHTML = `
+                <span class="file-name" title="${file.name}">${file.name}</span>
+                <div class="progress">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                </div>
+                <span class="status-icon text-muted"><i class="bi bi-hourglass-split"></i></span>
+            `;
+            progressContainer.appendChild(progressItem);
+
+            const xhr = new XMLHttpRequest();
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('<?= csrf_token() ?>', csrfToken);
+            
+            xhr.open('POST', uploadUrl, true);
+
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) {
+                    const percentComplete = (e.loaded / e.total) * 100;
+                    progressItem.querySelector('.progress-bar').style.width = `${percentComplete}%`;
+                }
+            };
+
+            xhr.onload = () => {
+                const progressBar = progressItem.querySelector('.progress-bar');
+                const statusIcon = progressItem.querySelector('.status-icon');
+                progressBar.classList.remove('progress-bar-striped', 'progress-bar-animated');
+
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    // Refresh CSRF token
+                    csrfToken = response.csrf_token;
+                    csrfInput.value = response.csrf_token;
+
+                    if (xhr.status === 200) {
+                        progressBar.classList.add('bg-success');
+                        statusIcon.innerHTML = `<button type="button" class="btn btn-sm btn-link text-danger p-0 remove-file-btn" data-file-id="${response.file_id}" data-ui-id="${fileId}"><i class="bi bi-x-circle-fill"></i></button>`;
+
+                        const hiddenInput = document.createElement('input');
+                        hiddenInput.type = 'hidden';
+                        hiddenInput.name = 'uploaded_media[]';
+                        hiddenInput.value = response.file_id;
+                        hiddenInput.id = `hidden-${fileId}`;
+                        uploadedFilesContainer.appendChild(hiddenInput);
+                    } else {
+                        progressBar.classList.add('bg-danger');
+                        statusIcon.innerHTML = `<i class="bi bi-x-circle-fill text-danger" title="${response.message || 'Upload failed'}"></i>`;
+                        console.error('Upload failed:', response.message);
+                    }
+                } catch (e) {
+                     progressBar.classList.add('bg-danger');
+                     statusIcon.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-danger" title="An unknown error occurred."></i>`;
+                     console.error('An unknown error occurred:', xhr.responseText);
+                }
+            };
+
+            xhr.onerror = () => {
+                const progressBar = progressItem.querySelector('.progress-bar');
+                progressBar.classList.remove('progress-bar-striped', 'progress-bar-animated');
+                progressBar.classList.add('bg-danger');
+                progressItem.querySelector('.status-icon').innerHTML = `<i class="bi bi-exclamation-triangle-fill text-danger" title="Network error."></i>`;
+                console.error('Network error during upload.');
+            };
+
+            xhr.send(formData);
+        };
+        
+        // Event delegation for remove buttons
+        progressContainer.addEventListener('click', function(e) {
+            const removeBtn = e.target.closest('.remove-file-btn');
+            if (removeBtn) {
+                const fileToDelete = removeBtn.dataset.fileId;
+                const uiElementId = removeBtn.dataset.uiId;
+                
+                const formData = new FormData();
+                formData.append('file_id', fileToDelete);
+                formData.append('<?= csrf_token() ?>', csrfToken);
+
+                fetch(deleteUrl, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Refresh CSRF token after deletion
+                    csrfToken = data.csrf_token;
+                    csrfInput.value = data.csrf_token;
+
+                    if (data.status === 'success') {
+                        document.getElementById(uiElementId)?.remove();
+                        document.getElementById(`hidden-${uiElementId}`)?.remove();
+                    } else {
+                        alert('Could not remove file: ' + data.message);
+                    }
+                })
+                .catch(error => console.error('Error deleting file:', error));
+            }
+        });
+
+        // --- Saved Prompts Logic ---
         const savedPromptsSelect = document.getElementById('savedPrompts');
         const usePromptBtn = document.getElementById('usePromptBtn');
         const deletePromptBtn = document.getElementById('deletePromptBtn');
 
-        // --- Modal Elements ---
-        const savePromptModal = new bootstrap.Modal(document.getElementById('savePromptModal'));
-        const modalPromptTextarea = document.getElementById('modalPromptText');
-        
-        // --- Populate Save Modal ---
-        const savePromptTrigger = document.querySelector('[data-bs-target="#savePromptModal"]');
-        if (savePromptTrigger) {
-            savePromptTrigger.addEventListener('click', () => {
-                modalPromptTextarea.value = mainPromptTextarea.value;
-            });
-        }
-
-        // --- Saved Prompts Logic ---
         if (savedPromptsSelect) {
             let selectedPromptId = null;
 
@@ -317,58 +440,17 @@
                 });
             }
         }
-
-        // --- Media File Input Management ---
-        const mediaUploadArea = document.getElementById('mediaUploadArea');
-        const addMediaBtn = document.getElementById('addMediaBtn');
-        const mediaContainer = document.getElementById('mediaInputContainer');
-        const maxMediaFiles = 5;
-
-        const updateMediaButtons = () => {
-            const mediaRows = mediaContainer.querySelectorAll('.media-input-row');
-            addMediaBtn.style.display = mediaRows.length < maxMediaFiles ? 'inline-block' : 'none';
-
-            mediaRows.forEach((row, index) => {
-                const removeBtn = row.querySelector('.remove-media-btn');
-                removeBtn.style.display = (mediaRows.length > 1 || row.querySelector('input').files.length > 0) ? 'inline-block' : 'none';
+        
+        // --- Modal Logic ---
+        const savePromptModal = new bootstrap.Modal(document.getElementById('savePromptModal'));
+        const modalPromptTextarea = document.getElementById('modalPromptText');
+        const savePromptTrigger = document.querySelector('[data-bs-target="#savePromptModal"]');
+        if (savePromptTrigger) {
+            savePromptTrigger.addEventListener('click', () => {
+                modalPromptTextarea.value = mainPromptTextarea.value;
             });
-        };
-
-        if (addMediaBtn && mediaContainer) {
-            addMediaBtn.addEventListener('click', function() {
-                if (mediaContainer.querySelectorAll('.media-input-row').length >= maxMediaFiles) return;
-                const newRow = document.createElement('div');
-                newRow.className = 'mb-2 media-input-row';
-                newRow.innerHTML = `<input type="file" class="form-control" name="media[]"><button type="button" class="btn btn-outline-danger btn-sm remove-media-btn"><i class="bi bi-x-lg"></i></button>`;
-                mediaContainer.appendChild(newRow);
-                updateMediaButtons();
-            });
-
-            mediaContainer.addEventListener('click', e => {
-                if (e.target.closest('.remove-media-btn')) {
-                    e.target.closest('.media-input-row').remove();
-                    updateMediaButtons();
-                }
-            });
-            mediaContainer.addEventListener('change', e => {
-                if (e.target.matches('input[type="file"]')) updateMediaButtons();
-            });
-
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => mediaUploadArea.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }));
-            ['dragenter', 'dragover'].forEach(eventName => mediaUploadArea.addEventListener(eventName, () => mediaUploadArea.classList.add('dragover')));
-            ['dragleave', 'drop'].forEach(eventName => mediaUploadArea.addEventListener(eventName, () => mediaUploadArea.classList.remove('dragover')));
-            
-            mediaUploadArea.addEventListener('drop', e => {
-                const firstInput = mediaContainer.querySelector('input[type="file"]');
-                if (firstInput && firstInput.files.length === 0) {
-                    firstInput.files = e.dataTransfer.files;
-                    firstInput.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-            });
-
-            updateMediaButtons();
         }
-
+        
         // --- Form Submission Loading State ---
         if (geminiForm && submitButton) {
             geminiForm.addEventListener('submit', function() {
