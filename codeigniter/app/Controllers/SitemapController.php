@@ -8,61 +8,48 @@ use CodeIgniter\HTTP\ResponseInterface;
 class SitemapController extends BaseController
 {
     /**
-     * Generates the sitemap.xml file.
+     * Generates the sitemap.xml file by rendering a view.
      */
     public function index(): ResponseInterface
     {
-        // Array of public-facing, static pages
+        // Array of public-facing, static pages by their route name
         $pages = [
-            'welcome',
-            'register',
-            'login',
-            'contact.form',
-            'portfolio.index',
-            'terms',
-            'privacy',
+            'welcome', 'register', 'login', 'contact.form',
+            'portfolio.index', 'terms', 'privacy',
         ];
 
-        $xmlContent = '<?xml version="1.0" encoding="UTF-8" ?>' . "\n";
-        $xmlContent .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
-
-        $urlsAdded = false; // Flag to check if any URLs were actually added
+        $urls = [];
+        $today = date('Y-m-d');
 
         foreach ($pages as $page) {
-            $generatedUrl = url_to($page); // Get the URL
+            $generatedUrl = url_to($page);
 
             if ($generatedUrl) {
-                $urlsAdded = true; // Mark that at least one URL was added
-                $xmlContent .= '    <url>' . "\n";
-                // Use default esc() instead of esc($url, 'xml')
-                $xmlContent .= '        <loc>' . esc($generatedUrl) . '</loc>' . "\n";
-                $xmlContent .= '        <lastmod>' . date('Y-m-d') . '</lastmod>' . "\n";
-                $xmlContent .= '        <changefreq>monthly</changefreq>' . "\n";
-                $xmlContent .= '        <priority>' . (($page === 'welcome') ? '1.0' : '0.8') . '</priority>' . "\n";
-                $xmlContent .= '    </url>' . "\n";
+                $urls[] = [
+                    'loc'        => esc($generatedUrl, 'url'),
+                    'lastmod'    => $today,
+                    'changefreq' => 'monthly',
+                    'priority'   => ($page === 'welcome') ? '1.0' : '0.8',
+                ];
             } else {
                 log_message('error', 'Sitemap: Failed to generate URL for route - ' . $page);
             }
         }
 
-        $xmlContent .= '</urlset>';
-
-        // If no valid URLs were generated, return an error response
-        if (!$urlsAdded) {
-            $response = service('response');
-            $response->setBody('Error generating sitemap: No valid URLs could be generated for the defined routes.');
-            $response->setStatusCode(500); // Internal Server Error
-            $response->setHeader('Content-Type', 'text/plain');
-            return $response;
+        // If no URLs were generated, return an error
+        if (empty($urls)) {
+            $this->response->setStatusCode(500);
+            $this->response->setBody('Error: No valid URLs could be generated for the sitemap.');
+            return $this->response;
         }
 
-        // Create a new response object
-        $response = service('response');
+        // Set the correct Content-Type header for an XML sitemap
+        $this->response->setHeader('Content-Type', 'application/xml');
 
-        // Set the response body and content type
-        $response->setBody($xmlContent);
-        $response->setHeader('Content-Type', 'application/xml');
+        // Pass the array of URLs to the sitemap view and set it as the response body
+        $viewContent = view('sitemap/index', ['urls' => $urls]);
+        $this->response->setBody($viewContent);
 
-        return $response;
+        return $this->response;
     }
 }

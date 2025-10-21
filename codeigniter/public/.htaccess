@@ -18,7 +18,7 @@ Options -Indexes
 
 	# ADD THIS RULE FOR SITEMAP.XML
 	# ----------------------------------------------------------------------
-	RewriteRule ^sitemap\.xml$ /index.php [L]
+	#RewriteRule ^sitemap\.xml$ /index.php [L]
 	# ----------------------------------------------------------------------
 
 	# Redirect Trailing Slashes...
