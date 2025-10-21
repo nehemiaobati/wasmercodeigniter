@@ -268,8 +268,10 @@
         const submitButton = geminiForm.querySelector('button[type="submit"]');
         let csrfToken = geminiForm.querySelector('input[name="<?= csrf_token() ?>"]').value;
         const csrfInput = geminiForm.querySelector('input[name="<?= csrf_token() ?>"]');
-        const uploadUrl = '<?= url_to('gemini.upload_media') ?>';
-        const deleteUrl = '<?= url_to('gemini.delete_media') ?>';
+        
+        // Dynamically create URLs based on the browser's current origin
+        const uploadUrl = `${window.location.origin}/gemini/upload-media`;
+        const deleteUrl = `${window.location.origin}/gemini/delete-media`;
 
         // --- AJAX File Upload Logic ---
         const mediaInput = document.getElementById('media-input-trigger');
