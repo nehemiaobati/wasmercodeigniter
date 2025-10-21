@@ -136,7 +136,7 @@ class CryptoController extends BaseController
             if (empty($errors)) {
                 $costInKSH = (self::CRYPTO_QUERY_COST_USD * self::USD_TO_KSH_RATE);
                 $deductionAmount = max(self::MINIMUM_BALANCE_KSH, ceil($costInKSH * 100) / 100);
-                $costMessage = "KSH " . number_format($deductionAmount, 2) . " deducted for your AI query.";
+                $costMessage = "KSH " . number_format($deductionAmount, 2) . " deducted for your query.";
 
                 if ($userId > 0) {
                     if ($this->userModel->deductBalance($userId, (string)$deductionAmount)) {
