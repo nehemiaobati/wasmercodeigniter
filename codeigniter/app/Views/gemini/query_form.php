@@ -127,7 +127,7 @@
 
     <form id="geminiForm" action="<?= url_to('gemini.generate') ?>" method="post" enctype="multipart/form-data">
         <?= csrf_field() ?>
-        <div class="row g-4 justify-content-center">
+        <div class="row g-4">
             <!-- Left Column: Settings & Config -->
             <div class="col-lg-4">
                 <div class="card settings-card">
