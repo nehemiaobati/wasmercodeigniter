@@ -122,30 +122,40 @@ class CryptoService
      */
     public function getLtcTransactions($address, $limit)
     {
-        // Step 1: Get the list of transaction hashes
+        // Step 1: Get the list of transaction hashes (remains the same)
         $hashes_url = "https://api.blockchair.com/litecoin/dashboards/address/" . urlencode($address) . "?limit=" . $limit;
         $hashes_data = $this->makeApiRequest($hashes_url);
 
-        if (isset($hashes_data['data']) && !empty($hashes_data['data'])) {
-            $address_data = reset($hashes_data['data']); // Get the first element, regardless of its key
-            if (isset($address_data['transactions'])) {
-                $tx_hashes = $address_data['transactions'];
-                $transactions = [];
-            } else {
-                return ['error' => 'Could not retrieve LTC transaction list for the specified address.'];
-            }
-        } else {
+        if (!isset($hashes_data['data'][$address]['transactions'])) {
             return ['error' => 'Could not retrieve LTC transaction list for the specified address.'];
         }
 
-        // Step 2: Loop through hashes and get details for each one
-        foreach ($tx_hashes as $hash) {
-            $details_url = "https://api.blockchair.com/litecoin/dashboards/transaction/" . $hash;
-            $details_data = $this->makeApiRequest($details_url);
+        $tx_hashes = $hashes_data['data'][$address]['transactions'];
 
-            if (!isset($details_data['data'][$hash]['transaction'])) {
-                log_message('warning', "Could not fetch details for LTC transaction hash: {$hash}");
-                continue; // Skip to the next transaction if details can't be fetched
+        if (empty($tx_hashes)) {
+            return [
+                'asset' => 'Litecoin (LTC)',
+                'address' => $address,
+                'query' => 'Last 0 Detailed Transactions',
+                'transactions' => []
+            ];
+        }
+
+        // Step 2: Fetch ALL transaction details in a single batch call
+        $hashes_string = implode(',', $tx_hashes);
+        $details_url = "https://api.blockchair.com/litecoin/dashboards/transactions/" . urlencode($hashes_string);
+        $details_data = $this->makeApiRequest($details_url);
+
+        if (!isset($details_data['data'])) {
+            return ['error' => 'Failed to retrieve details for LTC transactions.'];
+        }
+
+        $transactions = [];
+        // The API returns data in the same order as the requested hashes
+        foreach ($tx_hashes as $hash) {
+            if (!isset($details_data['data'][$hash])) {
+                log_message('warning', "Details for LTC transaction hash not found in batch response: {$hash}");
+                continue;
             }
 
             $tx = $details_data['data'][$hash];
@@ -169,7 +179,7 @@ class CryptoService
                 'time' => $tx['transaction']['time'] . " UTC",
                 'block_id' => $tx['transaction']['block_id'],
                 'fee' => rtrim(rtrim(sprintf('%.8f', ($tx['transaction']['fee'] / 100000000)), '0'), '.') . ' LTC',
-                'sending_addresses' => $sending_addresses,
+                'sending_addresses' => array_unique($sending_addresses),
                 'receiving_addresses' => $receiving_addresses
             ];
         }
