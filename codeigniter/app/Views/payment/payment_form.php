@@ -29,7 +29,7 @@
             <div class="text-center mb-5">
                 <i class="bi bi-credit-card-2-front-fill text-primary" style="font-size: 3rem;"></i>
                 <h2 class="fw-bold mt-3">Securely Top Up Your Account</h2>
-                <p class="text-muted">Payments are processed by Paystack. Supports <strong>M-Pesa, Airtel</strong>, and all major cards.</p>
+                <p class="text-muted">Payments are processed by Paystack. Supports <span style="color: green;">M-Pesa</span>, <span style="color: red;">Airtel</span>, and all major cards.</p>
             </div>
 
             <?= form_open(url_to('payment.initiate')) ?>

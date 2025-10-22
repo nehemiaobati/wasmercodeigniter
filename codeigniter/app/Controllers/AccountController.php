@@ -33,6 +33,9 @@ class AccountController extends BaseController
             return redirect()->to(url_to('login'));
         }
 
+        // Load the form helper to make form_open() available in views.
+        helper('form');
+
         $user = $userModel->find($userId);
 
         // Pass user data to the view.

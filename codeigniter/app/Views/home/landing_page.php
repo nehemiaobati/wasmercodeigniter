@@ -174,7 +174,7 @@
 <section class="hero-section">
     <div class="container hero-content">
         <h1 class="display-3 mb-3">Harness AI & Crypto Data. Unleash Your Ideas.</h1>
-        <p class="lead">Query crypto wallets and chat with a powerful AI assistant. Top up your account easily with <strong>M-Pesa</strong> or Card. Simple, pay-as-you-go pricing.</p>
+        <p class="lead">Query crypto wallets and chat with a powerful AI assistant. Top up your account easily with <span style="color: green;">M-Pesa</span>, <span style="color: red;">Airtel Money</span>, or Card. Simple, pay-as-you-go pricing.</p>
         <div class="d-grid gap-2 d-sm-flex justify-content-sm-center hero-buttons">
             <a href="<?= url_to('register') ?>" class="btn btn-primary btn-lg px-4 gap-3 fw-bold">Create Your Free Account</a>
             <a href="#features" class="btn btn-outline-light btn-lg px-4">Explore Features</a>
@@ -211,7 +211,7 @@
                         <div class="card-body p-4">
                             <div class="feature-icon"><i class="bi bi-shield-check"></i></div>
                             <h3 class="fs-4 fw-bold">Pay Your Way. Pay-As-You-Go.</h3>
-                            <p class="text-muted">Top up securely with M-Pesa, Airtel Money, or Card. You only pay for what you use—no subscriptions, no hidden fees.</p>
+                            <p class="text-muted">Top up securely with <span style="color: green;">M-Pesa</span>, <span style="color: red;">Airtel Money</span>, or Card. You only pay for what you use—no subscriptions, no hidden fees.</p>
                         </div>
                     </div>
                 </div>
@@ -248,14 +248,14 @@
                     <div class="process-step">
                         <div class="process-number">2</div>
                         <div>
-                            <h5 class="fw-bold">Proposal &amp; Planning</h5>
+                            <h5 class="fw-bold">Proposal & Planning</h5>
                             <p class="text-muted">You receive a detailed project proposal, including timeline, deliverables, and a transparent quote.</p>
                         </div>
                     </div>
                     <div class="process-step">
                         <div class="process-number">3</div>
                         <div>
-                            <h5 class="fw-bold">Development &amp; Launch</h5>
+                            <h5 class="fw-bold">Development & Launch</h5>
                             <p class="text-muted">We build your application with clean, efficient code and deploy it to a secure, scalable server environment.</p>
                         </div>
                     </div>
