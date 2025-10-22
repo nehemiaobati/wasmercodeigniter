@@ -173,10 +173,10 @@
 <!-- Hero Section -->
 <section class="hero-section">
     <div class="container hero-content">
-        <h1 class="display-3 mb-3"><?= esc($heroTitle ?? 'Unlock the Power of Digital Assets') ?></h1>
-        <p class="lead"><?= esc($heroSubtitle ?? 'Your one-stop solution for real-time cryptocurrency data and cutting-edge AI insights. Seamless, fast, and reliable.') ?></p>
+        <h1 class="display-3 mb-3">Harness AI & Crypto Data. Unleash Your Ideas.</h1>
+        <p class="lead">Query crypto wallets and chat with a powerful AI assistant. Top up your account easily with <strong>M-Pesa</strong> or Card. Simple, pay-as-you-go pricing.</p>
         <div class="d-grid gap-2 d-sm-flex justify-content-sm-center hero-buttons">
-            <a href="<?= url_to('register') ?>" class="btn btn-primary btn-lg px-4 gap-3 fw-bold">Start for Free</a>
+            <a href="<?= url_to('register') ?>" class="btn btn-primary btn-lg px-4 gap-3 fw-bold">Create Your Free Account</a>
             <a href="#features" class="btn btn-outline-light btn-lg px-4">Explore Features</a>
         </div>
     </div>
@@ -192,8 +192,8 @@
                     <div class="card h-100 shadow-sm feature-card">
                         <div class="card-body p-4">
                             <div class="feature-icon"><i class="bi bi-robot"></i></div>
-                            <h3 class="fs-4 fw-bold">Generative AI with Gemini</h3>
-                            <p class="text-muted">Leverage Google's powerful Gemini API. Generate creative text, analyze data, or interact with a state-of-the-art AI, all within our platform.</p>
+                            <h3 class="fs-4 fw-bold">Your Creative AI Co-Pilot</h3>
+                            <p class="text-muted">From writing marketing copy to analyzing documents, our AI assistant, powered by Google's Gemini, helps you work smarter.</p>
                         </div>
                     </div>
                 </div>
@@ -201,8 +201,8 @@
                     <div class="card h-100 shadow-sm feature-card">
                         <div class="card-body p-4">
                             <div class="feature-icon"><i class="bi bi-search"></i></div>
-                            <h3 class="fs-4 fw-bold">Real-Time Crypto Data</h3>
-                            <p class="text-muted">Instantly query Bitcoin and Litecoin addresses for balance and transaction history. Get accurate, up-to-the-minute data directly from the blockchain.</p>
+                            <h3 class="fs-4 fw-bold">Instant Blockchain Insights</h3>
+                            <p class="text-muted">Ditch the block explorers. Get real-time balance and transaction history for any Bitcoin or Litecoin address with a single click.</p>
                         </div>
                     </div>
                 </div>
@@ -210,8 +210,8 @@
                     <div class="card h-100 shadow-sm feature-card">
                         <div class="card-body p-4">
                             <div class="feature-icon"><i class="bi bi-shield-check"></i></div>
-                            <h3 class="fs-4 fw-bold">Simple & Secure Payments</h3>
-                            <p class="text-muted">Easily top up your account balance using our secure payment system. A pay-per-query model means you only pay for what you use.</p>
+                            <h3 class="fs-4 fw-bold">Pay Your Way. Pay-As-You-Go.</h3>
+                            <p class="text-muted">Top up securely with M-Pesa, Airtel Money, or Card. You only pay for what you use—no subscriptions, no hidden fees.</p>
                         </div>
                     </div>
                 </div>
@@ -276,7 +276,7 @@
                     <div class="step-item">
                         <div class="step-number">1</div>
                         <h4 class="fw-bold">Create Account</h4>
-                        <p class="text-muted">Sign up in seconds. All you need is a username and email to get started.</p>
+                        <p class="text-muted">Sign up in seconds. We'll gift you <strong>Ksh. 30</strong> in starter credits to begin exploring immediately.</p>
                     </div>
                 </div>
                 <div class="col-md-4">
@@ -302,8 +302,8 @@
         <div class="fade-in-section">
             <div class="row justify-content-center">
                 <div class="col-lg-8">
-                    <h2 class="display-5 fw-bold mb-3">Ready to Dive In?</h2>
-                    <p class="lead mb-4">Join now and get instant access to powerful data tools. Your next big discovery is just a query away.</p>
+                    <h2 class="display-5 fw-bold mb-3">Ready to Build, Create, and Discover?</h2>
+                    <p class="lead mb-4">Your account is free. Your first few queries are on us. Let's get started.</p>
                     <a href="<?= url_to('register') ?>" class="btn btn-primary btn-lg px-4 fw-bold">Create Your Account</a>
                 </div>
             </div>

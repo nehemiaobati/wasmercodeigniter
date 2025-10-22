@@ -170,13 +170,13 @@
         <div class="col-lg-5">
             <div class="row g-4">
                 <!-- Low Balance Alert -->
-                <?php if (isset($balance) && (float)$balance < 10): ?>
+                <?php if (isset($balance) && (float)$balance < 50): ?>
                 <div class="col-12">
                     <div class="low-balance-alert d-flex align-items-center">
                         <i class="bi bi-exclamation-triangle-fill fs-3 me-3"></i>
                         <div>
-                            <h5 class="fw-bold">Low Balance</h5>
-                            Your balance is running low. Add funds to ensure uninterrupted access to services.
+                            <h5 class="fw-bold">Your Balance is Low!</h5>
+                            Don't get caught without credits. Top up now to keep your creative flow going.
                         </div>
                     </div>
                 </div>
@@ -186,9 +186,9 @@
                 <div class="col-12">
                     <div class="dashboard-card action-card">
                         <div class="icon"><i class="bi bi-robot"></i></div>
-                        <h4>Gemini AI</h4>
-                        <p class="text-muted">Engage with Google's advanced AI. Generate content, analyze information, and more.</p>
-                        <a href="<?= url_to('gemini.index') ?>" class="btn btn-outline-primary">Access AI</a>
+                        <h4>AI Studio</h4>
+                        <p class="text-muted">Chat with your AI assistant, generate text, or analyze documents. Your creative co-pilot awaits.</p>
+                        <a href="<?= url_to('gemini.index') ?>" class="btn btn-outline-primary">Launch AI Studio</a>
                     </div>
                 </div>
 
@@ -196,9 +196,9 @@
                 <div class="col-12">
                     <div class="dashboard-card action-card">
                         <div class="icon"><i class="bi bi-search"></i></div>
-                        <h4>Crypto Data</h4>
-                        <p class="text-muted">Query real-time balance and transaction data for Bitcoin and Litecoin addresses.</p>
-                        <a href="<?= url_to('crypto.index') ?>" class="btn btn-outline-primary">Access Service</a>
+                        <h4>CryptoQuery</h4>
+                        <p class="text-muted">Look up any BTC or LTC wallet in seconds. Get the latest balance and transaction data instantly.</p>
+                        <a href="<?= url_to('crypto.index') ?>" class="btn btn-outline-primary">Run a Query</a>
                     </div>
                 </div>
             </div>

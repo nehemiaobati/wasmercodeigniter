@@ -67,8 +67,8 @@
                     <div class="col-lg-6 d-none d-lg-block auth-illustration">
                         <div class="illustration-content text-center">
                              <i class="bi bi-box-arrow-in-right" style="font-size: 4rem; margin-bottom: 1rem;"></i>
-                            <h4>Welcome Back!</h4>
-                            <p>Enter your credentials to access your dashboard and our powerful suite of tools.</p>
+                            <h4>Let's Get Back to It!</h4>
+                            <p>Your AI assistant and crypto data dashboard are waiting. Log in to continue your work.</p>
                         </div>
                     </div>
                     <div class="col-lg-6">

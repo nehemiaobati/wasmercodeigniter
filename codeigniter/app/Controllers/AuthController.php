@@ -231,7 +231,7 @@ class AuthController extends BaseController
         $data = [
             'pageTitle' => 'Forgot Password | Afrikenkid',
             'metaDescription' => 'Reset your Afrikenkid account password. Enter your email to receive a password reset link.',
-            'canonicalUrl' => url_to('auth.forgotPasswordForm'), // Added this line
+            'canonicalUrl' => url_to('auth.forgot_password'), // Added this line
         ];
         return view('auth/forgot_password', $data);
     }

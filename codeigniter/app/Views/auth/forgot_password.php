@@ -28,7 +28,7 @@
             <div class="text-center mb-4">
                 <i class="bi bi-key-fill text-primary" style="font-size: 3rem;"></i>
                 <h3 class="fw-bold mt-3">Forgot Your Password?</h3>
-                <p class="text-muted">No problem. Enter your email address below, and we'll send you a link to reset it.</p>
+                <p class="text-muted">No problem. Enter your email, and we'll send a secure link to reset it.</p>
             </div>
 
             <form action="<?= url_to('auth.send_reset_link') ?>" method="post">

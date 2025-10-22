@@ -36,7 +36,8 @@
         <div class="col-lg-8">
             <div class="card query-card">
                 <div class="card-body p-4 p-md-5">
-                    <h2 class="card-title fw-bold mb-4 text-center"><i class="bi bi-search"></i> Crypto Data Query</h2>
+                    <h2 class="card-title fw-bold mb-1 text-center"><i class="bi bi-search"></i> CryptoQuery</h2>
+                    <p class="text-center text-muted mb-4">Get instant, on-chain data for Bitcoin and Litecoin addresses.</p>
                     <form id="cryptoQueryForm" action="<?= url_to('crypto.query') ?>" method="post">
                         <?= csrf_field() ?>
                         <div class="form-floating mb-3">
@@ -56,7 +57,7 @@
                             <label for="query_type">Query Type</label>
                         </div>
                         <div class="form-floating mb-3">
-                            <input type="text" class="form-control" id="address" name="address" placeholder="Wallet Address" value="<?= old('address') ?>" required>
+                            <input type="text" class="form-control" id="address" name="address" placeholder="Enter a valid BTC or LTC wallet address..." value="<?= old('address') ?>" required>
                             <label for="address">Wallet Address</label>
                         </div>
                         <div class="form-floating mb-4" id="limit-field" style="display: <?= old('query_type') == 'tx' ? 'block' : 'none' ?>;">
@@ -64,7 +65,7 @@
                             <label for="limit">Number of Transactions (max 50)</label>
                         </div>
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg fw-bold"><i class="bi bi-search"></i> Run Query</button>
+                            <button type="submit" class="btn btn-primary btn-lg fw-bold"><i class="bi bi-search"></i> Get Data</button>
                         </div>
                     </form>
                 </div>
@@ -75,7 +76,7 @@
         <div class="col-lg-9">
             <div class="card results-card mt-4">
                 <div class="card-body p-4 p-md-5">
-                    <h3 class="fw-bold mb-4">Query Result</h3>
+                    <h3 class="fw-bold mb-4">Query Results</h3>
                     <div class="list-group list-group-flush mb-4">
                         <div class="list-group-item d-flex justify-content-between align-items-center px-0"><strong>Asset:</strong> <span><?= esc($result['asset'] ?? 'N/A') ?></span></div>
                         <div class="list-group-item d-flex justify-content-between align-items-center px-0"><strong>Address:</strong> <span class="text-muted text-truncate"><?= esc($result['address'] ?? 'N/A') ?></span></div>

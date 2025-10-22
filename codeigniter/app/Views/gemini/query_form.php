@@ -133,8 +133,8 @@
 <?= $this->section('content') ?>
 <div class="container my-5">
     <div class="text-center mb-5">
-        <h1 class="fw-bold"><i class="bi bi-stars text-primary"></i> Gemini AI</h1>
-        <p class="text-muted lead">Craft your prompts, attach media, and generate content with assistant-level context.</p>
+        <h1 class="fw-bold"><i class="bi bi-stars text-primary"></i> AI Studio</h1>
+        <p class="text-muted lead">This is your creative canvas. Chat, analyze, or generate anything you can imagine.</p>
     </div>
 
     <form id="geminiForm" action="<?= url_to('gemini.generate') ?>" method="post" enctype="multipart/form-data">
@@ -148,10 +148,10 @@
                             <i class="bi bi-gear-fill"></i> Settings
                         </h4>
                         <div class="form-check form-switch fs-5 p-0 d-flex justify-content-between align-items-center">
-                            <label class="form-check-label" for="assistantModeToggle">Assistant Mode</label>
+                            <label class="form-check-label" for="assistantModeToggle">Conversational Memory</label>
                             <input class="form-check-input" type="checkbox" role="switch" id="assistantModeToggle" name="assistant_mode" value="1" <?= old('assistant_mode', $assistant_mode_enabled ? '1' : '0') === '1' ? 'checked' : '' ?>>
                         </div>
-                        <small class="text-muted d-block mt-1">Enables memory and context for conversational queries.</small>
+                        <small class="text-muted d-block mt-1">Turn on to let the AI remember your previous conversations. Great for follow-up questions and multi-step tasks.</small>
                         
                         <?php if (!empty($prompts)): ?>
                         <div class="saved-prompts-block flex-grow-1">
@@ -179,7 +179,7 @@
                 <div class="card query-card">
                     <div class="card-body p-4 p-md-5">
                         <div class="form-floating mb-2">
-                            <textarea id="prompt" name="prompt" class="form-control" placeholder="Enter your prompt" style="height: 150px" required><?= old('prompt') ?></textarea>
+                            <textarea id="prompt" name="prompt" class="form-control" placeholder="e.g., &quot;Write a marketing email for a new coffee shop in Nairobi...&quot;" style="height: 150px" required><?= old('prompt') ?></textarea>
                             <label for="prompt">Your Prompt</label>
                         </div>
                         <div class="d-flex justify-content-end mb-4">
@@ -196,7 +196,7 @@
                         </div>
 
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg fw-bold"><i class="bi bi-robot"></i> Generate Content</button>
+                            <button type="submit" class="btn btn-primary btn-lg fw-bold"><i class="bi bi-sparkles"></i> Generate</button>
                         </div>
                     </div>
                 </div>
