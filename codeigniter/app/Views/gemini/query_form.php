@@ -22,6 +22,31 @@
         word-wrap: break-word;
         border: 1px solid #dee2e6;
         min-height: 100px; /* Ensure pre has height for the cursor */
+        padding-top: 3rem; /* Make space for copy button */
+    }
+    
+    .code-block-wrapper {
+        position: relative;
+    }
+
+    .copy-code-btn {
+        position: absolute;
+        top: 0.75rem;
+        right: 0.75rem;
+        z-index: 10;
+        padding: 0.25rem 0.6rem;
+        font-size: 0.75rem;
+        color: #fff;
+        background-color: #6c757d;
+        border: none;
+        border-radius: 0.25rem;
+        cursor: pointer;
+        opacity: 0;
+        transition: opacity 0.2s ease-in-out;
+    }
+
+    .code-block-wrapper:hover .copy-code-btn {
+        opacity: 1;
     }
 
     /* Settings Card specific styles */
@@ -120,14 +145,6 @@
     }
     .ai-response-html pre code { background-color: transparent; padding: 0; font-size: inherit; }
 </style>
-
-    <!-- ADD THIS LINE TO LOAD THE HIGHLIGHT.JS LIBRARY -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-
-    <!-- This line (which you already have) can now run successfully -->
-    <script>hljs.highlightAll();</script> 
-    
-    <?= $this->renderSection('scripts') ?>
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
@@ -216,7 +233,7 @@
                         <h3 class="fw-bold mb-4 d-flex justify-content-between align-items-center">
                             Studio Output
                             <button id="copy-response-btn" class="btn btn-sm btn-outline-secondary">
-                                <i class="bi bi-clipboard"></i> Copy
+                                <i class="bi bi-clipboard"></i> Copy Full Response
                             </button>
                         </h3>
                         <div id="ai-response-wrapper" class="ai-response-html">
@@ -261,6 +278,7 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const geminiForm = document.getElementById('geminiForm');
@@ -473,6 +491,7 @@
                 resultsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 100);
 
+            // Logic for main "Copy Full Response" button
             copyBtn.addEventListener('click', function() {
                 navigator.clipboard.writeText(rawTextarea.value).then(() => {
                     const originalIcon = this.innerHTML;
@@ -482,6 +501,40 @@
                     console.error('Failed to copy text: ', err);
                 });
             });
+
+            // --- New Code Snippet Copy Logic & Syntax Highlighting ---
+            const allPreTags = responseWrapper.querySelectorAll('pre');
+
+            allPreTags.forEach(pre => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'code-block-wrapper';
+                pre.parentNode.insertBefore(wrapper, pre);
+                wrapper.appendChild(pre);
+
+                const copyButton = document.createElement('button');
+                copyButton.className = 'copy-code-btn';
+                copyButton.innerHTML = '<i class="bi bi-clipboard"></i> Copy';
+
+                copyButton.addEventListener('click', () => {
+                    const codeElement = pre.querySelector('code');
+                    const codeToCopy = codeElement ? codeElement.innerText : pre.innerText;
+
+                    navigator.clipboard.writeText(codeToCopy).then(() => {
+                        copyButton.innerHTML = '<i class="bi bi-check-lg"></i> Copied!';
+                        setTimeout(() => {
+                            copyButton.innerHTML = '<i class="bi bi-clipboard"></i> Copy';
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Failed to copy code snippet: ', err);
+                        copyButton.innerText = 'Error';
+                    });
+                });
+                wrapper.appendChild(copyButton);
+            });
+
+            if (typeof hljs !== 'undefined') {
+                hljs.highlightAll();
+            }
         }
     });
 </script>

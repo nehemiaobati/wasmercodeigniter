@@ -174,7 +174,7 @@
 <section class="hero-section">
     <div class="container hero-content">
         <h1 class="display-3 mb-3">Harness AI & Crypto Data. Unleash Your Ideas.</h1>
-        <p class="lead">Query crypto wallets and chat with a powerful AI assistant. Top up your account easily with <span style="color: green;">M-Pesa</span>, <span style="color: red;">Airtel Money</span>, or Card. Simple, pay-as-you-go pricing.</p>
+        <p class="lead">Chat with a powerful AI assistant and Query crypto wallets. Top up your account easily with <span style="color: green;">M-Pesa</span>, <span style="color: red;">Airtel Money</span>, or Card. Simple, pay-as-you-go pricing.</p>
         <div class="d-grid gap-2 d-sm-flex justify-content-sm-center hero-buttons">
             <a href="<?= url_to('register') ?>" class="btn btn-primary btn-lg px-4 gap-3 fw-bold">Create Your Free Account</a>
             <a href="#features" class="btn btn-outline-light btn-lg px-4">Explore Features</a>
