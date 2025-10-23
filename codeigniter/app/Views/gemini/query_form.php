@@ -214,7 +214,7 @@
                 <div class="card results-card">
                     <div class="card-body p-4 p-md-5">
                         <h3 class="fw-bold mb-4 d-flex justify-content-between align-items-center">
-                            AI Response
+                            Studio Output
                             <button id="copy-response-btn" class="btn btn-sm btn-outline-secondary">
                                 <i class="bi bi-clipboard"></i> Copy
                             </button>
