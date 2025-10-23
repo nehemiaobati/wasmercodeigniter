@@ -1,8 +1,8 @@
 <?= $this->extend('layouts/default') ?>
 
 <?= $this->section('styles') ?>
-    <!-- ADD THIS LINE FOR SYNTAX HIGHLIGHTING STYLES -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+<!-- ADD THIS LINE FOR SYNTAX HIGHLIGHTING STYLES -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
 <style>
     .query-card,
     .results-card,
@@ -11,7 +11,8 @@
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
         border: none;
         transition: all 0.3s ease-in-out;
-        height: 100%; /* Make cards in the same row equal height */
+        height: 100%;
+        /* Make cards in the same row equal height */
     }
 
     .results-card pre {
@@ -21,10 +22,12 @@
         white-space: pre-wrap;
         word-wrap: break-word;
         border: 1px solid #dee2e6;
-        min-height: 100px; /* Ensure pre has height for the cursor */
-        padding-top: 3rem; /* Make space for copy button */
+        min-height: 100px;
+        /* Ensure pre has height for the cursor */
+        padding-top: 3rem;
+        /* Make space for copy button */
     }
-    
+
     .code-block-wrapper {
         position: relative;
     }
@@ -54,9 +57,11 @@
         display: flex;
         flex-direction: column;
     }
+
     .settings-card .form-check-label {
         font-weight: 500;
     }
+
     .settings-card .saved-prompts-block {
         margin-top: 1.5rem;
         padding-top: 1.5rem;
@@ -76,7 +81,7 @@
         background-color: #e9ecef;
         border-color: var(--primary-color);
     }
-    
+
     #file-progress-container .progress-item {
         display: flex;
         align-items: center;
@@ -84,10 +89,12 @@
         margin-bottom: 0.75rem;
         animation: fadeIn 0.3s ease-in-out;
     }
+
     #file-progress-container .progress {
         height: 10px;
         flex-grow: 1;
     }
+
     #file-progress-container .file-name {
         font-size: 0.9rem;
         color: #6c757d;
@@ -96,9 +103,10 @@
         text-overflow: ellipsis;
         max-width: 150px;
     }
-     #file-progress-container .status-icon {
+
+    #file-progress-container .status-icon {
         font-size: 1.2rem;
-     }
+    }
 
     /* Typing cursor animation */
     #ai-response-content.typing::after {
@@ -108,8 +116,15 @@
     }
 
     @keyframes blink {
-        from, to { color: transparent; }
-        50% { color: var(--primary-color); }
+
+        from,
+        to {
+            color: transparent;
+        }
+
+        50% {
+            color: var(--primary-color);
+        }
     }
 
     @keyframes fadeIn {
@@ -117,6 +132,7 @@
             opacity: 0;
             transform: translateY(-10px);
         }
+
         to {
             opacity: 1;
             transform: translateY(0);
@@ -124,26 +140,71 @@
     }
 
     /* Styles for rendered HTML content */
-    .ai-response-html { line-height: 1.6; color: #333; }
-    .ai-response-html h1, .ai-response-html h2, .ai-response-html h3, .ai-response-html h4 {
-        margin-top: 1.5em; margin-bottom: 0.8em; font-weight: 600;
+    .ai-response-html {
+        line-height: 1.6;
+        color: #333;
     }
-    .ai-response-html h1 { font-size: 2em; }
-    .ai-response-html h2 { font-size: 1.75em; }
-    .ai-response-html h3 { font-size: 1.5em; }
-    .ai-response-html p { margin-bottom: 1em; }
-    .ai-response-html ul, .ai-response-html ol { margin-bottom: 1em; padding-left: 2em; }
-    .ai-response-html li { margin-bottom: 0.5em; }
+
+    .ai-response-html h1,
+    .ai-response-html h2,
+    .ai-response-html h3,
+    .ai-response-html h4 {
+        margin-top: 1.5em;
+        margin-bottom: 0.8em;
+        font-weight: 600;
+    }
+
+    .ai-response-html h1 {
+        font-size: 2em;
+    }
+
+    .ai-response-html h2 {
+        font-size: 1.75em;
+    }
+
+    .ai-response-html h3 {
+        font-size: 1.5em;
+    }
+
+    .ai-response-html p {
+        margin-bottom: 1em;
+    }
+
+    .ai-response-html ul,
+    .ai-response-html ol {
+        margin-bottom: 1em;
+        padding-left: 2em;
+    }
+
+    .ai-response-html li {
+        margin-bottom: 0.5em;
+    }
+
     .ai-response-html pre {
-        background-color: #f8f9fa; padding: 1rem; border-radius: 0.5rem;
-        overflow-x: auto; border: 1px solid #dee2e6; margin-bottom: 1em;
-        font-family: 'Courier New', Courier, monospace; font-size: 0.9em; line-height: 1.4;
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        overflow-x: auto;
+        border: 1px solid #dee2e6;
+        margin-bottom: 1em;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 0.9em;
+        line-height: 1.4;
     }
+
     .ai-response-html code {
-        font-family: 'Courier New', Courier, monospace; background-color: rgba(0, 0, 0, 0.05);
-        padding: 0.2em 0.4em; border-radius: 0.3em; font-size: 0.9em;
+        font-family: 'Courier New', Courier, monospace;
+        background-color: rgba(0, 0, 0, 0.05);
+        padding: 0.2em 0.4em;
+        border-radius: 0.3em;
+        font-size: 0.9em;
     }
-    .ai-response-html pre code { background-color: transparent; padding: 0; font-size: inherit; }
+
+    .ai-response-html pre code {
+        background-color: transparent;
+        padding: 0;
+        font-size: inherit;
+    }
 </style>
 <?= $this->endSection() ?>
 
@@ -169,23 +230,23 @@
                             <input class="form-check-input" type="checkbox" role="switch" id="assistantModeToggle" name="assistant_mode" value="1" <?= old('assistant_mode', $assistant_mode_enabled ? '1' : '0') === '1' ? 'checked' : '' ?>>
                         </div>
                         <small class="text-muted d-block mt-1">Turn on to let the AI remember your previous conversations. Great for follow-up questions and multi-step tasks.</small>
-                        
+
                         <?php if (!empty($prompts)): ?>
-                        <div class="saved-prompts-block flex-grow-1">
-                            <label for="savedPrompts" class="form-label fw-bold">Saved Prompts</label>
-                            <div class="input-group">
-                                <select class="form-select" id="savedPrompts">
-                                    <option selected disabled>Select a prompt...</option>
-                                    <?php foreach ($prompts as $p): ?>
-                                        <option value="<?= esc($p->prompt_text) ?>" data-id="<?= $p->id ?>"><?= esc($p->title) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
+                            <div class="saved-prompts-block flex-grow-1">
+                                <label for="savedPrompts" class="form-label fw-bold">Saved Prompts</label>
+                                <div class="input-group">
+                                    <select class="form-select" id="savedPrompts">
+                                        <option selected disabled>Select a prompt...</option>
+                                        <?php foreach ($prompts as $p): ?>
+                                            <option value="<?= esc($p->prompt_text) ?>" data-id="<?= $p->id ?>"><?= esc($p->title) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="d-flex gap-2 mt-2">
+                                    <button type="button" id="usePromptBtn" class="btn btn-sm btn-outline-secondary w-100"><i class="bi bi-arrow-down-circle"></i> Use</button>
+                                    <button type="button" id="deletePromptBtn" class="btn btn-sm btn-outline-danger w-100" disabled><i class="bi bi-trash"></i> Delete</button>
+                                </div>
                             </div>
-                            <div class="d-flex gap-2 mt-2">
-                                <button type="button" id="usePromptBtn" class="btn btn-sm btn-outline-secondary w-100"><i class="bi bi-arrow-down-circle"></i> Use</button>
-                                <button type="button" id="deletePromptBtn" class="btn btn-sm btn-outline-danger w-100" disabled><i class="bi bi-trash"></i> Delete</button>
-                            </div>
-                        </div>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -221,10 +282,10 @@
         </div>
     </form>
 
-    <?php 
-        $result = session()->getFlashdata('result');
-        $raw_result = session()->getFlashdata('raw_result');
-        if ($result):
+    <?php
+    $result = session()->getFlashdata('result');
+    $raw_result = session()->getFlashdata('raw_result');
+    if ($result):
     ?>
         <div class="row justify-content-center mt-4">
             <div class="col-lg-12">
@@ -237,7 +298,7 @@
                             </button>
                         </h3>
                         <div id="ai-response-wrapper" class="ai-response-html">
-                             <?= $result ?>
+                            <?= $result ?>
                         </div>
                         <textarea id="raw-response-for-copy" class="visually-hidden"><?= esc($raw_result ?? strip_tags($result)) ?></textarea>
                     </div>
@@ -286,7 +347,7 @@
         const submitButton = geminiForm.querySelector('button[type="submit"]');
         let csrfToken = geminiForm.querySelector('input[name="<?= csrf_token() ?>"]').value;
         const csrfInput = geminiForm.querySelector('input[name="<?= csrf_token() ?>"]');
-        
+
         // Dynamically create URLs based on the browser's current origin
         const uploadUrl = `${window.location.origin}/gemini/upload-media`;
         const deleteUrl = `${window.location.origin}/gemini/delete-media`;
@@ -296,7 +357,7 @@
         const mediaUploadArea = document.getElementById('mediaUploadArea');
         const progressContainer = document.getElementById('file-progress-container');
         const uploadedFilesContainer = document.getElementById('uploaded-files-container');
-        
+
         const handleFiles = (files) => {
             [...files].forEach(uploadFile);
         };
@@ -305,15 +366,18 @@
             handleFiles(e.target.files);
             e.target.value = ''; // Reset input to allow re-uploading the same file
         });
-        
+
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            mediaUploadArea.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); });
+            mediaUploadArea.addEventListener(eventName, e => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
         });
         ['dragenter', 'dragover'].forEach(eventName => mediaUploadArea.addEventListener(eventName, () => mediaUploadArea.classList.add('dragover')));
         ['dragleave', 'drop'].forEach(eventName => mediaUploadArea.addEventListener(eventName, () => mediaUploadArea.classList.remove('dragover')));
-        
+
         mediaUploadArea.addEventListener('drop', e => handleFiles(e.dataTransfer.files));
-        
+
         const uploadFile = (file) => {
             const fileId = `file-${Math.random().toString(36).substr(2, 9)}`;
             const progressItem = document.createElement('div');
@@ -332,7 +396,7 @@
             const formData = new FormData();
             formData.append('file', file);
             formData.append('<?= csrf_token() ?>', csrfToken);
-            
+
             xhr.open('POST', uploadUrl, true);
 
             xhr.upload.onprogress = (e) => {
@@ -369,9 +433,9 @@
                         console.error('Upload failed:', response.message);
                     }
                 } catch (e) {
-                     progressBar.classList.add('bg-danger');
-                     statusIcon.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-danger" title="An unknown error occurred."></i>`;
-                     console.error('An unknown error occurred:', xhr.responseText);
+                    progressBar.classList.add('bg-danger');
+                    statusIcon.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-danger" title="An unknown error occurred."></i>`;
+                    console.error('An unknown error occurred:', xhr.responseText);
                 }
             };
 
@@ -385,36 +449,36 @@
 
             xhr.send(formData);
         };
-        
+
         // Event delegation for remove buttons
         progressContainer.addEventListener('click', function(e) {
             const removeBtn = e.target.closest('.remove-file-btn');
             if (removeBtn) {
                 const fileToDelete = removeBtn.dataset.fileId;
                 const uiElementId = removeBtn.dataset.uiId;
-                
+
                 const formData = new FormData();
                 formData.append('file_id', fileToDelete);
                 formData.append('<?= csrf_token() ?>', csrfToken);
 
                 fetch(deleteUrl, {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    // Refresh CSRF token after deletion
-                    csrfToken = data.csrf_token;
-                    csrfInput.value = data.csrf_token;
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        // Refresh CSRF token after deletion
+                        csrfToken = data.csrf_token;
+                        csrfInput.value = data.csrf_token;
 
-                    if (data.status === 'success') {
-                        document.getElementById(uiElementId)?.remove();
-                        document.getElementById(`hidden-${uiElementId}`)?.remove();
-                    } else {
-                        alert('Could not remove file: ' + data.message);
-                    }
-                })
-                .catch(error => console.error('Error deleting file:', error));
+                        if (data.status === 'success') {
+                            document.getElementById(uiElementId)?.remove();
+                            document.getElementById(`hidden-${uiElementId}`)?.remove();
+                        } else {
+                            alert('Could not remove file: ' + data.message);
+                        }
+                    })
+                    .catch(error => console.error('Error deleting file:', error));
             }
         });
 
@@ -449,10 +513,10 @@
                         const tempForm = document.createElement('form');
                         tempForm.method = 'post';
                         tempForm.action = deleteUrl;
-                        
+
                         const csrfField = geminiForm.querySelector('input[name="<?= csrf_token() ?>"]');
-                        if(csrfField) {
-                           tempForm.appendChild(csrfField.cloneNode());
+                        if (csrfField) {
+                            tempForm.appendChild(csrfField.cloneNode());
                         }
                         document.body.appendChild(tempForm);
                         tempForm.submit();
@@ -460,7 +524,7 @@
                 });
             }
         }
-        
+
         // --- Modal Logic ---
         const savePromptModal = new bootstrap.Modal(document.getElementById('savePromptModal'));
         const modalPromptTextarea = document.getElementById('modalPromptText');
@@ -470,7 +534,7 @@
                 modalPromptTextarea.value = mainPromptTextarea.value;
             });
         }
-        
+
         // --- Form Submission Loading State ---
         if (geminiForm && submitButton) {
             geminiForm.addEventListener('submit', function() {
@@ -478,7 +542,7 @@
                 submitButton.disabled = true;
             });
         }
-        
+
         // --- AI Response and Copy Logic ---
         const responseWrapper = document.getElementById('ai-response-wrapper');
         const copyBtn = document.getElementById('copy-response-btn');
@@ -488,7 +552,10 @@
             const resultsCard = responseWrapper.closest('.results-card');
 
             setTimeout(() => {
-                resultsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                resultsCard.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
             }, 100);
 
             // Logic for main "Copy Full Response" button
@@ -496,7 +563,9 @@
                 navigator.clipboard.writeText(rawTextarea.value).then(() => {
                     const originalIcon = this.innerHTML;
                     this.innerHTML = '<i class="bi bi-check-lg"></i> Copied!';
-                    setTimeout(() => { this.innerHTML = originalIcon; }, 2000);
+                    setTimeout(() => {
+                        this.innerHTML = originalIcon;
+                    }, 2000);
                 }).catch(err => {
                     console.error('Failed to copy text: ', err);
                 });
