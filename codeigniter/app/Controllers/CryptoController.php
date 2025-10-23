@@ -99,7 +99,7 @@ class CryptoController extends BaseController
 
                     if (bccomp((string) $user->balance, (string) $deductionAmount, 2) < 0) {
                         $errors[] = "Insufficient balance. This query costs approx. KSH " . number_format($deductionAmount, 2) .
-                                    ", but you only have KSH " . $user->balance . ".";
+                            ", but you only have KSH " . $user->balance . ".";
                     }
                 }
             } else {
