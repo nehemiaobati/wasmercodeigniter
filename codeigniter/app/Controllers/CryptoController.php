@@ -165,3 +165,5 @@ class CryptoController extends BaseController
         return redirect()->back()->withInput()->with('result', $result);
     }
 }
+
+
