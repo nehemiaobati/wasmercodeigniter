@@ -14,5 +14,4 @@
         AGI V5.1 Documentation
     </a>
 </div>
-
 <?= $this->endSection() ?>
