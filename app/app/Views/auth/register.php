@@ -57,6 +57,22 @@
         opacity: 0.9;
     }
 </style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', function(event) {
+                // Check if the form is valid before tracking
+                if (form.checkValidity()) {
+                    fbq('track', 'CompleteRegistration');
+                }
+            });
+        }
+    });
+</script>
+//p
+
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
@@ -99,7 +115,7 @@
                                     <div class="g-recaptcha" data-sitekey="<?= config('Recaptcha')->siteKey ?>"></div>
                                 </div>
                                 <div class="d-grid">
-                                    <button type="submit" class="btn btn-primary btn-lg">Register</button>
+                                    <button type="submit" id="submitButton" class="btn btn-primary btn-lg">Register</button>
                                 </div>
                                 <p class="mt-4 text-center text-muted">Already have an account? <a href="<?= url_to('login') ?>">Login here</a></p>
                             </form>
