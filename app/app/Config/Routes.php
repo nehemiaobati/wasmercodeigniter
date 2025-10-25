@@ -14,6 +14,9 @@ $routes->group('', static function ($routes) {
     // Home & Welcome Page
     $routes->get('/', 'HomeController::landing', ['as' => 'welcome']);
 
+    // Documentation Page
+    $routes->get('/documentation', 'DocumentationController::index', ['as' => 'documentation']);
+
     // Sitemap Route for SEO
     $routes->get('sitemap.xml', 'SitemapController::index', ['as' => 'sitemap']);
 

@@ -336,7 +336,7 @@ src="https://www.facebook.com/tr?id=1266537441823413&ev=PageView&noscript=1"
                     <ul class="list-unstyled mb-0">
                         <li><a href="<?= url_to('contact.form') ?>">Contact Us</a></li>
                         <li><a href="#">FAQ</a></li>
-                        <li><a href="#">Documentation</a></li>
+                        <li><a href="<?= url_to('documentation') ?>">Documentation</a></li>
                     </ul>
                 </div>
                 <div class="col-lg-3 col-md-6 mb-4 mb-lg-0">

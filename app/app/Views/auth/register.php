@@ -72,6 +72,7 @@
     });
 </script>
 
+
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
