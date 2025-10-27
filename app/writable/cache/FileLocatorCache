@@ -1,0 +1,243 @@
+<?php return array (
+  'search' => 
+  array (
+    'Config/Services' => 
+    array (
+      'php' => 
+      array (
+        1 => 
+        array (
+          0 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/app/Config/Services.php',
+          1 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Config/Services.php',
+        ),
+      ),
+    ),
+    'Config/Registrar.php' => 
+    array (
+      'php' => 
+      array (
+        1 => 
+        array (
+        ),
+      ),
+    ),
+    'Helpers/kint_helper' => 
+    array (
+      'php' => 
+      array (
+        1 => 
+        array (
+          0 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Helpers/kint_helper.php',
+        ),
+      ),
+    ),
+    'Helpers/url_helper' => 
+    array (
+      'php' => 
+      array (
+        1 => 
+        array (
+          0 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Helpers/url_helper.php',
+        ),
+      ),
+    ),
+    'Helpers/filesystem_helper' => 
+    array (
+      'php' => 
+      array (
+        1 => 
+        array (
+          0 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Helpers/filesystem_helper.php',
+        ),
+      ),
+    ),
+    'Helpers/array_helper' => 
+    array (
+      'php' => 
+      array (
+        1 => 
+        array (
+          0 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Helpers/array_helper.php',
+        ),
+      ),
+    ),
+    'Config/Routes.php' => 
+    array (
+      'php' => 
+      array (
+        1 => 
+        array (
+          0 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/app/Config/Routes.php',
+        ),
+      ),
+    ),
+    'Config/Events.php' => 
+    array (
+      'php' => 
+      array (
+        1 => 
+        array (
+          0 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/app/Config/Events.php',
+        ),
+      ),
+    ),
+    'Language/en/Migrations.php' => 
+    array (
+      'php' => 
+      array (
+        0 => 
+        array (
+          0 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Language/en/Migrations.php',
+        ),
+      ),
+    ),
+  ),
+  'findQualifiedNameFromPath' => 
+  array (
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/app/Config/Services.php' => 'Config\\Services',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Cache/ClearCache.php' => 'CodeIgniter\\Commands\\Cache\\ClearCache',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Cache/InfoCache.php' => 'CodeIgniter\\Commands\\Cache\\InfoCache',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Database/CreateDatabase.php' => 'CodeIgniter\\Commands\\Database\\CreateDatabase',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Database/Migrate.php' => 'CodeIgniter\\Commands\\Database\\Migrate',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Database/MigrateRefresh.php' => 'CodeIgniter\\Commands\\Database\\MigrateRefresh',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Database/MigrateRollback.php' => 'CodeIgniter\\Commands\\Database\\MigrateRollback',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Database/MigrateStatus.php' => 'CodeIgniter\\Commands\\Database\\MigrateStatus',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Database/Seed.php' => 'CodeIgniter\\Commands\\Database\\Seed',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Database/ShowTableInfo.php' => 'CodeIgniter\\Commands\\Database\\ShowTableInfo',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Encryption/GenerateKey.php' => 'CodeIgniter\\Commands\\Encryption\\GenerateKey',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/CellGenerator.php' => 'CodeIgniter\\Commands\\Generators\\CellGenerator',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/CommandGenerator.php' => 'CodeIgniter\\Commands\\Generators\\CommandGenerator',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/ConfigGenerator.php' => 'CodeIgniter\\Commands\\Generators\\ConfigGenerator',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/ControllerGenerator.php' => 'CodeIgniter\\Commands\\Generators\\ControllerGenerator',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/EntityGenerator.php' => 'CodeIgniter\\Commands\\Generators\\EntityGenerator',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/FilterGenerator.php' => 'CodeIgniter\\Commands\\Generators\\FilterGenerator',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/MigrationGenerator.php' => 'CodeIgniter\\Commands\\Generators\\MigrationGenerator',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/ModelGenerator.php' => 'CodeIgniter\\Commands\\Generators\\ModelGenerator',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/ScaffoldGenerator.php' => 'CodeIgniter\\Commands\\Generators\\ScaffoldGenerator',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/SeederGenerator.php' => 'CodeIgniter\\Commands\\Generators\\SeederGenerator',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/TestGenerator.php' => 'CodeIgniter\\Commands\\Generators\\TestGenerator',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/ValidationGenerator.php' => 'CodeIgniter\\Commands\\Generators\\ValidationGenerator',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/Views/cell.tpl.php' => false,
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/Views/cell_view.tpl.php' => false,
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/Views/command.tpl.php' => false,
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/Views/config.tpl.php' => false,
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/Views/controller.tpl.php' => false,
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/Views/entity.tpl.php' => false,
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/Views/filter.tpl.php' => false,
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/Views/migration.tpl.php' => false,
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/Views/model.tpl.php' => false,
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/Views/seeder.tpl.php' => false,
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/Views/test.tpl.php' => false,
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/Views/validation.tpl.php' => false,
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Help.php' => 'CodeIgniter\\Commands\\Help',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Housekeeping/ClearDebugbar.php' => 'CodeIgniter\\Commands\\Housekeeping\\ClearDebugbar',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Housekeeping/ClearLogs.php' => 'CodeIgniter\\Commands\\Housekeeping\\ClearLogs',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/ListCommands.php' => 'CodeIgniter\\Commands\\ListCommands',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Server/Serve.php' => 'CodeIgniter\\Commands\\Server\\Serve',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Translation/LocalizationFinder.php' => 'CodeIgniter\\Commands\\Translation\\LocalizationFinder',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Translation/LocalizationSync.php' => 'CodeIgniter\\Commands\\Translation\\LocalizationSync',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/ConfigCheck.php' => 'CodeIgniter\\Commands\\Utilities\\ConfigCheck',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Environment.php' => 'CodeIgniter\\Commands\\Utilities\\Environment',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/FilterCheck.php' => 'CodeIgniter\\Commands\\Utilities\\FilterCheck',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Namespaces.php' => 'CodeIgniter\\Commands\\Utilities\\Namespaces',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Optimize.php' => 'CodeIgniter\\Commands\\Utilities\\Optimize',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/PhpIniCheck.php' => 'CodeIgniter\\Commands\\Utilities\\PhpIniCheck',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Publish.php' => 'CodeIgniter\\Commands\\Utilities\\Publish',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Routes.php' => 'CodeIgniter\\Commands\\Utilities\\Routes',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Routes/AutoRouteCollector.php' => 'CodeIgniter\\Commands\\Utilities\\Routes\\AutoRouteCollector',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Routes/AutoRouterImproved/AutoRouteCollector.php' => 'CodeIgniter\\Commands\\Utilities\\Routes\\AutoRouterImproved\\AutoRouteCollector',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Routes/AutoRouterImproved/ControllerMethodReader.php' => 'CodeIgniter\\Commands\\Utilities\\Routes\\AutoRouterImproved\\ControllerMethodReader',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Routes/ControllerFinder.php' => 'CodeIgniter\\Commands\\Utilities\\Routes\\ControllerFinder',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Routes/ControllerMethodReader.php' => 'CodeIgniter\\Commands\\Utilities\\Routes\\ControllerMethodReader',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Routes/FilterCollector.php' => 'CodeIgniter\\Commands\\Utilities\\Routes\\FilterCollector',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Routes/FilterFinder.php' => 'CodeIgniter\\Commands\\Utilities\\Routes\\FilterFinder',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Routes/SampleURIGenerator.php' => 'CodeIgniter\\Commands\\Utilities\\Routes\\SampleURIGenerator',
+  ),
+  'listFiles' => 
+  array (
+    'Commands/' => 
+    array (
+      0 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Cache/ClearCache.php',
+      1 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Cache/InfoCache.php',
+      2 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Database/CreateDatabase.php',
+      3 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Database/Migrate.php',
+      4 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Database/MigrateRefresh.php',
+      5 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Database/MigrateRollback.php',
+      6 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Database/MigrateStatus.php',
+      7 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Database/Seed.php',
+      8 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Database/ShowTableInfo.php',
+      9 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Encryption/GenerateKey.php',
+      10 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/CellGenerator.php',
+      11 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/CommandGenerator.php',
+      12 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/ConfigGenerator.php',
+      13 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/ControllerGenerator.php',
+      14 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/EntityGenerator.php',
+      15 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/FilterGenerator.php',
+      16 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/MigrationGenerator.php',
+      17 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/ModelGenerator.php',
+      18 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/ScaffoldGenerator.php',
+      19 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/SeederGenerator.php',
+      20 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/TestGenerator.php',
+      21 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/ValidationGenerator.php',
+      22 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/Views/cell.tpl.php',
+      23 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/Views/cell_view.tpl.php',
+      24 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/Views/command.tpl.php',
+      25 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/Views/config.tpl.php',
+      26 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/Views/controller.tpl.php',
+      27 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/Views/entity.tpl.php',
+      28 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/Views/filter.tpl.php',
+      29 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/Views/migration.tpl.php',
+      30 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/Views/model.tpl.php',
+      31 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/Views/seeder.tpl.php',
+      32 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/Views/test.tpl.php',
+      33 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Generators/Views/validation.tpl.php',
+      34 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Help.php',
+      35 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Housekeeping/ClearDebugbar.php',
+      36 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Housekeeping/ClearLogs.php',
+      37 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/ListCommands.php',
+      38 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Server/Serve.php',
+      39 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Translation/LocalizationFinder.php',
+      40 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Translation/LocalizationSync.php',
+      41 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/ConfigCheck.php',
+      42 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Environment.php',
+      43 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/FilterCheck.php',
+      44 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Namespaces.php',
+      45 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Optimize.php',
+      46 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/PhpIniCheck.php',
+      47 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Publish.php',
+      48 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Routes.php',
+      49 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Routes/AutoRouteCollector.php',
+      50 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Routes/AutoRouterImproved/AutoRouteCollector.php',
+      51 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Routes/AutoRouterImproved/ControllerMethodReader.php',
+      52 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Routes/ControllerFinder.php',
+      53 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Routes/ControllerMethodReader.php',
+      54 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Routes/FilterCollector.php',
+      55 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Routes/FilterFinder.php',
+      56 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Utilities/Routes/SampleURIGenerator.php',
+    ),
+  ),
+  'listNamespaceFiles' => 
+  array (
+    'App' => 
+    array (
+      '/Database/Migrations/' => 
+      array (
+        0 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/app/Database/Migrations/2025-09-04-021136_CreateUsersTableWithUsername.php',
+        1 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/app/Database/Migrations/2025-09-05-164356_CreatePaymentsTable.php',
+        2 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/app/Database/Migrations/2025-10-14-013757_CreatePromptsTable.php',
+        3 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/app/Database/Migrations/2025-10-18-014534_CreateMemoryTables.php',
+        4 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/app/Database/Migrations/2025-10-19-221000_CreateUserSettingsTable.php',
+        5 => '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/app/Database/Migrations/2025-10-27-042600_CreateCampaignsTable.php',
+      ),
+    ),
+  ),
+  'getClassname' => 
+  array (
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/app/Database/Migrations/2025-09-04-021136_CreateUsersTableWithUsername.php' => 'App\\Database\\Migrations\\CreateUsersTableWithUsername',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/app/Database/Migrations/2025-09-05-164356_CreatePaymentsTable.php' => 'App\\Database\\Migrations\\CreatePaymentsTable',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/app/Database/Migrations/2025-10-14-013757_CreatePromptsTable.php' => 'App\\Database\\Migrations\\CreatePromptsTable',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/app/Database/Migrations/2025-10-18-014534_CreateMemoryTables.php' => 'App\\Database\\Migrations\\CreateMemoryTables',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/app/Database/Migrations/2025-10-19-221000_CreateUserSettingsTable.php' => 'App\\Database\\Migrations\\CreateUserSettingsTable',
+    '/Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/app/Database/Migrations/2025-10-27-042600_CreateCampaignsTable.php' => 'App\\Database\\Migrations\\Migration_2025_10_27_042600_CreateCampaignsTable',
+  ),
+);

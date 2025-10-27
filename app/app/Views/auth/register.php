@@ -30,7 +30,7 @@
         if (form) {
             form.addEventListener('submit', function(event) {
                 if (form.checkValidity()) {
-                   // fbq('track', 'CompleteRegistration');
+                    fbq('track', 'CompleteRegistration');
                 }
             });
         }
