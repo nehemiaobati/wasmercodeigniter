@@ -3,42 +3,6 @@
 <?= $this->section('styles') ?>
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 <style>
-    .auth-section {
-        min-height: 80vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 2rem 0;
-    }
-    .auth-card {
-        border-radius: 1rem;
-        box-shadow: 0 1rem 3rem rgba(0,0,0,.1);
-        border: none;
-        overflow: hidden;
-    }
-    .auth-card-header {
-        background-color: var(--primary-color);
-        color: white;
-        padding: 2rem;
-        text-align: center;
-    }
-    .auth-card-header h3 {
-        margin: 0;
-        font-weight: 700;
-    }
-    .auth-card-body {
-        padding: 2.5rem;
-    }
-    .auth-card .form-floating label {
-        color: #6c757d;
-    }
-    .auth-card .form-control:focus {
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-    }
-    .auth-card .btn-primary {
-        font-weight: 600;
-        padding: 0.75rem 1rem;
-    }
     .auth-illustration {
         background: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="%230d6efd" fill-opacity="1" d="M0,192L48,176C96,160,192,128,288,133.3C384,139,480,181,576,208C672,235,768,245,864,224C960,203,1056,149,1152,122.7C1248,96,1344,96,1392,96L1440,96L1440,0L1392,0C1344,0,1248,0,1152,0C1056,0,960,0,864,0C768,0,672,0,576,0C480,0,384,0,288,0C192,0,96,0,48,0L0,0Z"></path></svg>') no-repeat center center;
         background-size: cover;
@@ -47,6 +11,8 @@
         justify-content: center;
         color: white;
         padding: 3rem;
+        border-top-right-radius: 0.75rem;
+        border-bottom-right-radius: 0.75rem;
     }
     .illustration-content h4 {
         font-weight: 700;
@@ -63,26 +29,23 @@
         const form = document.querySelector('form');
         if (form) {
             form.addEventListener('submit', function(event) {
-                // Check if the form is valid before tracking
                 if (form.checkValidity()) {
-                    fbq('track', 'CompleteRegistration');
+                   // fbq('track', 'CompleteRegistration');
                 }
             });
         }
     });
 </script>
-
-
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
-<div class="container auth-section">
-    <div class="row w-100 justify-content-center">
+<div class="container my-5">
+    <div class="row justify-content-center">
         <div class="col-lg-10">
-            <div class="card auth-card">
+            <div class="card blueprint-card overflow-hidden">
                 <div class="row g-0">
                     <div class="col-lg-6">
-                        <div class="auth-card-body">
+                        <div class="card-body p-4 p-md-5">
                             <h3 class="text-center mb-4 fw-bold">Unlock Your Digital Toolkit</h3>
                             <?php if (isset($validation)): ?>
                                 <div class="alert alert-danger" role="alert">

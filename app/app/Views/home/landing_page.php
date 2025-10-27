@@ -1,3 +1,5 @@
+<?= '
+' ?>
 <?= $this->extend('layouts/default') ?>
 
 <?= $this->section('styles') ?>
@@ -111,7 +113,7 @@
     .step-number {
         width: 60px;
         height: 60px;
-        background-color: var(--light-gray);
+        background-color: #e7f1ff;
         border: 2px solid var(--primary-color);
         color: var(--primary-color);
         border-radius: 50%;

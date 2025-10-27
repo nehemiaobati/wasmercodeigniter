@@ -1,3 +1,5 @@
+<?= '
+' ?>
 <?= $this->extend('layouts/default') ?>
 
 <?= $this->section('styles') ?>
@@ -101,7 +103,7 @@
      }
 
     /* Typing cursor animation */
-    #ai-response-content.typing::after {
+    #ai-response-wrapper.typing::after {
         content: '▋';
         display: inline-block;
         animation: blink 1s step-end infinite;
@@ -208,7 +210,9 @@
                         <div id="mediaUploadArea" class="mb-4">
                             <input type="file" id="media-input-trigger" multiple class="d-none">
                             <label for="media-input-trigger" class="btn btn-secondary w-100"><i class="bi bi-paperclip"></i> Attach Files or Drag & Drop</label>
-                            <div id="file-progress-container" class="mt-3"></div>
+                            <div id="upload-list-wrapper" style="max-height: 200px; overflow-y: auto; padding-right: 10px;">
+                                <div id="file-progress-container" class="mt-3"></div>
+                            </div>
                             <div id="uploaded-files-container"></div>
                         </div>
 
@@ -237,9 +241,10 @@
                             </button>
                         </h3>
                         <div id="ai-response-wrapper" class="ai-response-html">
-                             <?= $result ?>
+                             <!-- This will be populated by the typing effect -->
                         </div>
                         <textarea id="raw-response-for-copy" class="visually-hidden"><?= esc($raw_result ?? strip_tags($result)) ?></textarea>
+                        <div id="final-rendered-content" class="visually-hidden"><?= $result ?></div>
                     </div>
                 </div>
             </div>
@@ -283,13 +288,29 @@
     document.addEventListener('DOMContentLoaded', function() {
         const geminiForm = document.getElementById('geminiForm');
         const mainPromptTextarea = document.getElementById('prompt');
-        const submitButton = geminiForm.querySelector('button[type="submit"]');
         let csrfToken = geminiForm.querySelector('input[name="<?= csrf_token() ?>"]').value;
         const csrfInput = geminiForm.querySelector('input[name="<?= csrf_token() ?>"]');
         
-        // Dynamically create URLs based on the browser's current origin
         const uploadUrl = `${window.location.origin}/gemini/upload-media`;
         const deleteUrl = `${window.location.origin}/gemini/delete-media`;
+
+        // --- Form Submission Loading State ---
+        function handleFormSubmit(form) {
+            const submitButton = form.querySelector('button[type="submit"]');
+            if (submitButton) {
+                const originalButtonText = submitButton.innerHTML;
+                submitButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...`;
+                submitButton.disabled = true;
+
+                window.addEventListener('pageshow', function() {
+                    submitButton.innerHTML = originalButtonText;
+                    submitButton.disabled = false;
+                });
+            }
+        }
+        if (geminiForm) {
+            geminiForm.addEventListener('submit', () => handleFormSubmit(geminiForm));
+        }
 
         // --- AJAX File Upload Logic ---
         const mediaInput = document.getElementById('media-input-trigger');
@@ -303,7 +324,7 @@
 
         mediaInput.addEventListener('change', (e) => {
             handleFiles(e.target.files);
-            e.target.value = ''; // Reset input to allow re-uploading the same file
+            e.target.value = '';
         });
         
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -349,7 +370,6 @@
 
                 try {
                     const response = JSON.parse(xhr.responseText);
-                    // Refresh CSRF token
                     csrfToken = response.csrf_token;
                     csrfInput.value = response.csrf_token;
 
@@ -386,7 +406,6 @@
             xhr.send(formData);
         };
         
-        // Event delegation for remove buttons
         progressContainer.addEventListener('click', function(e) {
             const removeBtn = e.target.closest('.remove-file-btn');
             if (removeBtn) {
@@ -403,7 +422,6 @@
                 })
                 .then(response => response.json())
                 .then(data => {
-                    // Refresh CSRF token after deletion
                     csrfToken = data.csrf_token;
                     csrfInput.value = data.csrf_token;
 
@@ -471,41 +489,15 @@
             });
         }
         
-        // --- Form Submission Loading State ---
-        if (geminiForm && submitButton) {
-            geminiForm.addEventListener('submit', function() {
-                submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...';
-                submitButton.disabled = true;
-            });
-        }
-        
         // --- AI Response and Copy Logic ---
         const responseWrapper = document.getElementById('ai-response-wrapper');
         const copyBtn = document.getElementById('copy-response-btn');
 
-        if (responseWrapper && copyBtn) {
-            const rawTextarea = document.getElementById('raw-response-for-copy');
-            const resultsCard = responseWrapper.closest('.results-card');
-
-            setTimeout(() => {
-                resultsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 100);
-
-            // Logic for main "Copy Full Response" button
-            copyBtn.addEventListener('click', function() {
-                navigator.clipboard.writeText(rawTextarea.value).then(() => {
-                    const originalIcon = this.innerHTML;
-                    this.innerHTML = '<i class="bi bi-check-lg"></i> Copied!';
-                    setTimeout(() => { this.innerHTML = originalIcon; }, 2000);
-                }).catch(err => {
-                    console.error('Failed to copy text: ', err);
-                });
-            });
-
-            // --- New Code Snippet Copy Logic & Syntax Highlighting ---
+        function setupResponseFormatting() {
             const allPreTags = responseWrapper.querySelectorAll('pre');
-
             allPreTags.forEach(pre => {
+                if (pre.parentElement.classList.contains('code-block-wrapper')) return;
+
                 const wrapper = document.createElement('div');
                 wrapper.className = 'code-block-wrapper';
                 pre.parentNode.insertBefore(wrapper, pre);
@@ -514,27 +506,56 @@
                 const copyButton = document.createElement('button');
                 copyButton.className = 'copy-code-btn';
                 copyButton.innerHTML = '<i class="bi bi-clipboard"></i> Copy';
-
                 copyButton.addEventListener('click', () => {
-                    const codeElement = pre.querySelector('code');
-                    const codeToCopy = codeElement ? codeElement.innerText : pre.innerText;
-
+                    const codeToCopy = pre.querySelector('code')?.innerText || pre.innerText;
                     navigator.clipboard.writeText(codeToCopy).then(() => {
                         copyButton.innerHTML = '<i class="bi bi-check-lg"></i> Copied!';
-                        setTimeout(() => {
-                            copyButton.innerHTML = '<i class="bi bi-clipboard"></i> Copy';
-                        }, 2000);
-                    }).catch(err => {
-                        console.error('Failed to copy code snippet: ', err);
-                        copyButton.innerText = 'Error';
+                        setTimeout(() => { copyButton.innerHTML = '<i class="bi bi-clipboard"></i> Copy'; }, 2000);
                     });
                 });
                 wrapper.appendChild(copyButton);
             });
-
             if (typeof hljs !== 'undefined') {
-                hljs.highlightAll();
+                responseWrapper.querySelectorAll('pre code').forEach((block) => {
+                    hljs.highlightElement(block);
+                });
             }
+        }
+
+        if (responseWrapper && copyBtn) {
+            const rawTextarea = document.getElementById('raw-response-for-copy');
+            const finalRenderedContent = document.getElementById('final-rendered-content');
+            const resultsCard = responseWrapper.closest('.results-card');
+
+            setTimeout(() => {
+                resultsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+
+            copyBtn.addEventListener('click', function() {
+                navigator.clipboard.writeText(rawTextarea.value).then(() => {
+                    this.innerHTML = '<i class="bi bi-check-lg"></i> Copied!';
+                    setTimeout(() => { this.innerHTML = '<i class="bi bi-clipboard"></i> Copy Full Response'; }, 2000);
+                });
+            });
+
+            const rawResponseText = rawTextarea.value;
+            let charIndex = 0;
+            responseWrapper.innerHTML = '';
+            responseWrapper.classList.add('typing');
+
+            function typeWriter() {
+                if (charIndex < rawResponseText.length) {
+                    responseWrapper.innerHTML += rawResponseText.charAt(charIndex);
+                    charIndex++;
+                    const speed = rawResponseText.length > 500 ? 5 : 20;
+                    setTimeout(typeWriter, speed);
+                } else {
+                    responseWrapper.classList.remove('typing');
+                    responseWrapper.innerHTML = finalRenderedContent.innerHTML;
+                    setupResponseFormatting();
+                }
+            }
+            typeWriter();
         }
     });
 </script>

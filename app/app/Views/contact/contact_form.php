@@ -2,20 +2,13 @@
 
 <?= $this->section('styles') ?>
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-<style>
-    .contact-card {
-        border-radius: 1rem;
-        box-shadow: 0 1rem 3rem rgba(0,0,0,.075);
-        border: none;
-    }
-</style>
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
 <div class="container my-5">
     <div class="row justify-content-center">
         <div class="col-lg-7">
-            <div class="card contact-card">
+            <div class="card blueprint-card">
                 <div class="card-body p-5">
                     <div class="text-center mb-5">
                         <i class="bi bi-envelope-heart-fill text-primary" style="font-size: 3rem;"></i>

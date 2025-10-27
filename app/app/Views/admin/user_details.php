@@ -2,11 +2,6 @@
 
 <?= $this->section('styles') ?>
 <style>
-    .details-card, .form-card {
-        border-radius: 0.75rem;
-        box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.05);
-        border: none;
-    }
     .details-card .list-group-item {
         border: none;
     }
@@ -25,7 +20,7 @@
 
     <div class="row g-4">
         <div class="col-lg-5">
-            <div class="card details-card">
+            <div class="card blueprint-card details-card">
                 <div class="card-body p-4">
                     <h4 class="card-title fw-bold mb-3">Account Information</h4>
                     <ul class="list-group list-group-flush">
@@ -37,7 +32,7 @@
             </div>
         </div>
         <div class="col-lg-7">
-            <div class="card form-card">
+            <div class="card blueprint-card">
                  <div class="card-body p-4">
                     <h4 class="card-title fw-bold mb-3">Update Balance</h4>
                     <form action="<?= url_to('admin.users.update_balance', $user->id) ?>" method="post">

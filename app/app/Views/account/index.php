@@ -2,12 +2,6 @@
 
 <?= $this->section('styles') ?>
 <style>
-    .account-card {
-        border-radius: 0.75rem;
-        box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.05);
-        border: none;
-        height: 100%;
-    }
     .details-list .list-group-item {
         border-left: 0;
         border-right: 0;
@@ -22,12 +16,6 @@
         margin-right: 10px;
         width: 20px;
     }
-    .table thead {
-        background-color: var(--bs-light);
-    }
-    .table th {
-        font-weight: 600;
-    }
     .status-badge {
         font-size: 0.8rem;
         padding: 0.4em 0.7em;
@@ -37,15 +25,15 @@
 
 <?= $this->section('content') ?>
 <div class="container my-5">
-    <div class="mb-5">
+    <div class="blueprint-header mb-5">
         <h1 class="fw-bold">My Account</h1>
-        <p class="text-muted">Manage your profile details and view your transaction history.</p>
+        <p class="text-muted lead">Manage your profile details and view your transaction history.</p>
     </div>
 
     <div class="row g-4">
         <!-- User Details Column -->
         <div class="col-lg-4">
-            <div class="card account-card">
+            <div class="card blueprint-card">
                 <div class="card-body p-4">
                     <h4 class="fw-bold mb-4">Profile Information</h4>
                     <ul class="list-group list-group-flush details-list">
@@ -74,18 +62,18 @@
 
         <!-- Transaction History Column -->
         <div class="col-lg-8">
-            <div class="card account-card d-flex flex-column">
+            <div class="card blueprint-card d-flex flex-column">
                 <div class="card-body p-4 flex-grow-1">
                     <h4 class="fw-bold mb-4">Transaction History</h4>
                     <?php if (!empty($transactions)): ?>
                         <div class="table-responsive">
                             <table class="table table-hover align-middle">
-                                <thead>
+                                <thead class="table-light">
                                     <tr>
-                                        <th>Date</th>
-                                        <th>Amount (KES)</th>
-                                        <th>Status</th>
-                                        <th>Reference</th>
+                                        <th class="fw-semibold">Date</th>
+                                        <th class="fw-semibold">Amount (KES)</th>
+                                        <th class="fw-semibold">Status</th>
+                                        <th class="fw-semibold">Reference</th>
                                     </tr>
                                 </thead>
                                 <tbody>

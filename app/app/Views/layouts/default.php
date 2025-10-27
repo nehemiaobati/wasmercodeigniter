@@ -1,3 +1,5 @@
+<?= '
+' ?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -65,10 +67,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
+        /* --- Part 7: Unified Frontend Workflow --- */
+        /* 7.2.D The Color Palette */
         :root {
             --primary-color: #0d6efd;
             --secondary-color: #6c757d;
-            --light-gray: #f8f9fa;
+            --success-green: #198754;
+            --light-bg: #f8f9fa; /* Page background */
+            --card-bg: #ffffff; /* Card background */
             --dark-gray: #343a40;
             --text-body: #495057;
             --header-bg: #ffffff;
@@ -78,81 +84,90 @@
 
         body {
             font-family: 'Poppins', sans-serif;
-            background-color: var(--light-gray);
+            background-color: var(--light-bg);
             color: var(--text-body);
         }
 
+        /* 7.2.B The Blueprint Card & Micro-interactions */
+        .blueprint-card {
+            background-color: var(--card-bg);
+            border-radius: 0.75rem;
+            box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.05);
+            border: none;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .blueprint-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0.8rem 1.5rem rgba(0,0,0,0.07) !important;
+        }
+        
+        /* General element transitions for a smoother feel */
+        .btn, .nav-link, .dropdown-item, .form-control {
+            transition: all 0.2s ease-in-out;
+        }
+        /* --- End Part 7 Implementation --- */
+
+
+        /* Navbar Styling */
         .navbar {
             transition: box-shadow 0.3s ease-in-out;
         }
-
         .navbar.scrolled {
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05) !important;
         }
-
         .navbar-brand {
             font-weight: 700;
             color: var(--primary-color) !important;
         }
-
         .navbar .nav-link {
             font-weight: 500;
             color: var(--dark-gray);
-            transition: color 0.3s;
         }
-
         .navbar .nav-link:hover,
         .navbar .nav-link.active {
             color: var(--primary-color);
         }
-
         .navbar .dropdown-menu {
             border-radius: 0.5rem;
             border-color: #e9ecef;
             box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
         }
-
         .navbar .dropdown-item:hover {
             background-color: var(--primary-color);
             color: white;
         }
 
+        /* Main Content & Footer Styling */
         main {
             flex-grow: 1;
         }
-
         .flash-message-container .alert {
             border-radius: 0.5rem;
             border-left-width: 5px;
         }
-
         .footer {
             background-color: var(--footer-bg);
             color: var(--footer-text);
             padding-top: 3rem;
             padding-bottom: 1rem;
         }
-
         .footer h5 {
             color: white;
             font-weight: 600;
             margin-bottom: 1rem;
         }
-
         .footer a {
             color: var(--footer-text);
             text-decoration: none;
             transition: color 0.3s;
         }
-
         .footer a:hover {
             color: white;
         }
-
         .footer .list-unstyled li {
             margin-bottom: 0.5rem;
         }
-
         .footer .social-icons a {
             display: inline-flex;
             justify-content: center;
@@ -165,18 +180,16 @@
             font-size: 1.2rem;
             margin-right: 0.5rem;
         }
-
         .footer .social-icons a:hover {
             background-color: var(--primary-color);
         }
-
         .footer .footer-bottom {
             border-top: 1px solid #495057;
             padding-top: 1rem;
             margin-top: 2rem;
         }
 
-        /* Centrally Managed Pagination Styling */
+        /* Reusable Component: Pagination */
         .pagination {
             --bs-pagination-padding-x: 0.85rem;
             --bs-pagination-padding-y: 0.45rem;
@@ -195,7 +208,6 @@
         }
         .pagination .page-link {
             border-radius: var(--bs-pagination-border-radius) !important;
-            transition: all 0.2s ease-in-out;
         }
         .pagination .page-item.active .page-link {
             box-shadow: 0 4px 8px rgba(13, 110, 253, 0.2);
@@ -215,7 +227,7 @@
                 text-align: center;
                 border: 1px solid #dee2e6;
                 box-shadow: none;
-                background-color: var(--light-gray);
+                background-color: var(--light-bg);
                 margin-top: 0.5rem !important;
             }
             .navbar .dropdown-menu-end {
@@ -241,7 +253,7 @@ t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window, document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
 fbq('init', '1266537441823413');
-fbq('track', 'PageView');
+//fbq('track', 'PageView');
 </script>
 <noscript><img height="1" width="1" style="display:none"
 src="https://www.facebook.com/tr?id=1266537441823413&ev=PageView&noscript=1"

@@ -1,3 +1,5 @@
+<?= '
+' ?>
 <?= $this->extend('layouts/default') ?>
 
 <?= $this->section('styles') ?>
@@ -5,204 +7,226 @@
     :root {
         --primary-accent: #0d6efd;
         --success-green: #198754;
-        --warning-orange: #fd7e14;
-        --light-bg: #f8f9fa;
-        --card-bg: #ffffff;
-        --card-border: #dee2e6;
         --text-muted: #6c757d;
+        --text-dark: #212529;
     }
 
-    .dashboard-header {
-        margin-bottom: 2.5rem;
-    }
-
+    /* --- Page Specific Enhancements --- */
     .dashboard-header h1 {
         font-weight: 700;
-        color: var(--dark-gray);
     }
-    
-    .dashboard-header .lead {
+    .card-body {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+    }
+    .card-title {
+        font-weight: 600;
+        color: var(--text-dark);
+    }
+    .card-text {
         color: var(--text-muted);
+        flex-grow: 1;
     }
-
-    .dashboard-card {
-        background-color: var(--card-bg);
-        border: 1px solid var(--card-border);
-        border-radius: 0.75rem;
-        box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.05);
-        transition: all 0.3s ease-in-out;
-        height: 100%;
-    }
-    
-    .balance-card .card-body {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-    }
-
-    .balance-amount {
-        font-size: 3rem;
-        font-weight: 700;
-        color: var(--success-green);
-        line-height: 1.2;
-    }
-    
-    .balance-card .text-muted {
-        font-size: 1.1rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .details-card .list-group-item {
-        border-left: 0;
-        border-right: 0;
-        padding-left: 0;
-        padding-right: 0;
-    }
-
-    .details-card .list-group-item:first-child {
-        border-top: 0;
-    }
-    
-    .details-card .list-group-item strong {
-        display: inline-block;
-        min-width: 120px;
-    }
-    
-    .details-card .list-group-item i {
-        color: var(--primary-accent);
-        margin-right: 10px;
-        width: 20px;
-        text-align: center;
-    }
-
-    .action-card {
-        display: flex;
-        flex-direction: column;
-        text-align: center;
-        padding: 2rem;
-    }
-    
-    .action-card .icon {
-        font-size: 3rem;
+    .icon {
+        font-size: 2.5rem;
         color: var(--primary-accent);
         margin-bottom: 1rem;
     }
-
-    .action-card h4 {
+    .tip-box {
+        background-color: #e7f1ff;
+        border-left: 5px solid var(--primary-accent);
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+    }
+    .tip-box .tip-title {
         font-weight: 600;
-        margin-bottom: 0.5rem;
+        color: var(--primary-accent);
     }
-    
-    .action-card p {
-        flex-grow: 1;
-        margin-bottom: 1.5rem;
+    .balance-amount {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--success-green);
+        line-height: 1;
     }
-
-    .action-card .btn {
-        font-weight: 600;
+    .prompt-suggestion {
+        background-color: var(--light-bg);
+        border: 1px dashed var(--card-border);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        font-size: 0.9rem;
+        margin-top: 1.5rem;
+        position: relative;
     }
-
+    .prompt-suggestion small {
+        font-weight: 500;
+        color: var(--text-muted);
+    }
+    .prompt-suggestion .copy-btn {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        cursor: pointer;
+    }
+    .account-info-section ul li {
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--light-bg);
+    }
+    .account-info-section ul li:last-child {
+        border-bottom: none;
+    }
+    .account-info-section i {
+        color: var(--primary-accent);
+        margin-right: 1rem;
+    }
     .low-balance-alert {
         background-color: #fff3cd;
         border-color: #ffeeba;
         color: #856404;
         border-radius: 0.5rem;
-        padding: 1rem;
     }
 </style>
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
+<?php
+    // Educative content: an array of tips to be displayed randomly
+    $tips = [
+        "**Conversational Memory:** Enable 'Conversational Memory' in the AI Studio to have the AI remember past interactions for better follow-up questions.",
+        "**Multi-File Uploads:** Did you know you can upload multiple files (images, PDFs, etc.) to the AI Studio for comprehensive analysis in a single prompt?",
+        "**Saving Prompts:** Save your most-used prompts in the AI Studio to reuse them later, saving you time and effort.",
+        "**Crypto Transactions:** When querying crypto transactions, you can specify the number of recent transactions you want to see (up to 50).",
+        "**Precise Balance:** All account balance calculations use high-precision math to ensure every cent is accurately tracked."
+    ];
+    $randomTip = $tips[array_rand($tips)];
+?>
 <div class="container my-5">
-    <div class="dashboard-header text-center">
+
+    <!-- Low Balance Alert (if applicable) -->
+    <?php if (isset($balance) && (float)$balance < 50): ?>
+    <div class="alert low-balance-alert d-flex align-items-center" role="alert">
+        <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+        <div>
+            <h5 class="alert-heading fw-bold">Your Balance is Low!</h5>
+            <p class="mb-0">Don't let your creative flow be interrupted. Top up your account to continue using our services without a hitch.</p>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <!-- Header -->
+    <div class="blueprint-header text-center mt-4">
         <h1>Welcome back, <span class="text-primary"><?= esc($username ?? 'User') ?>!</span></h1>
-        <p class="lead">Here's a quick overview of your account and available services.</p>
+        <p class="lead text-muted">Your digital toolkit is ready. What will you create today?</p>
     </div>
 
-    <div class="row g-4">
-        <!-- Main Panel: Balance and Account Details -->
-        <div class="col-lg-7">
-            <div class="row g-4">
-                <!-- Balance Card -->
-                <div class="col-12">
-                    <div class="dashboard-card balance-card">
-                        <div class="card-body p-5">
-                            <p class="text-muted text-uppercase fw-bold mb-2">Current Balance</p>
-                            <div class="balance-amount">Ksh. <?= esc(number_format((float)($balance ?? 0), 2)) ?></div>
-                            <p class="text-muted">Available for all services</p>
-                            <a href="<?= url_to('payment.index') ?>" class="btn btn-success btn-lg mt-2 px-5">
-                                <i class="bi bi-plus-circle"></i> Add Funds
-                            </a>
-                        </div>
-                    </div>
-                </div>
+    <!-- Tip of the Day -->
+    <div class="tip-box mb-5">
+        <p class="tip-title mb-1"><i class="bi bi-lightbulb-fill"></i> Pro Tip:</p>
+        <p class="mb-0"><?= esc(str_replace('**', '', $randomTip)) // Simple formatting for display ?></p>
+    </div>
 
-                <!-- Account Details Card -->
-                <div class="col-12">
-                    <div class="dashboard-card details-card">
-                        <div class="card-header bg-transparent border-0 pt-4 px-4">
-                            <h4 class="fw-bold">Account Details</h4>
-                        </div>
-                        <div class="card-body px-4 pb-4">
-                            <ul class="list-group list-group-flush">
-                                <li class="list-group-item d-flex align-items-center">
-                                    <i class="bi bi-person-fill"></i><strong>Username:</strong>
-                                    <span class="ms-auto text-muted d-block text-truncate"><?= esc($username ?? 'N/A') ?></span>
-                                </li>
-                                <li class="list-group-item d-flex align-items-center">
-                                    <i class="bi bi-envelope-fill"></i><strong>Email:</strong>
-                                    <span class="ms-auto text-muted d-block text-truncate"><?= esc($email ?? 'N/A') ?></span>
-                                </li>
-                                <li class="list-group-item d-flex align-items-center">
-                                    <i class="bi bi-calendar-check-fill"></i><strong>Member Since:</strong>
-                                    <span class="ms-auto text-muted d-block text-truncate"><?= esc($member_since ? date('F d, Y', strtotime($member_since)) : 'N/A') ?></span>
-                                </li>
-                            </ul>
-                        </div>
+    <!-- Scalable 3-Column Grid for Services -->
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+
+        <!-- AI Studio Card -->
+        <div class="col">
+            <div class="card blueprint-card h-100">
+                <div class="card-body p-4">
+                    <div class="icon"><i class="bi bi-stars"></i></div>
+                    <h4 class="card-title">AI Studio</h4>
+                    <p class="card-text">Your creative co-pilot for writing, analysis, and brainstorming. Powered by Google's Gemini.</p>
+                    <div class="prompt-suggestion">
+                        <span class="badge bg-primary-subtle text-primary-emphasis rounded-pill copy-btn" id="copyPromptBtn" title="Copy prompt">
+                            <i class="bi bi-clipboard"></i>
+                        </span>
+                        <small class="d-block">Try this prompt:</small>
+                        <p class="mb-0" id="promptToCopy">"Write a short, engaging marketing email for a new coffee shop opening in Nairobi."</p>
+                    </div>
+                    <a href="<?= url_to('gemini.index') ?>" class="btn btn-primary mt-4">Launch AI Studio <i class="bi bi-arrow-right-short"></i></a>
+                </div>
+            </div>
+        </div>
+
+        <!-- CryptoQuery Card -->
+        <div class="col">
+            <div class="card blueprint-card h-100">
+                <div class="card-body p-4">
+                    <div class="icon"><i class="bi bi-search"></i></div>
+                    <h4 class="card-title">CryptoQuery</h4>
+                    <p class="card-text">Get instant, real-time balance and transaction history for any public Bitcoin or Litecoin address.</p>
+                    <a href="<?= url_to('crypto.index') ?>" class="btn btn-primary mt-auto">Run a Query <i class="bi bi-arrow-right-short"></i></a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions Card -->
+        <div class="col">
+            <div class="card blueprint-card h-100">
+                <div class="card-body p-4">
+                    <div class="icon"><i class="bi bi-wallet2"></i></div>
+                    <h4 class="card-title">Quick Actions</h4>
+                    <div class="text-center my-3">
+                        <p class="text-muted text-uppercase small mb-1">Current Balance</p>
+                        <div class="balance-amount">Ksh. <?= esc(number_format((float)($balance ?? 0), 2)) ?></div>
+                    </div>
+                    <div class="d-grid gap-2 mt-auto">
+                        <a href="<?= url_to('payment.index') ?>" class="btn btn-success"><i class="bi bi-plus-circle"></i> Add Funds</a>
+                        <a href="<?= url_to('account.index') ?>" class="btn btn-outline-secondary"><i class="bi bi-receipt"></i> View History</a>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Side Panel: Services -->
-        <div class="col-lg-5">
-            <div class="row g-4">
-                <!-- Low Balance Alert -->
-                <?php if (isset($balance) && (float)$balance < 50): ?>
-                <div class="col-12">
-                    <div class="low-balance-alert d-flex align-items-center">
-                        <i class="bi bi-exclamation-triangle-fill fs-3 me-3"></i>
-                        <div>
-                            <h5 class="fw-bold">Your Balance is Low!</h5>
-                            Don't get caught without credits. Top up now to keep your creative flow going.
-                        </div>
-                    </div>
-                </div>
-                <?php endif; ?>
+    </div>
 
-                <!-- Gemini API Card -->
-                <div class="col-12">
-                    <div class="dashboard-card action-card">
-                        <div class="icon"><i class="bi bi-robot"></i></div>
-                        <h4>AI Studio</h4>
-                        <p class="text-muted">Chat with your AI assistant, generate text, or analyze documents. Your creative co-pilot awaits.</p>
-                        <a href="<?= url_to('gemini.index') ?>" class="btn btn-outline-primary">Launch AI Studio</a>
-                    </div>
-                </div>
-
-                <!-- Crypto Service Card -->
-                <div class="col-12">
-                    <div class="dashboard-card action-card">
-                        <div class="icon"><i class="bi bi-search"></i></div>
-                        <h4>CryptoQuery</h4>
-                        <p class="text-muted">Look up any BTC or LTC wallet in seconds. Get the latest balance and transaction data instantly.</p>
-                        <a href="<?= url_to('crypto.index') ?>" class="btn btn-outline-primary">Run a Query</a>
-                    </div>
-                </div>
-            </div>
+    <!-- Minimal Account Info Section -->
+    <div class="card blueprint-card mt-5">
+        <div class="card-body p-4 account-info-section">
+            <h4 class="fw-bold mb-3 text-center">Account Information</h4>
+            <ul class="list-unstyled mb-0">
+                <li class="d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-person-fill"></i><strong>Username</strong></span>
+                    <span class="text-muted"><?= esc($username ?? 'N/A') ?></span>
+                </li>
+                <li class="d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-envelope-fill"></i><strong>Email</strong></span>
+                    <span class="text-muted"><?= esc($email ?? 'N/A') ?></span>
+                </li>
+                <li class="d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-calendar-check-fill"></i><strong>Member Since</strong></span>
+                    <span class="text-muted"><?= esc($member_since ? date('F d, Y', strtotime($member_since)) : 'N/A') ?></span>
+                </li>
+            </ul>
         </div>
     </div>
+
 </div>
+<?= $this->endSection() ?>
+
+<?= $this->section('scripts') ?>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const copyBtn = document.getElementById('copyPromptBtn');
+        const promptText = document.getElementById('promptToCopy').innerText;
+        
+        if (copyBtn) {
+            copyBtn.addEventListener('click', function() {
+                navigator.clipboard.writeText(promptText).then(() => {
+                    const originalIcon = this.innerHTML;
+                    this.innerHTML = '<i class="bi bi-check-lg"></i>';
+                    this.classList.remove('bg-primary-subtle', 'text-primary-emphasis');
+                    this.classList.add('bg-success-subtle', 'text-success-emphasis');
+                    
+                    setTimeout(() => {
+                        this.innerHTML = originalIcon;
+                        this.classList.remove('bg-success-subtle', 'text-success-emphasis');
+                        this.classList.add('bg-primary-subtle', 'text-primary-emphasis');
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Failed to copy text: ', err);
+                });
+            });
+        }
+    });
+</script>
 <?= $this->endSection() ?>
