@@ -60,7 +60,7 @@ class CryptoController extends BaseController
     }
 
     /**
-     * Processes a crypto query, including a balance check before execution.
+     * Processes a crypto query, including a balance check and deduction within a transaction.
      *
      * @return RedirectResponse
      */
@@ -77,91 +77,78 @@ class CryptoController extends BaseController
             return redirect()->back()->withInput()->with('error', $this->validator->getErrors());
         }
 
+        $userId = (int) session()->get('userId');
+        if ($userId <= 0) {
+            return redirect()->back()->withInput()->with('error', 'User not logged in or invalid user ID.');
+        }
+
         $asset = $this->request->getPost('asset');
         $queryType = $this->request->getPost('query_type');
         $address = $this->request->getPost('address');
         $limit = $this->request->getPost('limit');
-
+        
         $result = [];
         $errors = [];
 
+        // --- Balance Check ---
+        $user = $this->userModel->find($userId);
+        if (!$user) {
+            return redirect()->back()->withInput()->with('error', 'User not found.');
+        }
+
+        $costInKSH = (self::CRYPTO_QUERY_COST_USD * self::USD_TO_KSH_RATE);
+        $deductionAmount = max(self::MINIMUM_BALANCE_KSH, ceil($costInKSH * 100) / 100);
+
+        if (bccomp((string) $user->getBalance(), (string) $deductionAmount, 2) < 0) {
+            $error = "Insufficient balance. This query costs approx. KSH " . number_format($deductionAmount, 2) .
+                     ", but you only have KSH " . $user->getBalance() . ".";
+            return redirect()->back()->withInput()->with('error', $error);
+        }
+        
         try {
-            // --- Balance Check ---
-            $userId = (int) session()->get('userId');
-            if ($userId > 0) {
-                /** @var \App\Entities\User|null $user */
-                $user = $this->userModel->find($userId);
-                if (! $user) {
-                    $errors[] = 'User not found.';
-                } else {
-                    $costInKSH = (self::CRYPTO_QUERY_COST_USD * self::USD_TO_KSH_RATE);
-                    $deductionAmount = max(self::MINIMUM_BALANCE_KSH, ceil($costInKSH * 100) / 100);
-
-                    if (bccomp((string) $user->balance, (string) $deductionAmount, 2) < 0) {
-                        $errors[] = "Insufficient balance. This query costs approx. KSH " . number_format($deductionAmount, 2) .
-                                    ", but you only have KSH " . $user->balance . ".";
-                    }
-                }
-            } else {
-                $errors[] = 'User not logged in or invalid user ID.';
-                log_message('error', 'User not logged in or invalid user ID during balance check.');
-            }
-
-            if (!empty($errors)) {
-                return redirect()->back()->withInput()->with('error', $errors);
-            }
-            // --- End Balance Check ---
-
             // --- Execute Query ---
             if ($asset === 'btc') {
-                if ($queryType === 'balance') {
-                    $result = $this->cryptoService->getBtcBalance($address);
-                } else {
-                    $result = $this->cryptoService->getBtcTransactions($address, $limit);
-                }
+                $result = ($queryType === 'balance') 
+                    ? $this->cryptoService->getBtcBalance($address) 
+                    : $this->cryptoService->getBtcTransactions($address, $limit);
             } elseif ($asset === 'ltc') {
-                if ($queryType === 'balance') {
-                    $result = $this->cryptoService->getLtcBalance($address);
-                } else {
-                    $result = $this->cryptoService->getLtcTransactions($address, $limit);
-                }
+                $result = ($queryType === 'balance') 
+                    ? $this->cryptoService->getLtcBalance($address) 
+                    : $this->cryptoService->getLtcTransactions($address, $limit);
             }
 
             if (isset($result['error'])) {
                 $errors[] = $result['error'];
             }
-            // --- End Execute Query ---
-
-            // --- Deduct Cost ---
-            if (empty($errors)) {
-                $costInKSH = (self::CRYPTO_QUERY_COST_USD * self::USD_TO_KSH_RATE);
-                $deductionAmount = max(self::MINIMUM_BALANCE_KSH, ceil($costInKSH * 100) / 100);
-                $costMessage = "KSH " . number_format($deductionAmount, 2) . " deducted for your query.";
-
-                if ($userId > 0) {
-                    if ($this->userModel->deductBalance($userId, (string)$deductionAmount)) {
-                        session()->setFlashdata('success', $costMessage);
-                    } else {
-                        // This error message covers insufficient balance or other deduction failures
-                        $errors[] = 'Insufficient balance or failed to update balance.';
-                    }
-                } else {
-                    // This case should ideally not be reached due to the earlier check, but included for safety.
-                    $errors[] = 'User not logged in or invalid user ID. Cannot deduct balance.';
-                    log_message('error', 'User not logged in or invalid user ID during balance deduction.');
-                }
-            }
-            // --- End Deduct Cost ---
 
         } catch (\Exception $e) {
-            $errors[] = 'An unexpected error occurred: ' . $e->getMessage();
-            log_message('error', 'Crypto query error: ' . $e->getMessage());
+            $errors[] = 'An error occurred while fetching crypto data: ' . $e->getMessage();
+            log_message('error', 'Crypto query API error: ' . $e->getMessage());
         }
 
         if (!empty($errors)) {
             return redirect()->back()->withInput()->with('error', $errors);
         }
+        
+        // --- Deduct Cost within a Transaction ---
+        $db = \Config\Database::connect();
+        $db->transStart();
 
-        return redirect()->back()->withInput()->with('result', $result);
+        $deductionSuccess = $this->userModel->deductBalance($userId, (string)$deductionAmount);
+        
+        $db->transComplete();
+
+        if ($db->transStatus() === false || !$deductionSuccess) {
+            log_message('critical', "Transaction failed while deducting crypto query cost for user ID: {$userId}");
+            // The user got the data but we failed to charge them. Log this critical error.
+            return redirect()->back()->withInput()
+                ->with('result', $result)
+                ->with('error', 'Query successful, but a billing error occurred. Please contact support.');
+        }
+
+        $costMessage = "KSH " . number_format($deductionAmount, 2) . " deducted for your query.";
+        return redirect()->back()->withInput()
+            ->with('result', $result)
+            ->with('success', $costMessage);
     }
 }

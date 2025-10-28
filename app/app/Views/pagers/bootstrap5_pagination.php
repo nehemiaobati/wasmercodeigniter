@@ -8,7 +8,7 @@ use CodeIgniter\Pager\PagerRenderer;
 $pager->setSurroundCount(2);
 ?>
 <nav aria-label="<?= lang('Pager.pageNavigation') ?>">
-<ul class="pagination">
+<ul class="pagination" style="flex-wrap: wrap;">
 <!-- First Link -->
 <?php if ($pager->hasPreviousPage()) : ?>
 <li class="page-item">

@@ -91,7 +91,7 @@ class AdminController extends BaseController
      * Updates a user's balance.
      *
      * Validates input for amount and action (deposit/withdraw) and performs
-     * precise balance updates using bcmath functions.
+     * precise balance updates using bcmath functions within a database transaction.
      *
      * @param int $id The unique identifier of the user whose balance is to be updated.
      * @return \CodeIgniter\HTTP\ResponseInterface Redirects back with status messages or errors.
@@ -99,60 +99,57 @@ class AdminController extends BaseController
     public function updateBalance($id)
     {
         $userModel = new UserModel();
-        // Check if the bcmath extension is loaded for precise floating-point calculations.
-        if (!extension_loaded('bcmath')) {
-            log_message('error', 'bcmath extension is not loaded. Balance calculations may be inaccurate.');
-            // Optionally, return an error to the user if bcmath is critical.
-            // return redirect()->back()->with('error', 'Server configuration error: bcmath extension missing.');
-        }
         
         /** @var User|null $user */
         $user = $userModel->find($id);
 
-        // If the user is not found, return an error.
         if (!$user) {
             return redirect()->back()->with('error', 'User not found.');
         }
 
-        // Define validation rules for the amount and action.
         $rules = [
             'amount' => 'required|numeric|greater_than[0]',
             'action' => 'required|in_list[deposit,withdraw]',
         ];
 
-        // Validate the input. If validation fails, redirect back with errors.
         if (! $this->validate($rules)) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
-        $amount = (float) $this->request->getPost('amount'); // Cast amount to float for precision.
+        $amount = $this->request->getPost('amount');
         $action = $this->request->getPost('action');
 
-        $newBalance = $user->balance; // Initialize with the current balance.
+        $db = \Config\Database::connect();
+        $db->transStart();
+
+        // Re-fetch user within transaction to ensure we have the latest data and lock the row
+        $userInTransaction = $userModel->find($id);
+        if (!$userInTransaction) {
+             $db->transComplete();
+             return redirect()->back()->with('error', 'User not found during transaction.');
+        }
 
         if ($action === 'deposit') {
-            // Use bcadd for precise floating-point addition.
-            $newBalance = bcadd((string) $user->balance, (string) $amount, 2);
+            $userModel->addBalance($id, (string)$amount);
         } elseif ($action === 'withdraw') {
-            // Check for sufficient balance before withdrawal using bccomp for precise comparison.
-            if (bccomp((string) $user->balance, (string) $amount, 2) >= 0) {
-                // Use bcsub for precise floating-point subtraction.
-                $newBalance = bcsub((string) $user->balance, (string) $amount, 2);
-            } else {
-                // If balance is insufficient, redirect back with an error message.
+            if (bccomp((string) $userInTransaction->getBalance(), (string) $amount, 2) < 0) {
+                // End transaction before redirecting
+                $db->transComplete();
                 return redirect()->back()->withInput()->with('error', 'Insufficient balance.');
             }
+            $userModel->deductBalance($id, (string)$amount);
         }
 
-        // Update the user's balance in the database.
-        if ($userModel->update($id, ['balance' => $newBalance])) {
-            // Redirect to the user's detail page with a success message.
-            return redirect()->to(url_to('admin.users.show', $id))->with('success', 'Balance updated successfully.');
-        } else {
-            // If the update fails, redirect back with an error message.
-            return redirect()->back()->withInput()->with('error', 'Failed to update balance.');
+        $db->transComplete();
+
+        if ($db->transStatus() === false) {
+            log_message('error', "Admin balance update transaction failed for user ID: {$id}");
+            return redirect()->back()->withInput()->with('error', 'A database error occurred. Failed to update balance.');
         }
+        
+        return redirect()->to(url_to('admin.users.show', $id))->with('success', 'Balance updated successfully.');
     }
+
 
     /**
      * Deletes a specific user.

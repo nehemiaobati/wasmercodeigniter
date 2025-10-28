@@ -93,6 +93,10 @@ class PaymentsController extends BaseController
         $response = $this->paystackService->verifyTransaction($paystackReference);
 
         if ($response['status'] === true && isset($response['data']['status']) && $response['data']['status'] === 'success') {
+            
+            $db = \Config\Database::connect();
+            $db->transStart();
+
             $this->paymentModel->update($payment->id, [
                 'status'            => 'success',
                 'paystack_response' => json_encode($response['data']),
@@ -100,6 +104,13 @@ class PaymentsController extends BaseController
 
             if ($payment->user_id) {
                 $this->userModel->addBalance((int) $payment->user_id, (string) $payment->amount);
+            }
+
+            $db->transComplete();
+
+            if ($db->transStatus() === false) {
+                log_message('critical', 'Payment verification transaction failed for payment ID: ' . $payment->id);
+                return redirect()->to(url_to('payment.index'))->with('error', ['payment' => 'A critical error occurred. Please contact support.']);
             }
 
             return redirect()->to(url_to('payment.index'))->with('success', 'Payment successful!');

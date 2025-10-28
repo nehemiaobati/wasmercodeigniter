@@ -6,12 +6,13 @@ use App\Controllers\BaseController;
 use App\Entities\User;
 use App\Libraries\GeminiService;
 use App\Libraries\MemoryService;
+use App\Models\EntityModel;
+use App\Models\InteractionModel;
 use App\Models\PromptModel;
 use App\Models\UserModel;
 use App\Models\UserSettingsModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
-use CodeIgniter\HTTP\Files\UploadedFile;
 use Parsedown;
 
 /**
@@ -98,17 +99,9 @@ class GeminiController extends BaseController
         $userId  = (int) session()->get('userId');
         $prompts = $this->promptModel->where('user_id', $userId)->findAll();
 
-        // Fetch or create user setting for Assistant Mode
+        // Fetch the user's saved setting. Default to 'true' if no setting exists yet.
         $userSetting = $this->userSettingsModel->where('user_id', $userId)->first();
-        if (!$userSetting) {
-            $this->userSettingsModel->save([
-                'user_id' => $userId,
-                'assistant_mode_enabled' => true, // Default to enabled for new users
-            ]);
-            $assistantModeEnabled = true;
-        } else {
-            $assistantModeEnabled = $userSetting->assistant_mode_enabled;
-        }
+        $assistantModeEnabled = $userSetting ? $userSetting->assistant_mode_enabled : true;
 
         $data = [
             'pageTitle'   => 'Gemini AI Studio | Afrikenkid',
@@ -117,7 +110,7 @@ class GeminiController extends BaseController
             'result'  => session()->getFlashdata('result'),
             'error'   => session()->getFlashdata('error'),
             'prompts' => $prompts,
-            'assistant_mode_enabled' => $assistantModeEnabled, // Pass setting to view
+            'assistant_mode_enabled' => $assistantModeEnabled,
         ];
         return view('gemini/query_form', $data);
     }
@@ -225,8 +218,9 @@ class GeminiController extends BaseController
             return redirect()->back()->withInput()->with('error', 'User not logged in or invalid user ID.');
         }
 
-        $isAssistantMode = $this->request->getPost('assistant_mode') === '1';
-        $this->userSettingsModel->where('user_id', $userId)->set(['assistant_mode_enabled' => $isAssistantMode])->update();
+        // Fetch the user's saved setting for assistant mode. Default to true if not found.
+        $userSetting = $this->userSettingsModel->where('user_id', $userId)->first();
+        $isAssistantMode = $userSetting ? $userSetting->assistant_mode_enabled : true;
 
         $inputText = (string) $this->request->getPost('prompt');
         $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
@@ -279,6 +273,42 @@ class GeminiController extends BaseController
         return redirect()->back()->withInput()
             ->with('result', $htmlResult)
             ->with('raw_result', $apiResponse['result']);
+    }
+
+    /**
+     * [NEW] Handles an AJAX request to update the user's assistant mode setting.
+     *
+     * @return ResponseInterface A JSON response indicating the status of the operation.
+     */
+    public function updateAssistantMode(): ResponseInterface
+    {
+        $userId = (int) session()->get('userId');
+        if ($userId <= 0) {
+            return $this->response->setStatusCode(403)->setJSON([
+                'status' => 'error',
+                'message' => 'Authentication required.',
+                'csrf_token' => csrf_hash()
+            ]);
+        }
+
+        $isEnabled = $this->request->getPost('enabled') === 'true';
+
+        $setting = $this->userSettingsModel->where('user_id', $userId)->first();
+
+        if ($setting) {
+            $this->userSettingsModel->update($setting->id, ['assistant_mode_enabled' => $isEnabled]);
+        } else {
+            $this->userSettingsModel->save([
+                'user_id' => $userId,
+                'assistant_mode_enabled' => $isEnabled
+            ]);
+        }
+
+        return $this->response->setStatusCode(200)->setJSON([
+            'status' => 'success',
+            'message' => 'Setting saved.',
+            'csrf_token' => csrf_hash()
+        ]);
     }
 
     /**
@@ -405,6 +435,7 @@ class GeminiController extends BaseController
 
     /**
      * Processes the API response, calculates final cost, deducts balance, and updates memory.
+     * All database writes are wrapped in a transaction.
      *
      * @param User  $user          The user entity.
      * @param array $apiResponse   The response from the Gemini API.
@@ -420,11 +451,10 @@ class GeminiController extends BaseController
 
         $costData = $this->_calculateCost($inputTokens, $outputTokens);
 
-        if ($this->userModel->deductBalance((int) $user->id, (string) $costData['deductionAmount'])) {
-            session()->setFlashdata('success', $costData['costMessage']);
-        } else {
-            session()->setFlashdata('error', 'Query processed, but an error occurred during balance deduction.');
-        }
+        $db = \Config\Database::connect();
+        $db->transStart();
+
+        $deductionSuccess = $this->userModel->deductBalance((int) $user->id, (string) $costData['deductionAmount']);
 
         if ($isAssistantMode && isset($contextData['memoryService'])) {
             /** @var MemoryService $memoryService */
@@ -435,6 +465,16 @@ class GeminiController extends BaseController
                 $aiResponseText,
                 $contextData['usedInteractionIds']
             );
+        }
+
+        $db->transComplete();
+
+        if ($db->transStatus() === false || !$deductionSuccess) {
+            // Log a critical error: The user received an AI response, but we failed to charge them or save their memory.
+            log_message('critical', "Transaction failed during AI response processing for user ID: {$user->id}");
+            session()->setFlashdata('error', 'Query processed, but a billing or memory error occurred. Please contact support.');
+        } else {
+            session()->setFlashdata('success', $costData['costMessage']);
         }
     }
 
@@ -548,5 +588,38 @@ class GeminiController extends BaseController
         }
 
         return redirect()->to(url_to('gemini.index'))->with('error', 'Failed to delete the prompt.');
+    }
+
+    /**
+     * Clears all conversational memory (interactions and entities) for the logged-in user.
+     *
+     * @return RedirectResponse
+     */
+    public function clearMemory(): RedirectResponse
+    {
+        $userId = (int) session()->get('userId');
+        if ($userId <= 0) {
+            return redirect()->to(url_to('gemini.index'))->with('error', 'You must be logged in to perform this action.');
+        }
+
+        $interactionModel = new InteractionModel();
+        $entityModel      = new EntityModel();
+
+        // Use a transaction to ensure both tables are cleared successfully
+        $db = \Config\Database::connect();
+        $db->transStart();
+
+        $interactionModel->where('user_id', $userId)->delete();
+        $entityModel->where('user_id', $userId)->delete();
+
+        $db->transComplete();
+
+        if ($db->transStatus() === false) {
+            // Log the error and notify the user
+            log_message('error', 'Failed to clear memory for user ID: ' . $userId);
+            return redirect()->to(url_to('gemini.index'))->with('error', 'An error occurred while trying to clear your memory. Please try again.');
+        }
+
+        return redirect()->to(url_to('gemini.index'))->with('success', 'Your conversational memory has been successfully cleared.');
     }
 }

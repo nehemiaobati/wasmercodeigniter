@@ -1,5 +1,3 @@
-<?= '
-' ?>
 <?= $this->extend('layouts/default') ?>
 
 <?= $this->section('styles') ?>
@@ -59,11 +57,18 @@
     .settings-card .form-check-label {
         font-weight: 500;
     }
-    .settings-card .saved-prompts-block {
+    .settings-card .saved-prompts-block, .settings-card .memory-management {
         margin-top: 1.5rem;
         padding-top: 1.5rem;
         border-top: 1px solid #e9ecef;
     }
+    
+    /* Toast notification for settings save */
+    .toast.show {
+        animation: slideIn 0.3s ease-out, fadeOut 0.5s ease-in 2.5s;
+    }
+    @keyframes slideIn { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
 
     /* Media Upload Area Styling */
     #mediaUploadArea {
@@ -151,56 +156,74 @@
 
 <?= $this->section('content') ?>
 <div class="container my-5">
-    <div class="text-center mb-5">
+    <div class="blueprint-header text-center mb-5">
         <h1 class="fw-bold"><i class="bi bi-stars text-primary"></i> AI Studio</h1>
         <p class="text-muted lead">This is your creative canvas. Chat, analyze, or generate anything you can imagine.</p>
     </div>
 
-    <form id="geminiForm" action="<?= url_to('gemini.generate') ?>" method="post" enctype="multipart/form-data">
-        <?= csrf_field() ?>
-        <div class="row g-4">
-            <!-- Left Column: Settings & Config -->
-            <div class="col-lg-4">
-                <div class="card settings-card">
-                    <div class="card-body p-4">
+    
+    <div class="row g-4">
+        <!-- Left Column: Settings & Config -->
+        <div class="col-lg-4">
+            <div class="card settings-card blueprint-card">
+                <div class="card-body p-4">
+                    <div id="settingsContainer">
                         <h4 class="card-title fw-bold mb-4">
                             <i class="bi bi-gear-fill"></i> Settings
                         </h4>
                         <div class="form-check form-switch fs-5 p-0 d-flex justify-content-between align-items-center">
                             <label class="form-check-label" for="assistantModeToggle">Conversational Memory</label>
-                            <input class="form-check-input" type="checkbox" role="switch" id="assistantModeToggle" name="assistant_mode" value="1" <?= old('assistant_mode', $assistant_mode_enabled ? '1' : '0') === '1' ? 'checked' : '' ?>>
+                            <input class="form-check-input" type="checkbox" role="switch" id="assistantModeToggle" name="assistant_mode" value="1" <?= $assistant_mode_enabled ? 'checked' : '' ?>>
                         </div>
                         <small class="text-muted d-block mt-1">Turn on to let the AI remember your previous conversations. Great for follow-up questions and multi-step tasks.</small>
-                        
-                        <?php if (!empty($prompts)): ?>
-                        <div class="saved-prompts-block flex-grow-1">
-                            <label for="savedPrompts" class="form-label fw-bold">Saved Prompts</label>
-                            <div class="input-group">
-                                <select class="form-select" id="savedPrompts">
-                                    <option selected disabled>Select a prompt...</option>
-                                    <?php foreach ($prompts as $p): ?>
-                                        <option value="<?= esc($p->prompt_text) ?>" data-id="<?= $p->id ?>"><?= esc($p->title) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="d-flex gap-2 mt-2">
-                                <button type="button" id="usePromptBtn" class="btn btn-sm btn-outline-secondary w-100"><i class="bi bi-arrow-down-circle"></i> Use</button>
-                                <button type="button" id="deletePromptBtn" class="btn btn-sm btn-outline-danger w-100" disabled><i class="bi bi-trash"></i> Delete</button>
-                            </div>
-                        </div>
-                        <?php endif; ?>
                     </div>
+
+                    <!-- SEPARATE FORM FOR CLEARING MEMORY -->
+                    <div class="memory-management">
+                        <label class="form-label fw-bold">Memory Management</label>
+                        <p class="small text-muted mb-2">Permanently delete all past interactions and learned concepts from your AI's memory.</p>
+                        <form id="clearMemoryForm" action="<?= url_to('gemini.memory.clear') ?>" method="post">
+                            <?= csrf_field() ?>
+                            <div class="d-grid">
+                                <button type="submit" id="clearMemoryBtn" class="btn btn-outline-danger">
+                                    <i class="bi bi-trash"></i> Clear All Memory
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <?php if (!empty($prompts)): ?>
+                    <div class="saved-prompts-block flex-grow-1">
+                        <label for="savedPrompts" class="form-label fw-bold">Saved Prompts</label>
+                        <div class="input-group">
+                            <select class="form-select" id="savedPrompts">
+                                <option selected disabled>Select a prompt...</option>
+                                <?php foreach ($prompts as $p): ?>
+                                    <option value="<?= esc($p->prompt_text) ?>" data-id="<?= $p->id ?>"><?= esc($p->title) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="d-flex gap-2 mt-2">
+                            <button type="button" id="usePromptBtn" class="btn btn-sm btn-outline-secondary w-100"><i class="bi bi-arrow-down-circle"></i> Use</button>
+                            <button type="button" id="deletePromptBtn" class="btn btn-sm btn-outline-danger w-100" disabled><i class="bi bi-trash"></i> Delete</button>
+                        </div>
+                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
+        </div>
 
-            <!-- Right Column: Main Prompt & Actions -->
-            <div class="col-lg-8">
-                <div class="card query-card">
+        <!-- Right Column: Main Prompt & Actions -->
+        <div class="col-lg-8">
+            <form id="geminiForm" action="<?= url_to('gemini.generate') ?>" method="post" enctype="multipart/form-data">
+                <?= csrf_field() ?>
+                <div class="card query-card blueprint-card">
                     <div class="card-body p-4 p-md-5">
                         <div class="form-floating mb-2">
-                            <textarea id="prompt" name="prompt" class="form-control" placeholder="e.g., &quot;Write a marketing email for a new coffee shop in Nairobi...&quot;" style="height: 150px" required><?= old('prompt') ?></textarea>
+                            <textarea id="prompt" name="prompt" class="form-control" placeholder="Your Prompt" style="height: 150px" required><?= old('prompt') ?></textarea>
                             <label for="prompt">Your Prompt</label>
                         </div>
+                        <small class="text-muted d-block mb-4">e.g., "Write a marketing email for a new coffee shop in Nairobi..."</small>
                         <div class="d-flex justify-content-end mb-4">
                             <button type="button" class="btn btn-link text-decoration-none btn-sm" data-bs-toggle="modal" data-bs-target="#savePromptModal">
                                 <i class="bi bi-bookmark-plus"></i> Save this prompt
@@ -217,13 +240,14 @@
                         </div>
 
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg fw-bold"><i class="bi bi-sparkles"></i> Generate</button>
+                            <button type="submit" id="generateBtn" class="btn btn-primary btn-lg fw-bold"><i class="bi bi-sparkles"></i> Generate</button>
                         </div>
                     </div>
                 </div>
-            </div>
+            </form>
         </div>
-    </form>
+    </div>
+    
 
     <?php 
         $result = session()->getFlashdata('result');
@@ -232,7 +256,7 @@
     ?>
         <div class="row justify-content-center mt-4">
             <div class="col-lg-12">
-                <div class="card results-card">
+                <div class="card results-card blueprint-card">
                     <div class="card-body p-4 p-md-5">
                         <h3 class="fw-bold mb-4 d-flex justify-content-between align-items-center">
                             Studio Output
@@ -280,6 +304,18 @@
         </div>
     </div>
 </div>
+
+<!-- Toast container for notifications -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
+  <div id="settingsToast" class="toast align-items-center text-white bg-dark border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body">
+        <!-- Message will be set by JS -->
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+</div>
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
@@ -287,30 +323,95 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const geminiForm = document.getElementById('geminiForm');
+        const clearMemoryForm = document.getElementById('clearMemoryForm');
         const mainPromptTextarea = document.getElementById('prompt');
-        let csrfToken = geminiForm.querySelector('input[name="<?= csrf_token() ?>"]').value;
-        const csrfInput = geminiForm.querySelector('input[name="<?= csrf_token() ?>"]');
+        let csrfToken = document.querySelector('input[name="<?= csrf_token() ?>"]').value;
+        const csrfInput = document.querySelector('input[name="<?= csrf_token() ?>"]');
         
-        const uploadUrl = `${window.location.origin}/gemini/upload-media`;
-        const deleteUrl = `${window.location.origin}/gemini/delete-media`;
+        const uploadUrl = "<?= url_to('gemini.upload_media') ?>";
+        const deleteUrl = "<?= url_to('gemini.delete_media') ?>";
+        const updateSettingsUrl = "<?= url_to('gemini.settings.updateAssistantMode') ?>";
 
-        // --- Form Submission Loading State ---
-        function handleFormSubmit(form) {
-            const submitButton = form.querySelector('button[type="submit"]');
-            if (submitButton) {
-                const originalButtonText = submitButton.innerHTML;
-                submitButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...`;
-                submitButton.disabled = true;
+        // --- Settings Save Logic (NEW) ---
+        const assistantModeToggle = document.getElementById('assistantModeToggle');
+        const settingsToastEl = document.getElementById('settingsToast');
+        const settingsToast = new bootstrap.Toast(settingsToastEl);
 
-                window.addEventListener('pageshow', function() {
-                    submitButton.innerHTML = originalButtonText;
-                    submitButton.disabled = false;
+        if (assistantModeToggle) {
+            assistantModeToggle.addEventListener('change', function() {
+                const isEnabled = this.checked;
+                const formData = new FormData();
+                formData.append('enabled', isEnabled);
+                formData.append('<?= csrf_token() ?>', csrfToken);
+
+                fetch(updateSettingsUrl, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Update CSRF token on the page for all forms
+                    csrfToken = data.csrf_token;
+                    document.querySelectorAll('input[name="<?= csrf_token() ?>"]').forEach(input => {
+                        input.value = data.csrf_token;
+                    });
+
+                    // Show feedback toast
+                    const toastBody = settingsToastEl.querySelector('.toast-body');
+                    if (data.status === 'success') {
+                        toastBody.textContent = `Conversational Memory ${isEnabled ? 'enabled' : 'disabled'}.`;
+                    } else {
+                        toastBody.textContent = 'Error saving setting.';
+                    }
+                    settingsToast.show();
+                })
+                .catch(error => {
+                    console.error('Error updating setting:', error);
+                    const toastBody = settingsToastEl.querySelector('.toast-body');
+                    toastBody.textContent = 'Network error. Could not save setting.';
+                    settingsToast.show();
                 });
+            });
+        }
+        
+        // --- Form Submission Loading States ---
+        const generateBtn = document.getElementById('generateBtn');
+        const clearMemoryBtn = document.getElementById('clearMemoryBtn');
+
+        if (geminiForm && generateBtn) {
+            geminiForm.addEventListener('submit', function(e) {
+                if (geminiForm.checkValidity()) {
+                    generateBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...`;
+                    generateBtn.disabled = true;
+                }
+            });
+        }
+
+        if (clearMemoryForm && clearMemoryBtn) {
+            clearMemoryForm.addEventListener('submit', function(e) {
+                if (!confirm('Are you sure you want to permanently delete your entire conversation history? This action cannot be undone.')) {
+                    e.preventDefault(); // Stop form submission if user clicks cancel
+                    return;
+                }
+                clearMemoryBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Clearing...`;
+                clearMemoryBtn.disabled = true;
+            });
+        }
+
+        // Restore button state on page load (for back button usage)
+        window.addEventListener('pageshow', function() {
+            if (generateBtn) {
+                generateBtn.innerHTML = `<i class="bi bi-sparkles"></i> Generate`;
+                generateBtn.disabled = false;
             }
-        }
-        if (geminiForm) {
-            geminiForm.addEventListener('submit', () => handleFormSubmit(geminiForm));
-        }
+            if (clearMemoryBtn) {
+                clearMemoryBtn.innerHTML = `<i class="bi bi-trash"></i> Clear All Memory`;
+                clearMemoryBtn.disabled = false;
+            }
+        });
 
         // --- AJAX File Upload Logic ---
         const mediaInput = document.getElementById('media-input-trigger');
@@ -371,7 +472,11 @@
                 try {
                     const response = JSON.parse(xhr.responseText);
                     csrfToken = response.csrf_token;
-                    csrfInput.value = response.csrf_token;
+                    // Update all csrf tokens on the page
+                    document.querySelectorAll('input[name="<?= csrf_token() ?>"]').forEach(input => {
+                        input.value = response.csrf_token;
+                    });
+
 
                     if (xhr.status === 200) {
                         progressBar.classList.add('bg-success');
@@ -423,7 +528,9 @@
                 .then(response => response.json())
                 .then(data => {
                     csrfToken = data.csrf_token;
-                    csrfInput.value = data.csrf_token;
+                    document.querySelectorAll('input[name="<?= csrf_token() ?>"]').forEach(input => {
+                        input.value = data.csrf_token;
+                    });
 
                     if (data.status === 'success') {
                         document.getElementById(uiElementId)?.remove();
