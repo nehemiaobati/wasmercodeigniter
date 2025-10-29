@@ -99,9 +99,9 @@ class CryptoController extends BaseController
         $costInKSH = (self::CRYPTO_QUERY_COST_USD * self::USD_TO_KSH_RATE);
         $deductionAmount = max(self::MINIMUM_BALANCE_KSH, ceil($costInKSH * 100) / 100);
 
-        if (bccomp((string) $user->getBalance(), (string) $deductionAmount, 2) < 0) {
+        if (bccomp((string) $user->balance, (string) $deductionAmount, 2) < 0) {
             $error = "Insufficient balance. This query costs approx. KSH " . number_format($deductionAmount, 2) .
-                     ", but you only have KSH " . $user->getBalance() . ".";
+                     ", but you only have KSH " . $user->balance . ".";
             return redirect()->back()->withInput()->with('error', $error);
         }
         

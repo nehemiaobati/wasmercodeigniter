@@ -328,9 +328,9 @@
         let csrfToken = document.querySelector('input[name="<?= csrf_token() ?>"]').value;
         const csrfInput = document.querySelector('input[name="<?= csrf_token() ?>"]');
         
-        const uploadUrl = "<?= url_to('gemini.upload_media') ?>";
-        const deleteUrl = "<?= url_to('gemini.delete_media') ?>";
-        const updateSettingsUrl = "<?= url_to('gemini.settings.updateAssistantMode') ?>";
+        const uploadUrl = "<?= route_to('gemini.upload_media') ?>";
+        const deleteUrl = "<?= route_to('gemini.delete_media') ?>";
+        const updateSettingsUrl = "<?= route_to('gemini.settings.updateAssistantMode') ?>";
 
         // --- Settings Save Logic (NEW) ---
         const assistantModeToggle = document.getElementById('assistantModeToggle');
@@ -570,7 +570,7 @@
                 deletePromptBtn.addEventListener('click', function() {
                     if (!selectedPromptId || this.disabled) return;
                     if (confirm('Are you sure you want to delete this prompt?')) {
-                        const deleteUrl = `<?= rtrim(url_to('gemini.prompts.delete', 0), '0') ?>${selectedPromptId}`;
+                        const deleteUrl = `<?= rtrim(route_to('gemini.prompts.delete', 0), '0') ?>${selectedPromptId}`;
                         const tempForm = document.createElement('form');
                         tempForm.method = 'post';
                         tempForm.action = deleteUrl;

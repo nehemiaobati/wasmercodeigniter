@@ -91,10 +91,11 @@ if (!selectedOption || selectedOption.disabled) return;
 const campaignId = selectedOption.value;
 const campaignSubject = selectedOption.getAttribute('data-subject');
 
+// Corrected template literal for confirm message
 if (confirm(`Are you sure you want to delete the template: "${campaignSubject}"? This action cannot be undone.`)) {
 const tempForm = document.createElement('form');
 tempForm.method = 'POST';
-tempForm.action = `<?= rtrim(url_to('admin.campaign.delete', 0), '0') ?>${campaignId}`;
+tempForm.action = `<?= rtrim(route_to('admin.campaign.delete', 0), '0') ?>${campaignId}`;
 
 const csrfInput = document.createElement('input');
 csrfInput.type = 'hidden';
