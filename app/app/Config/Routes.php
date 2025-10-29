@@ -12,7 +12,7 @@ use CodeIgniter\Router\RouteCollection;
 // These routes are accessible to everyone.
 $routes->group('', static function ($routes) {
     // Home & Welcome Page
-    $routes->get('/', 'HomeController::landing', ['as' => 'welcome']);
+    $routes->get('/', 'HomeController::landing', ['as' => 'landing']);
 
     // Documentation Page
     $routes->get('/documentation', 'DocumentationController::index', ['as' => 'documentation']);
@@ -45,6 +45,10 @@ $routes->group('', static function ($routes) {
     // Legal Routes
     $routes->get('terms', 'HomeController::terms', ['as' => 'terms']);
     $routes->get('privacy', 'HomeController::privacy', ['as' => 'privacy']);
+
+    // Public Service Pages
+    $routes->get('ai-studio', 'GeminiController::publicPage', ['as' => 'gemini.public']);
+    $routes->get('crypto-query', 'CryptoController::publicPage', ['as' => 'crypto.public']);
 });
 
 //--------------------------------------------------------------------

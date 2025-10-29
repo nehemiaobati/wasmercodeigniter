@@ -5,6 +5,19 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "ContactPage",
+  "name": "Contact Us - Afrikenkid",
+  "description": "Get in touch with the Afrikenkid team for support, inquiries, or custom development projects.",
+  "url": "<?= url_to('contact.form') ?>",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "<?= url_to('contact.form') ?>"
+  }
+}
+</script>
 <div class="container my-5">
     <div class="row justify-content-center">
         <div class="col-lg-7">

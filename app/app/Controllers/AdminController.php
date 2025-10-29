@@ -30,6 +30,8 @@ class AdminController extends BaseController
         $data['total_users'] = $userModel->pager->getTotal();
         // Retrieve the total balance of all users, assuming UserModel has getTotalBalance().
         $data['total_balance'] = $userModel->getTotalBalance();
+        // Add noindex directive for authenticated pages
+        $data['robotsTag'] = 'noindex, follow';
 
         return $this->response->setBody(view('admin/index_view', $data));
     }
@@ -63,6 +65,8 @@ class AdminController extends BaseController
         $data['search_query'] = $searchQuery;
         // Count the number of users found in the search results.
         $data['total_users'] = count($data['users']);
+        // Add noindex directive for authenticated pages
+        $data['robotsTag'] = 'noindex, follow';
 
         // Render the user search results view.
         return $this->response->setBody(view('admin/user_search_results', $data));
@@ -78,6 +82,8 @@ class AdminController extends BaseController
     {
         $userModel = new UserModel();
         $data['user'] = $userModel->find($id);
+        // Add noindex directive for authenticated pages
+        $data['robotsTag'] = 'noindex, follow';
 
         // If the user is not found, redirect back with an error message.
         if (!$data['user']) {

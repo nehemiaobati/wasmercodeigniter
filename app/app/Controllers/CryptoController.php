@@ -33,6 +33,22 @@ class CryptoController extends BaseController
     protected UserModel $userModel;
 
     /**
+     * Displays the public-facing landing page for the CryptoQuery tool.
+     *
+     * @return string The rendered view.
+     */
+    public function publicPage(): string
+    {
+        $data = [
+            'pageTitle'       => 'Real-Time Crypto Wallet Query (BTC & LTC) | Afrikenkid',
+            'metaDescription' => 'Instantly check the balance and transaction history of any Bitcoin (BTC) or Litecoin (LTC) wallet. Simple, fast, and accurate on-chain data.',
+            'canonicalUrl'    => url_to('crypto.public'),
+        ];
+
+        return view('crypto/public_page', $data);
+    }
+
+    /**
      * Constructor.
      * Initializes the CryptoService and UserModel.
      */
@@ -50,12 +66,14 @@ class CryptoController extends BaseController
     public function index(): string
     {
         $data = [
-            'pageTitle' => 'Cryptocurrency Data Query | Afrikenkid',
-            'metaDescription' => 'Query real-time balance and transaction history for Bitcoin (BTC) and Litecoin (LTC) addresses on the Afrikenkid platform.',
-            'canonicalUrl' => url_to('crypto.index'),
-            'result' => session()->getFlashdata('result'),
-            'errors' => session()->getFlashdata('errors')
+            'pageTitle'       => 'CryptoQuery Tool | Afrikenkid',
+            'metaDescription' => 'Query real-time balance and transaction history for any Bitcoin (BTC) or Litecoin (LTC) address. Your tool for instant on-chain data analysis.',
+            'canonicalUrl'    => url_to('crypto.index'),
+            'result'          => session()->getFlashdata('result'),
+            'errors'          => session()->getFlashdata('errors')
         ];
+        // Add noindex directive for authenticated pages
+        $data['robotsTag'] = 'noindex, follow';
         return view('crypto/query_form', $data); // View name updated
     }
 

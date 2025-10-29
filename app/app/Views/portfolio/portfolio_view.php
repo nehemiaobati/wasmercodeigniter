@@ -287,6 +287,24 @@
 
 <?= $this->section('content') ?>
 <main>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "name": "Nehemia Obati",
+  "url": "<?= url_to('portfolio.index') ?>",
+  "image": "<?= base_url('assets/images/potraitwebp.webp') ?>",
+  "sameAs": [
+    "https://www.linkedin.com/in/nehemia-obati-b74886344"
+  ],
+  "jobTitle": "Software Developer",
+  "worksFor": {
+    "@type": "Organization",
+    "name": "Kingsway Business Systems LTD"
+  },
+  "knowsAbout": ["PHP", "CodeIgniter", "Python", "Google Cloud Platform", "AWS", "Linux", "Server Management", "SQL", "JavaScript"]
+}
+</script>
     <div class="container">
         <!-- Hero Section -->
         <section id="home" class="py-5">
@@ -354,25 +372,25 @@
                 <h2>Portfolio</h2>
             </div>
             <div class="portfolio-grid">
-                <div class="portfolio-card"> <img src="https://placehold.co/600x400/e9ecef/6c757d?text=PIMIS" alt="PIMIS Project Screenshot">
+                <div class="portfolio-card"> <img src="https://placehold.co/600x400/0d6efd/ffffff?text=PIMIS" alt="Screenshot of the PIMIS - Public Investment Management System for the National Treasury.">
                     <div class="portfolio-content">
                         <h3>PIMIS - Public Investment Management System</h3>
                         <p>A system for the National Treasury. Project TENDER NO. TNT/025/2020-2021.</p> <a href="https://pimisdev.treasury.go.ke/" target="_blank" class="btn btn-primary">View Project</a>
                     </div>
                 </div>
-                <div class="portfolio-card"> <img src="https://placehold.co/600x400/e9ecef/6c757d?text=ECIPMS" alt="ECIPMS Project Screenshot">
+                <div class="portfolio-card"> <img src="https://placehold.co/600x400/198754/ffffff?text=ECIPMS" alt="Dashboard of the ECIPMS - County Integrated Planning Management System for Kakamega County.">
                     <div class="portfolio-content">
                         <h3>ECIPMS - County Integrated Planning Management System</h3>
                         <p>Automated M&E system for Kakamega County Government. CONTRACT FOR THE SUPPLY, INSTALLATION AND COMMISSIONING OF STANDARDIZED AUTOMATED MONITORING AND EVALUATION SYSTEM. Project TENDER NO. CGKK/OG/2020/2021/01.</p> <a href="https://ecipms.kingsway.co.ke/" target="_blank" class="btn btn-primary">View Project</a>
                     </div>
                 </div>
-                <div class="portfolio-card"> <img src="https://placehold.co/600x400/e9ecef/6c757d?text=IFMIS" alt="IFMIS Project Screenshot">
+                <div class="portfolio-card"> <img src="https://placehold.co/600x400/6f42c1/ffffff?text=IFMIS" alt="The IFMIS e-procurement module for the National Treasury of Kenya.">
                     <div class="portfolio-content">
                         <h3>IFMIS - National Treasury</h3>
                         <p>Onsite support for IFMIS applications and E-Procurement enhancement. TENDER FOR PROVISION OF ONSITE SUPPORT FOR IFMIS APPLICATIONS AND ENHANCEMENT OF IFMIS E-PROCUREMENT. Project TENDER NO. TNT/029/2019-2020.</p>
                     </div>
                 </div>
-                <div class="portfolio-card"> <img src="https://placehold.co/600x400/e9ecef/6c757d?text=Oracle" alt="Oracle Project Screenshot">
+                <div class="portfolio-card"> <img src="https://placehold.co/600x400/fd7e14/ffffff?text=Oracle+Support" alt="Oracle Database logo representing the application support license project.">
                     <div class="portfolio-content">
                         <h3>Oracle E-Procurement - National Treasury</h3>
                         <p>Provision of Oracle application support licenses. TENDER FOR THE PROVISION OF ORACLE APPLICATION SUPPORT LICENSES. Project TENDER NO. TNT/026/2019-2020.</p>

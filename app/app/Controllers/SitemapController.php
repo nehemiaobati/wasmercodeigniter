@@ -14,8 +14,9 @@ class SitemapController extends BaseController
     {
         // Array of public-facing, static pages by their route name
         $pages = [
-            'welcome', 'register', 'login', 'contact.form',
+            'landing', 'register', 'login', 'contact.form',
             'portfolio.index', 'terms', 'privacy',
+            'gemini.public', 'crypto.public',
         ];
 
         $urls = [];
@@ -26,10 +27,10 @@ class SitemapController extends BaseController
 
             if ($generatedUrl) {
                 $urls[] = [
-                    'loc'        => esc($generatedUrl, 'url'),
+                    'loc'        => $generatedUrl,
                     'lastmod'    => $today,
                     'changefreq' => 'monthly',
-                    'priority'   => ($page === 'welcome') ? '1.0' : '0.8',
+                    'priority'   => ($page === 'landing') ? '1.0' : '0.8',
                 ];
             } else {
                 log_message('error', 'Sitemap: Failed to generate URL for route - ' . $page);
@@ -46,9 +47,12 @@ class SitemapController extends BaseController
         // Set the correct Content-Type header for an XML sitemap
         $this->response->setHeader('Content-Type', 'application/xml');
 
-        // Pass the array of URLs to the sitemap view and set it as the response body
+        // Pass the array of URLs to the sitemap view
         $viewContent = view('sitemap/index', ['urls' => $urls]);
-        $this->response->setBody($viewContent);
+
+        // Prepend the XML declaration and set the final body
+        $sitemapContent = '<?xml version="1.0" encoding="UTF-8" ?>' . "\n" . $viewContent;
+        $this->response->setBody($sitemapContent);
 
         return $this->response;
     }

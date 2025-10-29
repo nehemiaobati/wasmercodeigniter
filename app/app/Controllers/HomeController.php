@@ -35,17 +35,19 @@ class HomeController extends BaseController
             'balance'   => $balance,
             'canonicalUrl' => url_to('home'), // Corrected route name
         ];
+        // Add noindex directive for authenticated pages
+        $data['robotsTag'] = 'noindex, follow';
         return view('home/welcome_user', $data);
     }
 
     public function landing(): string
     {
         $data = [
-            'pageTitle' => 'Afrikenkid | Generative AI & Real-Time Crypto Data',
-            'metaDescription' => 'Afrikenkid provides innovative solutions for generative AI and real-time cryptocurrency data. Access AI-powered insights, query BTC/LTC data, and utilize secure payment options like Mobile Money (Safaricom, Airtel) and Credit Cards. Built for Kenya, Africa, and the global digital economy.',
-            'heroTitle' => 'Build Your Dreams with Us',
-            'heroSubtitle' => 'Providing innovative solutions for real-time data access and AI-powered insights to help you succeed in the digital world.',
-            'canonicalUrl' => url_to('welcome'),
+            'pageTitle'       => 'Afrikenkid | AI Tools & Crypto Data for Kenya & Africa',
+            'metaDescription' => 'Unlock the power of Generative AI and access real-time Bitcoin & Litecoin data. Afrikenkid offers pay-as-you-go tools for developers and creators in Kenya, with easy M-Pesa payments.',
+            'heroTitle'       => 'The Developer\'s Toolkit for AI & Crypto',
+            'heroSubtitle'    => 'Instantly query blockchain data and leverage Google\'s Gemini AI with simple, pay-as-you-go pricing. Built for creators and developers in Africa.',
+            'canonicalUrl'    => url_to('landing'),
         ];
         return view('home/landing_page', $data);
     }

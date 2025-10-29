@@ -24,9 +24,9 @@ class AuthController extends BaseController
             return redirect()->to(url_to('home'));
         }
         $data = [
-            'pageTitle' => 'Register | Afrikenkid',
-            'metaDescription' => 'Create your Afrikenkid account to access generative AI tools, real-time crypto data queries, and simple, secure payment options in Kenya and Africa.',
-            'canonicalUrl' => url_to('register'), // Added this line
+            'pageTitle'       => 'Create Your Account | Afrikenkid',
+            'metaDescription' => 'Sign up for a free Afrikenkid account and get KSH 30 in starter credits. Access powerful AI tools and real-time crypto data queries instantly.',
+            'canonicalUrl'    => url_to('register'),
         ];
         return view('auth/register', $data);
     }
@@ -111,9 +111,9 @@ class AuthController extends BaseController
     {
         helper(['form']);
         $data = [
-            'pageTitle' => 'Login | Afrikenkid',
-            'metaDescription' => 'Log in to your Afrikenkid account to manage your balance and use our suite of AI and cryptocurrency tools.',
-            'canonicalUrl' => url_to('login'), // Added this line
+            'pageTitle'       => 'Login | Afrikenkid',
+            'metaDescription' => 'Access your Afrikenkid dashboard. Log in to use the AI Studio, run crypto queries, and manage your account balance.',
+            'canonicalUrl'    => url_to('login'),
         ];
         return view('auth/login', $data);
     }

@@ -10,7 +10,7 @@
     <!-- SEO Meta Tags -->
     <title><?= esc($pageTitle ?? 'AFRIKENKID | Generative AI & Crypto Data') ?></title>
     <meta name="description" content="<?= esc($metaDescription ?? 'Explore generative AI and real-time crypto data with Afrikenkid. Query Bitcoin & Litecoin, and interact with advanced AI. Pay easily with Mobile Money or Credit Card.') ?>">
-    <meta name="keywords" content="Generative AI, Cryptocurrency, Bitcoin, Litecoin, Crypto Query, AI Insights, Kenya, Africa, Mobile Money, Safaricom, M-Pesa, Airtel Money, Paystack">
+    <meta name="keywords" content="Generative AI, Google Gemini, Crypto Data, Bitcoin Wallet, Litecoin Wallet, Blockchain Query, AI Tools, Kenya, M-Pesa, Mobile Money Africa, CodeIgniter Development">
     
     <!-- Geo-targeting for Kenya -->
     <meta name="geo.region" content="KE">
@@ -22,7 +22,7 @@
     <link rel="canonical" href="<?= esc($canonicalUrl ?? current_url()) ?>">
 
     <!-- Robots Meta Tag -->
-    <meta name="robots" content="index, follow">
+    <meta name="robots" content="<?= esc($robotsTag ?? 'index, follow') ?>">
     <link rel="icon" href="<?= base_url('favicon.ico') ?>" type="image/x-icon">
 
     <!-- Open Graph / Facebook -->
@@ -265,21 +265,22 @@ src="https://www.facebook.com/tr?id=1266537441823413&ev=PageView&noscript=1"
     
     <nav id="mainNavbar" class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top py-3">
         <div class="container">
-            <a class="navbar-brand fs-4" href="<?= url_to('welcome') ?>"><i class="bi bi-box"></i> AFRIKENKID</a>
+            <a class="navbar-brand fs-4" href="<?= url_to('landing') ?>"><i class="bi bi-box"></i> AFRIKENKID</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
+                <ul class="navbar-nav ms-auto align-items-lg-center">
                     <?php if (session()->get('isLoggedIn')): ?>
-                        <li class="nav-item"><a class="nav-link" href="<?= url_to('home') ?>">Home</a></li>
+                        <!-- LOGGED-IN NAVIGATION -->
+                        <li class="nav-item"><a class="nav-link" href="<?= url_to('home') ?>">Dashboard</a></li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="servicesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 Services
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="servicesDropdown">
-                                <li><a class="dropdown-item" href="<?= url_to('gemini.index') ?>">Gemini AI</a></li>
-                                <li><a class="dropdown-item" href="<?= url_to('crypto.index') ?>">Crypto Data</a></li>
+                                <li><a class="dropdown-item" href="<?= url_to('gemini.index') ?>"><i class="bi bi-stars me-2"></i>AI Studio Tool</a></li>
+                                <li><a class="dropdown-item" href="<?= url_to('crypto.index') ?>"><i class="bi bi-search me-2"></i>CryptoQuery Tool</a></li>
                             </ul>
                         </li>
                         <li class="nav-item"><a class="nav-link" href="<?= url_to('payment.index') ?>">Top Up</a></li>
@@ -292,23 +293,34 @@ src="https://www.facebook.com/tr?id=1266537441823413&ev=PageView&noscript=1"
                                     <li><a class="dropdown-item" href="<?= url_to('admin.index') ?>">Admin Panel</a></li>
                                 <?php endif; ?>
                                 <li><a class="dropdown-item" href="<?= url_to('account.index') ?>">My Account</a></li>
-                                <li>
-                                    <hr class="dropdown-divider">
-                                </li>
+                                <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="<?= url_to('logout') ?>">Logout</a></li>
                             </ul>
                         </li>
                     <?php else: ?>
-                        <!-- Responsive Auth Buttons -->
-                        <li class="nav-item d-lg-none auth-buttons-mobile">
-                            <div class="d-flex justify-content-center gap-2">
-                                <a class="btn btn-outline-primary w-100" href="<?= url_to('login') ?>">Login</a>
-                                <a class="btn btn-primary w-100" href="<?= url_to('register') ?>">Register</a>
-                            </div>
+                        <!-- LOGGED-OUT NAVIGATION -->
+                        <li class="nav-item"><a class="nav-link" href="<?= url_to('landing') ?>">Home</a></li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="servicesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Services
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="servicesDropdown">
+                                <li><a class="dropdown-item" href="<?= url_to('gemini.public') ?>">About AI Studio</a></li>
+                                <li><a class="dropdown-item" href="<?= url_to('crypto.public') ?>">About CryptoQuery</a></li>
+                            </ul>
                         </li>
-                        <li class="nav-item d-none d-lg-flex align-items-center">
+                        
+                        <!-- Auth Buttons for Desktop -->
+                        <li class="nav-item d-none d-lg-flex align-items-center ms-lg-2">
                             <a class="btn btn-outline-primary" href="<?= url_to('login') ?>">Login</a>
                             <a class="btn btn-primary ms-2" href="<?= url_to('register') ?>">Register</a>
+                        </li>
+                        <!-- Auth Buttons for Mobile -->
+                        <li class="nav-item d-lg-none auth-buttons-mobile">
+                            <div class="d-grid gap-2">
+                                <a class="btn btn-outline-primary" href="<?= url_to('login') ?>">Login</a>
+                                <a class="btn btn-primary" href="<?= url_to('register') ?>">Register</a>
+                            </div>
                         </li>
                     <?php endif; ?>
                 </ul>

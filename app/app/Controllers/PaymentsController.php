@@ -25,12 +25,14 @@ class PaymentsController extends BaseController
     public function index(): string
     {
         $data = [
-            'pageTitle' => 'Add Funds | Afrikenkid',
-            'metaDescription' => 'Securely add funds to your Afrikenkid account using Mobile Money (Safaricom, Airtel) or Credit Card via our secure payment gateway.',
-            'canonicalUrl' => url_to('payment.index'),
-            'email' => session()->get('userEmail') ?? '',
-            'errors' => session()->getFlashdata('errors'),
+            'pageTitle'       => 'Top Up Your Account | Afrikenkid',
+            'metaDescription' => 'Securely add funds to your Afrikenkid account via M-Pesa, Airtel Money, or Credit Card. All payments are processed by Paystack.',
+            'canonicalUrl'    => url_to('payment.index'),
+            'email'           => session()->get('userEmail') ?? '',
+            'errors'          => session()->getFlashdata('errors'),
         ];
+        // Add noindex directive for authenticated pages
+        $data['robotsTag'] = 'noindex, follow';
 
         return view('payment/payment_form', $data); // View name updated
     }

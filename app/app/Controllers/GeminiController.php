@@ -79,6 +79,24 @@ class GeminiController extends BaseController
     private const MINIMUM_BALANCE = 0.01;
 
     /**
+     * Displays the public-facing landing page for the AI Studio.
+     *
+     * @return string The rendered view.
+     */
+    public function publicPage(): string
+    {
+        $data = [
+            'pageTitle'       => 'AI Studio: Powered by Google Gemini | Afrikenkid',
+            'metaDescription' => 'Generate text, analyze PDFs, and chat with a context-aware AI. Our AI Studio leverages Google Gemini for powerful, creative, and analytical tasks.',
+            'canonicalUrl'    => url_to('gemini.public'),
+            'heroTitle'       => 'Go Beyond Basic Chat',
+            'heroSubtitle'    => 'Leverage the power of Google Gemini. Our AI Studio helps you write code, analyze documents, and generate creative content with conversational memory.'
+        ];
+
+        return view('gemini/public_page', $data);
+    }
+
+    /**
      * GeminiController constructor.
      */
     public function __construct()
@@ -104,14 +122,16 @@ class GeminiController extends BaseController
         $assistantModeEnabled = $userSetting ? $userSetting->assistant_mode_enabled : true;
 
         $data = [
-            'pageTitle'   => 'Gemini AI Studio | Afrikenkid',
-            'metaDescription' => 'Access Google\'s powerful Gemini AI. Craft prompts, attach media, and generate content with assistant-level context and memory.',
-            'canonicalUrl' => url_to('gemini.index'),
-            'result'  => session()->getFlashdata('result'),
-            'error'   => session()->getFlashdata('error'),
-            'prompts' => $prompts,
+            'pageTitle'       => 'AI Studio | Afrikenkid',
+            'metaDescription' => 'Generate content, analyze PDFs, and chat with your AI assistant. Access your saved prompts and manage conversational memory.',
+            'canonicalUrl'    => url_to('gemini.index'),
+            'result'          => session()->getFlashdata('result'),
+            'error'           => session()->getFlashdata('error'),
+            'prompts'         => $prompts,
             'assistant_mode_enabled' => $assistantModeEnabled,
         ];
+        // Add noindex directive for authenticated pages
+        $data['robotsTag'] = 'noindex, follow';
         return view('gemini/query_form', $data);
     }
 
