@@ -14,10 +14,21 @@ class GeminiService
     protected $apiKey;
 
     /**
-     * The model ID to use for API calls.
-     * @var string
+     * An ordered list of Gemini model IDs to try, from most preferred to least preferred.
+     * The service will attempt to use these models in order, falling back to the next
+     * if a quota error (429) is encountered for the current model.
+     * @var array<string>
      */
-    protected string $modelId = "gemini-flash-lite-latest"; // Centralize model ID
+    protected array $modelPriorities = [
+        //"gemini-2.5-pro",
+        "gemini-flash-latest",
+        "gemini-flash-lite-latest",
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
+        // Add more fallback models here if available, e.g., "gemini-1.0-pro", "gemini-1.0-flash"
+    ];
 
     /**
      * Constructor.
@@ -30,6 +41,7 @@ class GeminiService
 
     /**
      * Counts the number of tokens in a given set of content parts.
+     * This method will use the highest priority model and does not implement fallback.
      *
      * @param array $parts An array of content parts (text and/or inlineData for files).
      * @return array An associative array with 'status' (bool) and 'totalTokens' (int) or 'error' (string).
@@ -40,8 +52,11 @@ class GeminiService
             return ['status' => false, 'error' => 'GEMINI_API_KEY not set in .env file.'];
         }
 
+        // Use the highest priority model for token counting
+        // Ensure $modelPriorities is not empty before accessing index 0
+        $currentModel = !empty($this->modelPriorities) ? $this->modelPriorities[0] : "gemini-flash-latest";
         $countTokensApi = "countTokens";
-        $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$this->modelId}:{$countTokensApi}?key={$this->apiKey}";
+        $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$currentModel}:{$countTokensApi}?key={$this->apiKey}";
 
         $requestPayload = ["contents" => [["parts" => $parts]]];
         $requestBody = json_encode($requestPayload);
@@ -76,7 +91,7 @@ class GeminiService
     }
 
     /**
-     * Sends a request to the Gemini API with a retry mechanism for transient errors.
+     * Sends a request to the Gemini API with a retry mechanism and model fallback for quota errors.
      *
      * @param array $parts An array of content parts (text and/or inlineData for files).
      * @return array An associative array with either a 'result' string and 'usage' data on success, or an 'error' string on failure.
@@ -88,79 +103,112 @@ class GeminiService
         }
 
         $generateContentApi = "generateContent";
-        $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$this->modelId}:{$generateContentApi}?key={$this->apiKey}";
+        $lastError = ['error' => 'An unexpected error occurred after multiple retries.']; // Default error, overridden by specific errors
 
-        $requestPayload = [
-            "contents" => [["role" => "user", "parts" => $parts]],
-            "generationConfig" => ["maxOutputTokens" => 8192], // Adjusted for flash model
-        ];
+        if (empty($this->modelPriorities)) {
+            return ['error' => 'No Gemini models configured in modelPriorities.'];
+        }
 
-        $maxRetries = 3;
-        $initialDelay = 1; // seconds
+        foreach ($this->modelPriorities as $model) {
+            $currentModel = $model;
+            $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$currentModel}:{$generateContentApi}?key={$this->apiKey}";
 
-        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
-            try {
-                $client = \Config\Services::curlrequest();
-                $response = $client->request('POST', $apiUrl, [
-                    'body' => json_encode($requestPayload),
-                    'headers' => ['Content-Type' => 'application/json'],
-                    'timeout' => 90, // Increased timeout to 90 seconds for large files
-                    'connect_timeout' => 15,
-                ]);
+            $requestPayload = [
+                "contents" => [["role" => "user", "parts" => $parts]],
+                "generationConfig" => ["maxOutputTokens" => 8192],
+            ];
 
-                $statusCode = $response->getStatusCode();
-                $responseBody = $response->getBody();
+            $maxRetries = 3;
+            $initialDelay = 1; // seconds
 
-                // If the status is 503, it's a server error, so we should retry.
-                if ($statusCode === 503) {
-                    throw new \Exception("Service Unavailable (503) - Retrying...", 503);
-                }
+            for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+                try {
+                    $client = \Config\Services::curlrequest();
+                    $response = $client->request('POST', $apiUrl, [
+                        'body' => json_encode($requestPayload),
+                        'headers' => ['Content-Type' => 'application/json'],
+                        'timeout' => 90, // Increased timeout to 90 seconds for large files
+                        'connect_timeout' => 15,
+                    ]);
 
-                // If the status is not 200, it's a client or other server error, fail immediately.
-                if ($statusCode !== 200) {
-                    $errorData = json_decode($responseBody, true);
-                    $errorMessage = $errorData['error']['message'] ?? 'Unknown API error';
-                    log_message('error', "Gemini API Error: Status {$statusCode} - {$errorMessage} | Response: {$responseBody}");
-                    return ['error' => $errorMessage];
-                }
+                    $statusCode = $response->getStatusCode();
+                    $responseBody = $response->getBody();
 
-                $responseData = json_decode($responseBody, true);
-                if (json_last_error() !== JSON_ERROR_NONE) {
-                    log_message('error', 'Gemini API Response JSON Decode Error: ' . json_last_error_msg() . ' | Response: ' . $responseBody);
-                    return ['error' => 'Failed to decode API response.'];
-                }
+                    if ($statusCode === 429) {
+                        // Quota exceeded for this model. Log and decide whether to retry this model or try fallback.
+                        log_message('warning', "Gemini API Quota Exceeded (429) for model '{$currentModel}' on attempt {$attempt}.");
+                        $lastError = ['error' => "Quota exceeded for model '{$currentModel}'."];
 
-                $processedText = '';
-                if (isset($responseData['candidates'][0]['content']['parts'])) {
-                    foreach ($responseData['candidates'][0]['content']['parts'] as $part) {
-                        $processedText .= $part['text'] ?? '';
+                        if ($attempt < $maxRetries) {
+                            // Retry this model after exponential backoff
+                            sleep($initialDelay * pow(2, $attempt - 1));
+                            continue; // Continue to the next retry attempt for the SAME model
+                        } else {
+                            // Max retries for this specific model exhausted due to 429.
+                            // Break from inner retry loop to proceed to the next model in $modelPriorities.
+                            break;
+                        }
+                    }
+
+                    // For any other non-200 error, or if successful, return immediately.
+                    if ($statusCode !== 200) {
+                        $errorData = json_decode($responseBody, true);
+                        $errorMessage = $errorData['error']['message'] ?? 'Unknown API error';
+                        log_message('error', "Gemini API Error: Status {$statusCode} - {$errorMessage} | Model: {$currentModel} | Response: {$responseBody}");
+                        $lastError = ['error' => $errorMessage];
+                        return $lastError; // Non-429 error, so fail immediately without further fallback.
+                    }
+
+                    $responseData = json_decode($responseBody, true);
+                    if (json_last_error() !== JSON_ERROR_NONE) {
+                        log_message('error', 'Gemini API Response JSON Decode Error: ' . json_last_error_msg() . ' | Response: ' . $responseBody);
+                        $lastError = ['error' => 'Failed to decode API response.'];
+                        return $lastError; // JSON decode error, fail immediately.
+                    }
+
+                    $processedText = '';
+                    if (isset($responseData['candidates'][0]['content']['parts'])) {
+                        foreach ($responseData['candidates'][0]['content']['parts'] as $part) {
+                            $processedText .= $part['text'] ?? '';
+                        }
+                    }
+
+                    $usageMetadata = $responseData['usageMetadata'] ?? null;
+
+                    if (empty($processedText) && $usageMetadata === null) {
+                        $lastError = ['error' => 'Received an empty or invalid response from the AI.'];
+                        return $lastError; // Empty response, fail immediately.
+                    }
+
+                    // Success! Return the result and exit both loops.
+                    return ['result' => $processedText, 'usage' => $usageMetadata];
+
+                } catch (\Exception $e) {
+                    // This catch block handles network errors or unexpected exceptions during the cURL request.
+                    log_message('error', "Gemini API Request Attempt {$attempt} failed for model '{$currentModel}': " . $e->getMessage());
+                    $lastError = ['error' => 'The AI service is currently unavailable or the request timed out. Please try again in a few moments.'];
+
+                    if ($attempt < $maxRetries) {
+                        sleep($initialDelay * pow(2, $attempt - 1));
+                        continue; // Continue to the next retry attempt for the SAME model
+                    } else {
+                        // Max retries for this specific model exhausted due to a network error.
+                        // Break from inner retry loop to proceed to the next model in $modelPriorities.
+                        break;
                     }
                 }
-
-                $usageMetadata = $responseData['usageMetadata'] ?? null;
-
-                if (empty($processedText) && $usageMetadata === null) {
-                    return ['error' => 'Received an empty or invalid response from the AI.'];
-                }
-
-                // Success, return the result
-                return ['result' => $processedText, 'usage' => $usageMetadata];
-
-            } catch (\Exception $e) {
-                // LOG THE TECHNICAL ERROR for debugging
-                log_message('error', "Gemini API Request Attempt {$attempt} failed: " . $e->getMessage());
-
-                // If this was the last attempt, RETURN A USER-FRIENDLY ERROR to the UI
-                if ($attempt === $maxRetries) {
-                    return ['error' => 'The AI service is currently unavailable or the request timed out. Please try again in a few moments.'];
-                }
-
-                // Wait before the next attempt (exponential backoff)
-                sleep($initialDelay * pow(2, $attempt - 1));
             }
+            // If we reach here, it means the current model failed after all retries (likely 429 or network error)
+            // and we continue to the next model in the foreach loop.
         }
-        
-        // This should not be reached, but as a fallback
-        return ['error' => 'An unexpected error occurred after multiple retries.'];
+
+        // If the foreach loop completes, it means all models have been tried.
+        // Check if the last error was specifically a 429 across all models.
+        $finalErrorMsg = $lastError['error'] ?? 'An unexpected error occurred after multiple retries across all models.';
+        if (str_contains($finalErrorMsg, 'Quota exceeded')) {
+            return ['error' => 'All available AI models have exceeded their quota. Please wait and try again later. To increase your limits, request a quota increase through AI Studio, or switch to another /auth method.'];
+        }
+
+        return $lastError;
     }
 }
