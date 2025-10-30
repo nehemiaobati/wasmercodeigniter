@@ -17,7 +17,7 @@ class GeminiService
      * The model ID to use for API calls.
      * @var string
      */
-    protected string $modelId = "gemini-flash-latest"; // Centralize model ID
+    protected string $modelId = "gemini-flash-lite-latest"; // Centralize model ID
 
     /**
      * Constructor.
