@@ -9,7 +9,7 @@
 
     <!-- SEO Meta Tags -->
     <title><?= esc($pageTitle ?? 'AFRIKENKID | Generative AI & Crypto Data') ?></title>
-    <meta name="description" content="<?= esc($metaDescription ?? 'Explore generative AI and real-time crypto data with Afrikenkid. Query Bitcoin & Litecoin, and interact with advanced AI. Pay easily with Mobile Money or Credit Card.') ?>">
+    <meta name="description" content="<?= esc($metaDescription ?? 'Explore generative AI and real-time crypto data with . Query Bitcoin & Litecoin, and interact with advanced AI. Pay easily with Mobile Money or Credit Card.') ?>">
     <meta name="keywords" content="Generative AI, Google Gemini, Crypto Data, Bitcoin Wallet, Litecoin Wallet, Blockchain Query, AI Tools, Kenya, M-Pesa, Mobile Money Africa, CodeIgniter Development">
     
     <!-- Geo-targeting for Kenya -->
@@ -253,7 +253,7 @@ t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window, document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
 fbq('init', '1266537441823413');
-fbq('track', 'PageView');
+//fbq('track', 'PageView');
 </script>
 <noscript><img height="1" width="1" style="display:none"
 src="https://www.facebook.com/tr?id=1266537441823413&ev=PageView&noscript=1"
@@ -340,7 +340,7 @@ src="https://www.facebook.com/tr?id=1266537441823413&ev=PageView&noscript=1"
             <div class="row">
                 <div class="col-lg-4 col-md-6 mb-4 mb-lg-0">
                     <h5 class="text-uppercase">AFRIKENKID</h5>
-                    <p>Providing innovative solutions for real-time data access and AI-powered insights to help you succeed in the digital world.</p>
+                    <p>Build smarter with pay-as-you-go platform. Leverage Generative AI (Google Gemini), query real-time BTC & LTC wallet data, and securely top up with M-Pesa. Built for developers in Kenya and Africa.</p>
                     <div class="social-icons">
                         <a href="#" class="twitter"><i class="bi bi-twitter"></i></a>
                         <a href="https://www.linkedin.com/in/nehemia-obati-b74886344" class="linkedin"><i class="bi bi-linkedin"></i></a>

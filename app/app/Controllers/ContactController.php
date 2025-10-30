@@ -13,7 +13,7 @@ class ContactController extends BaseController
     {
         $data = [
             'pageTitle' => 'Contact Us | Afrikenkid',
-            'metaDescription' => 'Get in touch with the Afrikenkid team for support, inquiries, or custom development projects. We serve Kenya, Africa, and global clients.',
+            'metaDescription' => 'Get in touch with the team for support, inquiries, or custom development projects. We serve Kenya, Africa, and global clients.',
             'canonicalUrl' => url_to('contact.form'), // Added this line
         ];
         return view('contact/contact_form', $data);

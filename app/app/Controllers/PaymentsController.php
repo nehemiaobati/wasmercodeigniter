@@ -26,7 +26,7 @@ class PaymentsController extends BaseController
     {
         $data = [
             'pageTitle'       => 'Top Up Your Account | Afrikenkid',
-            'metaDescription' => 'Securely add funds to your Afrikenkid account via M-Pesa, Airtel Money, or Credit Card. All payments are processed by Paystack.',
+            'metaDescription' => 'Securely add funds to your account via M-Pesa, Airtel Money, or Credit Card. All payments are processed by Paystack.',
             'canonicalUrl'    => url_to('payment.index'),
             'email'           => session()->get('userEmail') ?? '',
             'errors'          => session()->getFlashdata('errors'),

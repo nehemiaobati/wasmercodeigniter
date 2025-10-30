@@ -25,7 +25,7 @@ class AuthController extends BaseController
         }
         $data = [
             'pageTitle'       => 'Create Your Account | Afrikenkid',
-            'metaDescription' => 'Sign up for a free Afrikenkid account and get KSH 30 in starter credits. Access powerful AI tools and real-time crypto data queries instantly.',
+            'metaDescription' => 'Sign up for a free account and get KSH 30 in starter credits. Access powerful AI tools and real-time crypto data queries instantly.',
             'canonicalUrl'    => url_to('register'),
         ];
         return view('auth/register', $data);
@@ -112,7 +112,7 @@ class AuthController extends BaseController
         helper(['form']);
         $data = [
             'pageTitle'       => 'Login | Afrikenkid',
-            'metaDescription' => 'Access your Afrikenkid dashboard. Log in to use the AI Studio, run crypto queries, and manage your account balance.',
+            'metaDescription' => 'Access your dashboard. Log in to use the AI Studio, run crypto queries, and manage your account balance.',
             'canonicalUrl'    => url_to('login'),
         ];
         return view('auth/login', $data);
@@ -230,7 +230,7 @@ class AuthController extends BaseController
         helper(['form']);
         $data = [
             'pageTitle' => 'Forgot Password | Afrikenkid',
-            'metaDescription' => 'Reset your Afrikenkid account password. Enter your email to receive a password reset link.',
+            'metaDescription' => 'Reset your account password. Enter your email to receive a password reset link.',
             'canonicalUrl' => url_to('auth.forgot_password'), // Added this line
         ];
         return view('auth/forgot_password', $data);

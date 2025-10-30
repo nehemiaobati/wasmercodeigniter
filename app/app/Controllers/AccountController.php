@@ -42,7 +42,7 @@ class AccountController extends BaseController
         $data['user'] = $user;
         
         $data['pageTitle'] = 'My Account | Afrikenkid';
-        $data['metaDescription'] = 'Manage your Afrikenkid profile, view your account balance, and see your full transaction history.';
+        $data['metaDescription'] = 'Manage your profile, view your account balance, and see your full transaction history.';
         $data['canonicalUrl'] = url_to('account.index');
         // Add noindex directive for authenticated pages
         $data['robotsTag'] = 'noindex, follow';

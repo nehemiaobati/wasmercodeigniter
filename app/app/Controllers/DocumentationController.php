@@ -14,6 +14,8 @@ class DocumentationController extends BaseController
      */
     public function index(): string
     {
-        return view('documentation/index');
+        // Set robotsTag to 'noindex, follow' for documentation pages
+        $data['robotsTag'] = 'noindex, follow';
+        return view('documentation/index', $data);
     }
 }

@@ -28,7 +28,7 @@ class HomeController extends BaseController
 
         $data = [
             'pageTitle' => 'Dashboard | ' . session()->get('username'),
-            'metaDescription' => 'Your Afrikenkid dashboard. Check your account balance, manage your details, and access our AI and Crypto services.',
+            'metaDescription' => 'Your dashboard. Check your account balance, manage your details, and access our AI and Crypto services.',
             'username'  => session()->get('username'),
             'email'     => session()->get('userEmail'),
             'member_since' => $user->created_at ?? null,
@@ -44,7 +44,7 @@ class HomeController extends BaseController
     {
         $data = [
             'pageTitle'       => 'Afrikenkid | AI Tools & Crypto Data for Kenya & Africa',
-            'metaDescription' => 'Unlock the power of Generative AI and access real-time Bitcoin & Litecoin data. Afrikenkid offers pay-as-you-go tools for developers and creators in Kenya, with easy M-Pesa payments.',
+            'metaDescription' => 'Unlock the power of Generative AI and access real-time Bitcoin & Litecoin data. offers pay-as-you-go tools for developers and creators in Kenya, with easy M-Pesa payments.',
             'heroTitle'       => 'The Developer\'s Toolkit for AI & Crypto',
             'heroSubtitle'    => 'Instantly query blockchain data and leverage Google\'s Gemini AI with simple, pay-as-you-go pricing. Built for creators and developers in Africa.',
             'canonicalUrl'    => url_to('landing'),
@@ -56,7 +56,7 @@ class HomeController extends BaseController
     {
         $data = [
             'pageTitle' => 'Terms of Service | Afrikenkid',
-            'metaDescription' => 'Read the official Terms of Service for using the Afrikenkid platform, its AI tools, and cryptocurrency data services.',
+            'metaDescription' => 'Read the official Terms of Service for using the platform, its AI tools, and cryptocurrency data services.',
             'canonicalUrl' => url_to('terms'),
         ];
         return view('home/terms', $data);
@@ -66,7 +66,7 @@ class HomeController extends BaseController
     {
         $data = [
             'pageTitle' => 'Privacy Policy | Afrikenkid',
-            'metaDescription' => 'Our Privacy Policy outlines how we collect, use, and protect your personal data when you use Afrikenkid\'s services.',
+            'metaDescription' => 'Our Privacy Policy outlines how we collect, use, and protect your personal data when you use services.',
             'canonicalUrl' => url_to('privacy'),
         ];
         return view('home/privacy', $data);
