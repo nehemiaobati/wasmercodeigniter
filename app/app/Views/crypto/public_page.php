@@ -69,7 +69,8 @@
             <p class="text-muted">Our tool simplifies blockchain data access. Just enter an address, select your query, and get immediate results in a clean, easy-to-read format.</p>
         </div>
         <div class="col-md-6">
-            <img src="https://placehold.co/800x500/e9ecef/6c757d?text=CryptoQuery+Results" class="img-fluid rounded shadow-sm" alt="Example results from the CryptoQuery tool showing a Bitcoin wallet balance.">
+            <!-- <img src="https://placehold.co/800x500/e9ecef/6c757d?text=CryptoQuery+Results" class="img-fluid rounded shadow-sm" alt="Example results from the CryptoQuery tool showing a Bitcoin wallet balance."> -->
+            <img src="https://images.pexels.com/photos/844124/pexels-photo-844124.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" class="img-fluid rounded shadow-sm" alt="Digital representation of a cryptocurrency blockchain network.">
         </div>
     </div>
 

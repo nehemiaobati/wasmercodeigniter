@@ -69,7 +69,8 @@
             <p class="text-muted">The intuitive interface makes it easy to manage your prompts, upload media, and interact with the AI. See your ideas come to life in a clean, organized workspace.</p>
         </div>
         <div class="col-md-6">
-            <img src="https://placehold.co/800x500/e9ecef/6c757d?text=AI+Studio+Interface" class="img-fluid rounded shadow-sm" alt="The Afrikenkid AI Studio interface showing a chat session.">
+            <!-- <img src="https://placehold.co/800x500/e9ecef/6c757d?text=AI+Studio+Interface" class="img-fluid rounded shadow-sm" alt="The Afrikenkid AI Studio interface showing a chat session."> -->
+            <img src="https://images.pexels.com/photos/8386440/pexels-photo-8386440.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" class="img-fluid rounded shadow-sm" alt="Abstract visualization of an artificial intelligence neural network.">
         </div>
     </div>
 
