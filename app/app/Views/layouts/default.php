@@ -10,7 +10,7 @@
     <!-- SEO Meta Tags -->
     <title><?= esc($pageTitle ?? 'AFRIKENKID | Generative AI & Crypto Data') ?></title>
     <meta name="description" content="<?= esc($metaDescription ?? 'Explore generative AI and real-time crypto data with . Query Bitcoin & Litecoin, and interact with advanced AI. Pay easily with Mobile Money or Credit Card.') ?>">
-    <meta name="keywords" content="Generative AI, Google Gemini, Crypto Data, Bitcoin Wallet, Litecoin Wallet, Blockchain Query, AI Tools, Kenya, M-Pesa, Mobile Money Africa, CodeIgniter Development">
+    <meta name="keywords" content="Generative AI, Google Gemini, Crypto Data, Bitcoin Wallet, Litecoin Wallet, Blockchain Query, AI Tools, Kenya, M-Pesa, Lipa na Mpesa, Mobile Money Africa, CodeIgniter Development">
     
     <!-- Geo-targeting for Kenya -->
     <meta name="geo.region" content="KE">
