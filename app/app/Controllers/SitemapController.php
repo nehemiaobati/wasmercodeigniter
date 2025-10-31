@@ -57,3 +57,4 @@ class SitemapController extends BaseController
         return $this->response;
     }
 }
+
