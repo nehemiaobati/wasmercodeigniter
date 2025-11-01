@@ -20,7 +20,7 @@ class GeminiService
      * @var array<string>
      */
     protected array $modelPriorities = [
-        //"gemini-2.5-pro",
+       // "gemini-2.5-pro",
         "gemini-flash-latest",
         "gemini-flash-lite-latest",
         "gemini-2.5-flash",
@@ -113,9 +113,18 @@ class GeminiService
             $currentModel = $model;
             $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$currentModel}:{$generateContentApi}?key={$this->apiKey}";
 
+            // MODIFIED: Added tools and thinkingConfig to the payload
             $requestPayload = [
                 "contents" => [["role" => "user", "parts" => $parts]],
-                "generationConfig" => ["maxOutputTokens" => 8192],
+                "generationConfig" => [
+                    "maxOutputTokens" => 64192,
+                    "thinkingConfig" => [
+                        "thinkingBudget" => -1
+                    ]
+                ],
+                "tools" => [
+                    ["googleSearch" => new \stdClass()]
+                ],
             ];
 
             $maxRetries = 3;
@@ -136,6 +145,7 @@ class GeminiService
 
                     if ($statusCode === 429) {
                         // Quota exceeded for this model. Log and decide whether to retry this model or try fallback.
+                        log_message('debug',"Try model {$currentModel} attempt {$attempt}");
                         log_message('warning', "Gemini API Quota Exceeded (429) for model '{$currentModel}' on attempt {$attempt}.");
                         $lastError = ['error' => "Quota exceeded for model '{$currentModel}'."];
 
