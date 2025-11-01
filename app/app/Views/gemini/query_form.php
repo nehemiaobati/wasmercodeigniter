@@ -227,8 +227,8 @@
                         
                         <div class="mb-3">
                             <label for="prompt" class="form-label fw-bold">Your Prompt</label>
-                            <!-- MODIFIED: Removed 'required' attribute -->
-                            <textarea id="prompt" name="prompt"><?= old('prompt') ?></textarea>
+                            <!-- MODIFIED: Hide the textarea initially to prevent FOUC -->
+                            <textarea id="prompt" name="prompt" style="visibility: hidden;"><?= old('prompt') ?></textarea>
                         </div>
 
                         <div class="d-flex justify-content-end mb-4">
@@ -330,7 +330,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
 <!-- MODIFIED: Load self-hosted TinyMCE instead of cloud version -->
-<script src="<?= base_url('public/assets/tinymce/tinymce.min.js') ?>" referrerpolicy="origin"></script>
+<script src="<?= base_url('assets/tinymce/tinymce.min.js') ?>" referrerpolicy="origin"></script>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -344,7 +344,11 @@
             toolbar: 'blocks | bold italic strikethrough | bullist numlist | link | alignleft aligncenter alignright',
             block_formats: 'Text=p; Heading 1=h1; Heading 2=h2; Heading 3=h3', // THIS LINE IS THE FIX
             content_style: 'body { font-family:Poppins,sans-serif; font-size:16px }',
-            license_key: 'gpl'
+            license_key: 'gpl',
+            // MODIFIED: Make the editor visible on initialization
+            init_instance_callback: function (editor) {
+                editor.getContainer().style.visibility = 'visible';
+            }
         });
 
         const geminiForm = document.getElementById('geminiForm');
