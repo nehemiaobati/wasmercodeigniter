@@ -330,7 +330,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
 <!-- MODIFIED: Load self-hosted TinyMCE instead of cloud version -->
-<script src="<?= base_url('assets/tinymce/tinymce.min.js') ?>" referrerpolicy="origin"></script>
+<script src="<?= base_url('public/assets/tinymce/tinymce.min.js') ?>" referrerpolicy="origin"></script>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
