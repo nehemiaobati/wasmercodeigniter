@@ -86,9 +86,8 @@
             font-family: 'Poppins', sans-serif;
             background-color: var(--light-bg);
             color: var(--text-body);
-            /* MODIFIED: Initially hide the body and set a transition for a smooth fade-in */
-            opacity: 0;
-            transition: opacity 0.5s ease-in-out;
+            /* MODIFIED: Initially hide the body to prevent FOUC. No transition needed. */
+            visibility: hidden;
         }
 
         /* 7.2.B The Blueprint Card & Micro-interactions */
@@ -395,8 +394,8 @@ src="https://www.facebook.com/tr?id=1266537441823413&ev=PageView&noscript=1"
                 });
             }
 
-            // MODIFIED: Make the body visible after the DOM is loaded
-            document.body.style.opacity = '1';
+            // MODIFIED: Make the body visible instantly after the DOM is fully loaded
+            document.body.style.visibility = 'visible';
         });
     </script>
     <?= $this->renderSection('scripts') ?>
