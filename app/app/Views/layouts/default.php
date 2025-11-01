@@ -307,8 +307,8 @@ src="https://www.facebook.com/tr?id=1266537441823413&ev=PageView&noscript=1"
                                 Services
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="servicesDropdown">
-                                <li><a class="dropdown-item" href="<?= url_to('gemini.public') ?>">About AI Studio</a></li>
-                                <li><a class="dropdown-item" href="<?= url_to('crypto.public') ?>">About CryptoQuery</a></li>
+                                <li><a class="dropdown-item" href="<?= url_to('gemini.public') ?>">AI Studio</a></li>
+                                <li><a class="dropdown-item" href="<?= url_to('crypto.public') ?>">CryptoQuery</a></li>
                             </ul>
                         </li>
                         
