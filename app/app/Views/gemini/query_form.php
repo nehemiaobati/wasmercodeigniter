@@ -63,12 +63,11 @@
         border-top: 1px solid #e9ecef;
     }
     
-    /* Toast notification for settings save */
+    /* MODIFIED: Toast notification for settings save - Removed custom fadeOut animation */
     .toast.show {
-        animation: slideIn 0.3s ease-out, fadeOut 0.5s ease-in 2.5s;
+        animation: slideIn 0.3s ease-out;
     }
     @keyframes slideIn { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
 
     /* Media Upload Area Styling */
     #mediaUploadArea {
@@ -151,6 +150,12 @@
         padding: 0.2em 0.4em; border-radius: 0.3em; font-size: 0.9em;
     }
     .ai-response-html pre code { background-color: transparent; padding: 0; font-size: inherit; }
+    
+    /* TinyMCE editor container style */
+    .tox-tinymce {
+        border-radius: 0.5rem !important;
+        border: 1px solid #ced4da !important;
+    }
 </style>
 <?= $this->endSection() ?>
 
@@ -219,11 +224,13 @@
                 <?= csrf_field() ?>
                 <div class="card query-card blueprint-card">
                     <div class="card-body p-4 p-md-5">
-                        <div class="form-floating mb-2">
-                            <textarea id="prompt" name="prompt" class="form-control" placeholder="Your Prompt" style="height: 150px" required><?= old('prompt') ?></textarea>
-                            <label for="prompt">Your Prompt</label>
+                        
+                        <div class="mb-3">
+                            <label for="prompt" class="form-label fw-bold">Your Prompt</label>
+                            <!-- MODIFIED: Removed 'required' attribute -->
+                            <textarea id="prompt" name="prompt"><?= old('prompt') ?></textarea>
                         </div>
-                        <small class="text-muted d-block mb-4">e.g., "Write a marketing email for a new coffee shop in Nairobi..."</small>
+
                         <div class="d-flex justify-content-end mb-4">
                             <button type="button" class="btn btn-link text-decoration-none btn-sm" data-bs-toggle="modal" data-bs-target="#savePromptModal">
                                 <i class="bi bi-bookmark-plus"></i> Save this prompt
@@ -307,7 +314,8 @@
 
 <!-- Toast container for notifications -->
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
-  <div id="settingsToast" class="toast align-items-center text-white bg-dark border-0" role="alert" aria-live="assertive" aria-atomic="true">
+  <!-- MODIFIED: Added data-bs-delay attribute for standard Bootstrap auto-hide functionality -->
+  <div id="settingsToast" class="toast align-items-center text-white bg-dark border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="3000">
     <div class="d-flex">
       <div class="toast-body">
         <!-- Message will be set by JS -->
@@ -320,8 +328,25 @@
 
 <?= $this->section('scripts') ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+<!-- MODIFIED: Load self-hosted TinyMCE instead of cloud version -->
+<script src="<?= base_url('assets/tinymce/tinymce.min.js') ?>" referrerpolicy="origin"></script>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // MODIFIED: Added block_formats to customize the dropdown
+        tinymce.init({
+            selector: '#prompt',
+            height: 250,
+            menubar: false,
+            statusbar: false,
+            plugins: 'autolink link lists',
+            toolbar: 'blocks | bold italic strikethrough | bullist numlist | link | alignleft aligncenter alignright',
+            block_formats: 'Text=p; Heading 1=h1; Heading 2=h2; Heading 3=h3', // THIS LINE IS THE FIX
+            content_style: 'body { font-family:Poppins,sans-serif; font-size:16px }',
+            license_key: 'gpl'
+        });
+
         const geminiForm = document.getElementById('geminiForm');
         const clearMemoryForm = document.getElementById('clearMemoryForm');
         const mainPromptTextarea = document.getElementById('prompt');
@@ -332,7 +357,7 @@
         const deleteUrl = "<?= route_to('gemini.delete_media') ?>";
         const updateSettingsUrl = "<?= route_to('gemini.settings.updateAssistantMode') ?>";
 
-        // --- Settings Save Logic (NEW) ---
+        // --- Settings Save Logic ---
         const assistantModeToggle = document.getElementById('assistantModeToggle');
         const settingsToastEl = document.getElementById('settingsToast');
         const settingsToast = new bootstrap.Toast(settingsToastEl);
@@ -383,10 +408,22 @@
 
         if (geminiForm && generateBtn) {
             geminiForm.addEventListener('submit', function(e) {
-                if (geminiForm.checkValidity()) {
-                    generateBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...`;
-                    generateBtn.disabled = true;
+                // First, ensure the latest editor content is saved to the underlying textarea
+                tinymce.triggerSave();
+
+                // Manually check if the editor's content is empty
+                const promptContent = tinymce.get('prompt').getContent({ format: 'text' });
+                
+                if (!promptContent || promptContent.trim() === '') {
+                    // Prevent the form from submitting
+                    e.preventDefault(); 
+                    alert('Please enter a prompt before generating.');
+                    return;
                 }
+
+                // If content exists, proceed with showing the loading state
+                generateBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...`;
+                generateBtn.disabled = true;
             });
         }
 
@@ -561,7 +598,8 @@
                 usePromptBtn.addEventListener('click', function() {
                     const selectedOption = savedPromptsSelect.options[savedPromptsSelect.selectedIndex];
                     if (selectedOption && selectedOption.value) {
-                        mainPromptTextarea.value = selectedOption.value;
+                        // MODIFIED: Set content in the TinyMCE editor
+                        tinymce.get('prompt').setContent(selectedOption.value);
                     }
                 });
             }
@@ -587,12 +625,13 @@
         }
         
         // --- Modal Logic ---
-        const savePromptModal = new bootstrap.Modal(document.getElementById('savePromptModal'));
+        const savePromptModalEl = document.getElementById('savePromptModal');
         const modalPromptTextarea = document.getElementById('modalPromptText');
-        const savePromptTrigger = document.querySelector('[data-bs-target="#savePromptModal"]');
-        if (savePromptTrigger) {
-            savePromptTrigger.addEventListener('click', () => {
-                modalPromptTextarea.value = mainPromptTextarea.value;
+
+        if (savePromptModalEl) {
+            savePromptModalEl.addEventListener('show.bs.modal', () => {
+                // Get the current content from the editor when the modal opens
+                modalPromptTextarea.value = tinymce.get('prompt').getContent({ format: 'html' });
             });
         }
         
@@ -644,25 +683,11 @@
                     setTimeout(() => { this.innerHTML = '<i class="bi bi-clipboard"></i> Copy Full Response'; }, 2000);
                 });
             });
+            
+            // The typing effect is removed to instantly render the complex HTML from the rich text output
+            responseWrapper.innerHTML = finalRenderedContent.innerHTML;
+            setupResponseFormatting();
 
-            const rawResponseText = rawTextarea.value;
-            let charIndex = 0;
-            responseWrapper.innerHTML = '';
-            responseWrapper.classList.add('typing');
-
-            function typeWriter() {
-                if (charIndex < rawResponseText.length) {
-                    responseWrapper.innerHTML += rawResponseText.charAt(charIndex);
-                    charIndex++;
-                    const speed = rawResponseText.length > 500 ? 5 : 20;
-                    setTimeout(typeWriter, speed);
-                } else {
-                    responseWrapper.classList.remove('typing');
-                    responseWrapper.innerHTML = finalRenderedContent.innerHTML;
-                    setupResponseFormatting();
-                }
-            }
-            typeWriter();
         }
     });
 </script>
