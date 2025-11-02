@@ -378,6 +378,11 @@ src="https://www.facebook.com/tr?id=1266537441823413&ev=PageView&noscript=1"
             </div>
         </div>
     </footer>
+    
+    <!-- NEW: Conditionally include the cookie banner -->
+    <?php if ($showCookieBanner ?? false): ?>
+        <?= $this->include('partials/cookie_banner') ?>
+    <?php endif; ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>

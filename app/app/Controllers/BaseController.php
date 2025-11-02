@@ -33,5 +33,8 @@ abstract class BaseController extends Controller
     {
         parent::initController($request, $response, $logger);
         $this->session = service('session');
+        
+        // NEW: Check for cookie consent and pass to all views
+        service('renderer')->setData(['showCookieBanner' => !hasCookieConsent()]);
     }
 }
