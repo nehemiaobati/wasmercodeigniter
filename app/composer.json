@@ -16,7 +16,8 @@
         "ext-bcmath": "*",
         "erusev/parsedown": "^1.7",
         "laminas/laminas-escaper": "^2.17",
-        "psr/log": "^3.0"
+        "psr/log": "^3.0",
+        "dompdf/dompdf": "^2.0"
     },
     "require-dev": {
         "codeigniter/coding-standard": "^1.7",

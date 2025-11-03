@@ -20,7 +20,7 @@ class GeminiService
      * @var array<string>
      */
     protected array $modelPriorities = [
-        "gemini-2.5-pro",
+        //"gemini-2.5-pro",
         "gemini-flash-latest",
         "gemini-flash-lite-latest",
         "gemini-2.5-flash",
