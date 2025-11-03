@@ -331,7 +331,7 @@
 </div>
 
 <!-- Hidden form for PDF download -->
-<form id="pdfDownloadForm" action="<?= route_to('gemini.download_pdf') ?>" method="post" target="_blank" class="d-none">
+<form id="pdfDownloadForm" action="<?= url_to('gemini.download_pdf') ?>" method="post" target="_self" class="d-none">
     <?= csrf_field() ?>
     <textarea name="raw_response" id="pdf-raw-response"></textarea>
 </form>
