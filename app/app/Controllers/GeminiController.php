@@ -704,7 +704,7 @@ class GeminiController extends BaseController
             $options->set('tempDir', $tempDir);
             
             // [THE FIX] Set chroot to the project root, not the public folder.
-            $options->set('chroot', ROOTPATH);
+            //$options->set('chroot', ROOTPATH);
     
             $dompdf = new Dompdf($options);
     
