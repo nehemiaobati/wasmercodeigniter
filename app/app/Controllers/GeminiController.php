@@ -653,6 +653,10 @@ class GeminiController extends BaseController
     public function downloadPdf()
     {
         try {
+            // [THE FIX] Set the script execution time limit to unlimited (0) for this specific request.
+            // This prevents timeouts when generating large PDF files.
+            set_time_limit(0);
+
             // 1. Get the raw markdown content from the POST request
             $markdownContent = $this->request->getPost('raw_response');
     
@@ -692,9 +696,7 @@ class GeminiController extends BaseController
             $options->set('defaultFont', 'DejaVu Sans');
             $options->set('isHtml5ParserEnabled', true);
             $options->set('isRemoteEnabled', true);
-            
-            // [THE FIX] Disable font subsetting to bypass the font parsing error.
-            $options->set('isFontSubsettingEnabled', false);
+            $options->set('isFontSubsettingEnabled', false); // Keep this to avoid the unpack() error.
             
             $tempDir = WRITEPATH . 'dompdf_temp';
             if (!is_dir($tempDir)) {
