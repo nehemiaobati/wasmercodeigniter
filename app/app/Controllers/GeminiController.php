@@ -645,30 +645,30 @@ class GeminiController extends BaseController
         return redirect()->to(url_to('gemini.index'))->with('success', 'Your conversational memory has been successfully cleared.');
     }
 
-    /**
-     * Generates a PDF from the raw markdown response and streams it for download.
+/**
+     * Generates a PDF from the raw markdown response, serves it for download,
+     * and then deletes the temporary file. This method handles streaming manually
+     * to ensure file deletion occurs after the download is sent.
      *
-     * @return ResponseInterface|void
+     * @return ResponseInterface|RedirectResponse|void
      */
     public function downloadPdf()
     {
         try {
-            // [THE FIX] Set the script execution time limit to unlimited (0) for this specific request.
-            // This prevents timeouts when generating large PDF files.
+            // Allow this script to run for as long as it needs.
             set_time_limit(0);
 
-            // 1. Get the raw markdown content from the POST request
+            // 1. Get and validate the raw markdown content.
             $markdownContent = $this->request->getPost('raw_response');
-    
             if (empty($markdownContent)) {
                 return redirect()->back()->with('error', 'No content provided to generate PDF.');
             }
-    
-            // 2. Convert Markdown to HTML using Parsedown
+
+            // 2. Convert Markdown to HTML.
             $parsedown = new Parsedown();
             $htmlContent = $parsedown->text($markdownContent);
-    
-            // Add a full HTML structure with UTF-8 meta tag and robust CSS for PDF rendering.
+
+            // 3. Prepare the full HTML document for Dompdf.
             $fullHtml = '
             <!DOCTYPE html>
             <html lang="en">
@@ -690,13 +690,13 @@ class GeminiController extends BaseController
             </head>
             <body>' . $htmlContent . '</body>
             </html>';
-    
-            // 3. Initialize Dompdf with robust options for production environments
+
+            // 4. Configure and run Dompdf.
             $options = new Options();
             $options->set('defaultFont', 'DejaVu Sans');
             $options->set('isHtml5ParserEnabled', true);
             $options->set('isRemoteEnabled', true);
-            $options->set('isFontSubsettingEnabled', false); // Keep this to avoid the unpack() error.
+            $options->set('isFontSubsettingEnabled', false);
             
             $tempDir = WRITEPATH . 'dompdf_temp';
             if (!is_dir($tempDir)) {
@@ -707,31 +707,51 @@ class GeminiController extends BaseController
                 return redirect()->back()->with('error', 'Server configuration error: PDF temporary directory is not writable.');
             }
             $options->set('tempDir', $tempDir);
-            
             $options->set('chroot', ROOTPATH);
     
             $dompdf = new Dompdf($options);
-    
-            // 4. Load HTML into Dompdf, specifying the encoding
             $dompdf->loadHtml($fullHtml, 'UTF-8');
-    
-            // 5. Set paper size and orientation
             $dompdf->setPaper('A4', 'portrait');
-    
-            // 6. Render the PDF
             $dompdf->render();
-    
-            // 7. Stream the generated PDF to the browser for download
-            $dompdf->stream('AI-Response.pdf', ['Attachment' => 1]);
-    
-            // 8. We must exit here to prevent CodeIgniter from sending further output which corrupts the PDF.
+            $output = $dompdf->output();
+            
+            // 5. Save the PDF to a temporary file.
+            $fileName = 'AI-Response-' . uniqid() . '.pdf';
+            $filePath = $tempDir . '/' . $fileName;
+            if (file_put_contents($filePath, $output) === false) {
+                log_message('error', '[PDF Generation Failed] Could not write PDF to temporary file: ' . $filePath);
+                return redirect()->back()->with('error', 'Failed to save the PDF file on the server.');
+            }
+
+            // 6. [NEW WORKFLOW] Manually stream the file for download.
+            // This ensures we have control to delete the file after sending.
+            if (ob_get_level()) {
+                ob_end_clean(); // Clean any previous output buffer.
+            }
+            
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: attachment; filename="' . basename($filePath) . '"');
+            header('Content-Transfer-Encoding: binary');
+            header('Expires: 0');
+            header('Cache-Control: must-revalidate');
+            header('Pragma: public');
+            header('Content-Length: ' . filesize($filePath));
+            
+            // Stream the file and check if it was successful
+            if (readfile($filePath) === false) {
+                log_message('error', '[PDF Download Failed] Could not read file for streaming: ' . $filePath);
+                // Don't delete the file yet so we can inspect it
+                return redirect()->back()->with('error', 'Could not read the generated PDF file for download.');
+            }
+            
+            // 7. Delete the file after it has been successfully streamed.
+            unlink($filePath);
+
+            // 8. End the script execution.
             exit(0);
 
         } catch (\Throwable $e) {
-            // If anything goes wrong, log the detailed error for debugging.
             log_message('error', '[PDF Generation Failed] ' . $e->getMessage() . "\n" . $e->getTraceAsString());
-            
-            // Redirect the user back with a helpful message.
             return redirect()->back()->with('error', 'Could not generate the PDF due to a server error. The issue has been logged for review.');
         }
     }
