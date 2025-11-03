@@ -652,99 +652,81 @@ class GeminiController extends BaseController
      */
     public function downloadPdf()
     {
-        // 1. Get the raw markdown content from the POST request
-        $markdownContent = $this->request->getPost('raw_response');
+        try {
+            // 1. Get the raw markdown content from the POST request
+            $markdownContent = $this->request->getPost('raw_response');
+    
+            if (empty($markdownContent)) {
+                return redirect()->back()->with('error', 'No content provided to generate PDF.');
+            }
+    
+            // 2. Convert Markdown to HTML using Parsedown
+            $parsedown = new Parsedown();
+            $htmlContent = $parsedown->text($markdownContent);
+    
+            // Add a full HTML structure with UTF-8 meta tag and robust CSS for PDF rendering.
+            $fullHtml = '
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+                <title>AI Response</title>
+                <style>
+                    body { font-family: "DejaVu Sans", sans-serif; line-height: 1.6; color: #333; font-size: 12px; }
+                    h1, h2, h3, h4, h5, h6 { font-family: "DejaVu Sans", sans-serif; margin-bottom: 0.5em; font-weight: bold; }
+                    p { margin-bottom: 1em; }
+                    ul, ol { margin-bottom: 1em; }
+                    strong, b { font-weight: bold; }
+                    pre { background-color: #f4f4f4; padding: 10px; border: 1px solid #ddd; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; font-family: "DejaVu Sans Mono", monospace; }
+                    code { font-family: "DejaVu Sans Mono", monospace; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 1em; }
+                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    th { background-color: #f2f2f2; }
+                </style>
+            </head>
+            <body>' . $htmlContent . '</body>
+            </html>';
+    
+            // 3. Initialize Dompdf with robust options for production environments
+            $options = new Options();
+            $options->set('defaultFont', 'DejaVu Sans'); // Font with broad Unicode support is crucial.
+            $options->set('isHtml5ParserEnabled', true);
+            $options->set('isRemoteEnabled', true);
+            
+            // [FIX] Explicitly set a writable temp directory within your project.
+            // This avoids issues with restricted system temp folders on servers.
+            $tempDir = WRITEPATH . 'dompdf_temp';
+            if (!is_dir($tempDir)) {
+                mkdir($tempDir, 0775, true);
+            }
+            $options->set('tempDir', $tempDir);
+            
+            // [FIX] Set a "chroot" directory to help Dompdf resolve local file paths securely.
+            $options->set('chroot', FCPATH);
+    
+            $dompdf = new Dompdf($options);
+    
+            // 4. Load HTML into Dompdf, specifying the encoding
+            $dompdf->loadHtml($fullHtml, 'UTF-8');
+    
+            // 5. Set paper size and orientation
+            $dompdf->setPaper('A4', 'portrait');
+    
+            // 6. Render the PDF
+            $dompdf->render();
+    
+            // 7. Stream the generated PDF to the browser for download
+            $dompdf->stream('AI-Response.pdf', ['Attachment' => 1]);
+    
+            // 8. We must exit here to prevent CodeIgniter from sending further output which corrupts the PDF.
+            exit(0);
 
-        if (empty($markdownContent)) {
-            return redirect()->back()->with('error', 'No content provided to generate PDF.');
+        } catch (\Throwable $e) {
+            // If anything goes wrong, log the detailed error for debugging.
+            log_message('error', '[PDF Generation Failed] ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            
+            // Redirect the user back with a helpful message.
+            return redirect()->back()->with('error', 'Could not generate the PDF due to a server error. The issue has been logged for review.');
         }
-
-        // 2. Convert Markdown to HTML using Parsedown
-        $parsedown = new Parsedown();
-        $htmlContent = $parsedown->text($markdownContent);
-
-        // [FIX] Add a full HTML structure with UTF-8 meta tag and robust CSS for PDF rendering.
-        // This ensures better font support and styling.
-        $fullHtml = '
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-            <title>AI Response</title>
-            <style>
-                /* Use a font that supports a wide range of characters */
-                body { 
-                    font-family: "DejaVu Sans", sans-serif; 
-                    line-height: 1.6; 
-                    color: #333; 
-                    font-size: 12px;
-                }
-                h1, h2, h3, h4, h5, h6 { 
-                    font-family: "DejaVu Sans", sans-serif;
-                    margin-bottom: 0.5em;
-                    font-weight: bold;
-                }
-                p { 
-                    margin-bottom: 1em; 
-                }
-                ul, ol {
-                    margin-bottom: 1em;
-                }
-                strong, b {
-                    font-weight: bold;
-                }
-                pre { 
-                    background-color: #f4f4f4; 
-                    padding: 10px; 
-                    border: 1px solid #ddd;
-                    border-radius: 4px; 
-                    white-space: pre-wrap;       /* css-3 */
-                    word-wrap: break-word;       /* Internet Explorer 5.5+ */
-                    font-family: "DejaVu Sans Mono", monospace;
-                }
-                code { 
-                    font-family: "DejaVu Sans Mono", monospace;
-                }
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-bottom: 1em;
-                }
-                th, td {
-                    border: 1px solid #ddd;
-                    padding: 8px;
-                    text-align: left;
-                }
-                th {
-                    background-color: #f2f2f2;
-                }
-            </style>
-        </head>
-        <body>' . $htmlContent . '</body>
-        </html>';
-
-        // 3. Initialize Dompdf
-        $options = new Options();
-        // [FIX] Set the default font to one with good Unicode support.
-        $options->set('defaultFont', 'DejaVu Sans');
-        $options->set('isHtml5ParserEnabled', true);
-        $options->set('isRemoteEnabled', true);
-        $dompdf = new Dompdf($options);
-
-        // 4. Load HTML into Dompdf
-        $dompdf->loadHtml($fullHtml, 'UTF-8'); // [FIX] Specify encoding
-
-        // (Optional) Set paper size and orientation
-        $dompdf->setPaper('A4', 'portrait');
-
-        // 5. Render the PDF
-        $dompdf->render();
-
-        // 6. Stream the generated PDF to the browser for download
-        // The 'attachment' => 1 parameter forces a download dialog.
-        $dompdf->stream('AI-Studio Output.pdf', ['Attachment' => 1]);
-
-        // [FIX] We must exit here to prevent CodeIgniter from sending further output which corrupts the PDF.
-        exit(0);
     }
 }
