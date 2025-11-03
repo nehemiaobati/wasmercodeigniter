@@ -70,6 +70,9 @@ $routes->group('', ['filter' => 'auth'], static function ($routes) {
         $routes->post('users/delete/(:num)', 'AdminController::delete/$1', ['as' => 'admin.users.delete']);
         $routes->get('users/search', 'AdminController::searchUsers', ['as' => 'admin.users.search']);
         
+        // New route for viewing logs
+        $routes->get('logs', 'AdminController::logs', ['as' => 'admin.logs']);
+        
         // --- Campaign Routes ---
         $routes->get('campaign', 'CampaignController::create', ['as' => 'admin.campaign.create']);
         $routes->post('campaign/send', 'CampaignController::send', ['as' => 'admin.campaign.send']);

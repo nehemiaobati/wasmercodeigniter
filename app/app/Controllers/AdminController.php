@@ -15,8 +15,6 @@ class AdminController extends BaseController
     /**
      * Displays a paginated list of all users.
      *
-     * Retrieves users with pagination and provides total user count and balance information.
-     *
      * @return \CodeIgniter\HTTP\ResponseInterface The rendered admin index view with user data.
      */
     public function index()
@@ -184,5 +182,52 @@ class AdminController extends BaseController
             // If deletion fails, redirect back with an error message.
             return redirect()->back()->with('error', 'Failed to delete user.');
         }
+    }
+
+    /**
+     * Displays the application log files for debugging.
+     * Only accessible by administrators.
+     *
+     * @return \CodeIgniter\HTTP\ResponseInterface|string
+     */
+    public function logs()
+    {
+        // Security check: Ensure only administrators can access this page.
+        if (!session()->get('is_admin')) {
+            return redirect()->to(url_to('home'))->with('error', 'You do not have permission to access this page.');
+        }
+
+        helper('filesystem');
+
+        $logPath = WRITEPATH . 'logs/';
+        $logFiles = get_filenames($logPath);
+        
+        // Sort files by name to get the latest one (log-YYYY-MM-DD.log)
+        if ($logFiles) {
+            rsort($logFiles);
+        } else {
+            $logFiles = [];
+        }
+
+        $logContent = '';
+        $selectedFile = $this->request->getGet('file') ?? ($logFiles[0] ?? null);
+
+        if ($selectedFile && in_array($selectedFile, $logFiles)) {
+            // Sanitize filename to prevent directory traversal
+            $safeFile = basename($selectedFile);
+            if (file_exists($logPath . $safeFile)) {
+                $logContent = file_get_contents($logPath . $safeFile);
+            }
+        }
+
+        $data = [
+            'pageTitle'    => 'Application Logs | Admin',
+            'logFiles'     => $logFiles,
+            'selectedFile' => $selectedFile,
+            'logContent'   => $logContent,
+            'robotsTag'    => 'noindex, nofollow',
+        ];
+
+        return view('admin/logs_view', $data);
     }
 }

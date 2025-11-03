@@ -24,12 +24,15 @@
 
 <?= $this->section('content') ?>
 <div class="container my-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <h1 class="fw-bold">Admin Dashboard</h1>
-        <form action="<?= url_to('admin.users.search') ?>" method="GET" class="d-flex">
-            <input type="text" name="q" class="form-control me-2" placeholder="Search users..." value="<?= esc($search_query ?? '') ?>">
-            <button type="submit" class="btn btn-outline-primary">Search</button>
-        </form>
+        <div class="d-flex align-items-center">
+            <a href="<?= url_to('admin.logs') ?>" class="btn btn-outline-secondary me-2"><i class="bi bi-journal-text"></i> View Logs</a>
+            <form action="<?= url_to('admin.users.search') ?>" method="GET" class="d-flex">
+                <input type="text" name="q" class="form-control me-2" placeholder="Search users..." value="<?= esc($search_query ?? '') ?>">
+                <button type="submit" class="btn btn-outline-primary">Search</button>
+            </form>
+        </div>
     </div>
 
     <!-- Stats & Actions Cards -->
