@@ -267,9 +267,14 @@
                     <div class="card-body p-4 p-md-5">
                         <h3 class="fw-bold mb-4 d-flex justify-content-between align-items-center">
                             Studio Output
-                            <button id="copy-response-btn" class="btn btn-sm btn-outline-secondary">
-                                <i class="bi bi-clipboard"></i> Copy Full Response
-                            </button>
+                            <div class="btn-group" role="group">
+                                <button id="copy-response-btn" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-clipboard"></i> Copy Full Response
+                                </button>
+                                <button id="download-pdf-btn" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-file-earmark-pdf"></i> Download as PDF
+                                </button>
+                            </div>
                         </h3>
                         <div id="ai-response-wrapper" class="ai-response-html">
                              <!-- This will be populated by the typing effect -->
@@ -324,6 +329,12 @@
     </div>
   </div>
 </div>
+
+<!-- Hidden form for PDF download -->
+<form id="pdfDownloadForm" action="<?= url_to('gemini.download_pdf') ?>" method="post" target="_blank" class="d-none">
+    <?= csrf_field() ?>
+    <textarea name="raw_response" id="pdf-raw-response"></textarea>
+</form>
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
@@ -639,9 +650,10 @@
             });
         }
         
-        // --- AI Response and Copy Logic ---
+        // --- AI Response and Copy/Download Logic ---
         const responseWrapper = document.getElementById('ai-response-wrapper');
         const copyBtn = document.getElementById('copy-response-btn');
+        const downloadPdfBtn = document.getElementById('download-pdf-btn');
 
         function setupResponseFormatting() {
             const allPreTags = responseWrapper.querySelectorAll('pre');
@@ -672,7 +684,7 @@
             }
         }
 
-        if (responseWrapper && copyBtn) {
+        if (responseWrapper) {
             const rawTextarea = document.getElementById('raw-response-for-copy');
             const finalRenderedContent = document.getElementById('final-rendered-content');
             const resultsCard = responseWrapper.closest('.results-card');
@@ -681,17 +693,28 @@
                 resultsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 100);
 
-            copyBtn.addEventListener('click', function() {
-                navigator.clipboard.writeText(rawTextarea.value).then(() => {
-                    this.innerHTML = '<i class="bi bi-check-lg"></i> Copied!';
-                    setTimeout(() => { this.innerHTML = '<i class="bi bi-clipboard"></i> Copy Full Response'; }, 2000);
+            if (copyBtn) {
+                copyBtn.addEventListener('click', function() {
+                    navigator.clipboard.writeText(rawTextarea.value).then(() => {
+                        this.innerHTML = '<i class="bi bi-check-lg"></i> Copied!';
+                        setTimeout(() => { this.innerHTML = '<i class="bi bi-clipboard"></i> Copy'; }, 2000);
+                    });
                 });
-            });
+            }
+
+            if (downloadPdfBtn) {
+                const pdfDownloadForm = document.getElementById('pdfDownloadForm');
+                const pdfRawResponseTextarea = document.getElementById('pdf-raw-response');
+                
+                downloadPdfBtn.addEventListener('click', function() {
+                    pdfRawResponseTextarea.value = rawTextarea.value;
+                    pdfDownloadForm.submit();
+                });
+            }
             
             // The typing effect is removed to instantly render the complex HTML from the rich text output
             responseWrapper.innerHTML = finalRenderedContent.innerHTML;
             setupResponseFormatting();
-
         }
     });
 </script>
