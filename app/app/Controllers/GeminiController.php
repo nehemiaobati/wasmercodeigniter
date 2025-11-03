@@ -644,7 +644,8 @@ class GeminiController extends BaseController
 
         return redirect()->to(url_to('gemini.index'))->with('success', 'Your conversational memory has been successfully cleared.');
     }
-/**
+
+    /**
      * Generates a PDF from the raw markdown response and streams it for download.
      *
      * @return ResponseInterface|void
@@ -692,19 +693,20 @@ class GeminiController extends BaseController
             $options->set('isHtml5ParserEnabled', true);
             $options->set('isRemoteEnabled', true);
             
+            // [THE FIX] Disable font subsetting to bypass the font parsing error.
+            $options->set('isFontSubsettingEnabled', false);
+            
             $tempDir = WRITEPATH . 'dompdf_temp';
             if (!is_dir($tempDir)) {
                 mkdir($tempDir, 0775, true);
             }
-            // Add a check to ensure the directory is writable
             if (!is_writable($tempDir)) {
                 log_message('error', '[PDF Generation Failed] Dompdf temp directory is not writable: ' . $tempDir);
                 return redirect()->back()->with('error', 'Server configuration error: PDF temporary directory is not writable.');
             }
             $options->set('tempDir', $tempDir);
             
-            // [THE FIX] Set chroot to the project root, not the public folder.
-            //$options->set('chroot', ROOTPATH);
+            $options->set('chroot', ROOTPATH);
     
             $dompdf = new Dompdf($options);
     
