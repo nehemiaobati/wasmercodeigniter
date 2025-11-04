@@ -367,7 +367,7 @@
         <?= $this->include('partials/cookie_banner') ?>
     <?php endif; ?>
 
-    <script src="<?= base_url('assets/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
+    <script src="<?= base_url('public/assets/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             const themeToggles = document.querySelectorAll('.theme-toggle');
