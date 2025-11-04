@@ -218,7 +218,7 @@
                         <!-- LOGGED-IN NAVIGATION (Desktop) -->
                         <li class="nav-item"><a class="nav-link <?= str_contains(current_url(), 'home') ? 'active' : '' ?>" href="<?= url_to('home') ?>">Dashboard</a></li>
                         <li class="nav-item"><a class="nav-link <?= str_contains(current_url(), 'gemini') ? 'active' : '' ?>" href="<?= url_to('gemini.index') ?>">AI Studio</a></li>
-                        <li class="nav-item"><a class="nav-link <?= str_contains(current_url(), 'crypto') ? 'active' : '' ?>" href="<?= url_to('crypto.index') ?>">CryptoQuery</a></li>
+                        <li class="nav-item"><a class="nav-link <?= str_contains(current_url(), 'crypto') ? 'active' : '' ?>" href="<?= url_to('crypto.index') ?>">Crypto Query</a></li>
                         <li class="nav-item"><a class="nav-link <?= str_contains(current_url(), 'payment') ? 'active' : '' ?>" href="<?= url_to('payment.index') ?>">Top Up</a></li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle user-dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -238,7 +238,7 @@
                         <!-- LOGGED-OUT NAVIGATION (Desktop) -->
                         <li class="nav-item"><a class="nav-link <?= current_url() == url_to('landing') ? 'active' : '' ?>" href="<?= url_to('landing') ?>">Home</a></li>
                         <li class="nav-item"><a class="nav-link <?= str_contains(current_url(), 'ai-studio') ? 'active' : '' ?>" href="<?= url_to('gemini.public') ?>">AI Studio</a></li>
-                        <li class="nav-item"><a class="nav-link <?= str_contains(current_url(), 'crypto-query') ? 'active' : '' ?>" href="<?= url_to('crypto.public') ?>">CryptoQuery</a></li>
+                        <li class="nav-item"><a class="nav-link <?= str_contains(current_url(), 'crypto-query') ? 'active' : '' ?>" href="<?= url_to('crypto.public') ?>">Crypto Query</a></li>
                         <li class="nav-item d-flex align-items-center ms-lg-3">
                             <a class="btn btn-outline-primary" href="<?= url_to('login') ?>">Login</a>
                             <a class="btn btn-primary ms-2" href="<?= url_to('register') ?>">Register</a>
