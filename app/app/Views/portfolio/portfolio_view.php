@@ -8,7 +8,8 @@
 
     /* Add scroll-margin-top to sections to offset for the sticky navbars */
     main section[id] {
-        scroll-margin-top: 160px; /* Combined height of both navbars */
+        scroll-margin-top: 160px;
+        /* Combined height of both navbars */
     }
 
     /* Section-specific styles adapted for the light theme */
@@ -20,7 +21,8 @@
     /* Quick Navigation for page sections */
     .quick-nav {
         position: sticky;
-        top: 85px; /* Adjust based on main navbar height */
+        top: 85px;
+        /* Adjust based on main navbar height */
         z-index: 999;
         background-color: rgba(255, 255, 255, 0.9);
         backdrop-filter: blur(10px);
@@ -287,24 +289,24 @@
 
 <?= $this->section('content') ?>
 <main>
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "Person",
-  "name": "Nehemia Obati",
-  "url": "<?= url_to('portfolio.index') ?>",
-  "image": "<?= base_url('assets/images/potraitwebp.webp') ?>",
-  "sameAs": [
-    "https://www.linkedin.com/in/nehemia-obati-b74886344"
-  ],
-  "jobTitle": "Software Developer",
-  "worksFor": {
-    "@type": "Organization",
-    "name": "Kingsway Business Systems LTD"
-  },
-  "knowsAbout": ["PHP", "CodeIgniter", "Python", "Google Cloud Platform", "AWS", "Linux", "Server Management", "SQL", "JavaScript"]
-}
-</script>
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Person",
+            "name": "Nehemia Obati",
+            "url": "<?= url_to('portfolio.index') ?>",
+            "image": "<?= base_url('assets/images/potraitwebp.webp') ?>",
+            "sameAs": [
+                "https://www.linkedin.com/in/nehemia-obati-b74886344"
+            ],
+            "jobTitle": "Software Developer",
+            "worksFor": {
+                "@type": "Organization",
+                "name": "Kingsway Business Systems LTD"
+            },
+            "knowsAbout": ["PHP", "CodeIgniter", "Python", "Google Cloud Platform", "AWS", "Linux", "Server Management", "SQL", "JavaScript"]
+        }
+    </script>
     <div class="container">
         <!-- Hero Section -->
         <section id="home" class="py-5">
@@ -518,12 +520,12 @@
 
 <?= $this->section('scripts') ?>
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function() {
         const quickNavLinks = document.querySelectorAll('.quick-nav .nav-link');
         const sections = document.querySelectorAll('main section[id]');
 
         // No script needed for click-to-scroll, handled by CSS `scroll-margin-top` and `scroll-behavior: smooth;`
-        
+
         // Intersection Observer for active link highlighting
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
