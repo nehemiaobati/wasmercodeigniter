@@ -6,35 +6,32 @@
         scroll-behavior: smooth;
     }
 
-    /* Add scroll-margin-top to sections to offset for the sticky navbars */
     main section[id] {
         scroll-margin-top: 160px;
-        /* Combined height of both navbars */
     }
 
-    /* Section-specific styles adapted for the light theme */
     .section-title h2 {
         font-weight: 700;
-        color: var(--dark-gray);
+        color: var(--text-heading);
     }
 
     /* Quick Navigation for page sections */
     .quick-nav {
         position: sticky;
         top: 85px;
-        /* Adjust based on main navbar height */
         z-index: 999;
-        background-color: rgba(255, 255, 255, 0.9);
+        background-color: rgba(var(--card-bg-rgb), 0.9); /* MODIFICATION: Theme-aware background */
         backdrop-filter: blur(10px);
         border-radius: 0.75rem;
         padding: 0.5rem 1rem;
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.07);
         margin-bottom: 4rem;
         margin-top: 2rem;
+        border: 1px solid var(--border-color);
     }
 
     .quick-nav .nav-link {
-        color: var(--secondary-color);
+        color: var(--text-body);
         font-weight: 500;
         padding: 0.5rem 1rem;
         border-radius: 0.5rem;
@@ -42,7 +39,7 @@
 
     .quick-nav .nav-link:hover {
         color: var(--primary-color);
-        background-color: #e9ecef;
+        background-color: rgba(var(--bs-primary-rgb), 0.1);
     }
 
     .quick-nav .nav-link.active {
@@ -61,7 +58,7 @@
 
     .hero-text h1 {
         font-weight: 700;
-        color: var(--dark-gray);
+        color: var(--text-heading);
     }
 
     .hero-text h1 strong {
@@ -85,55 +82,42 @@
         height: 250px;
         border-radius: 50%;
         object-fit: cover;
-        border: 5px solid #fff;
+        border: 5px solid var(--card-bg);
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
     }
 
     /* Card-based sections */
-    .skill-category,
-    .portfolio-card,
-    .education-item,
-    .detail-card,
-    .reference-item {
-        background-color: #fff;
-        padding: 30px;
-        border-radius: 12px;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-        border: 1px solid #e9ecef;
-    }
+    /* MODIFICATION: Removed all custom card classes like .skill-category, .portfolio-card, etc. 
+       They are all replaced by the global .blueprint-card class in the HTML. */
 
-    .skills-grid {
+    .skills-grid,
+    .education-grid,
+    .personal-details-grid,
+    .references-grid,
+    .portfolio-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
         gap: 30px;
     }
 
-    .skill-category h3 {
+    .blueprint-card h3 {
         border-bottom: 2px solid var(--primary-color);
         padding-bottom: 10px;
         margin-bottom: 20px;
     }
 
-    .skill-category ul {
+    .blueprint-card ul {
         list-style: none;
         padding: 0;
     }
 
-    .skill-category ul li {
+    .blueprint-card ul li {
         padding: 8px 0;
-        border-bottom: 1px solid #e9ecef;
+        border-bottom: 1px solid var(--border-color);
     }
 
-    .skill-category ul li:last-child {
+    .blueprint-card ul li:last-child {
         border-bottom: none;
-    }
-
-    .education-grid,
-    .personal-details-grid,
-    .references-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 30px;
     }
 
     /* Work Timeline */
@@ -147,7 +131,7 @@
         content: '';
         position: absolute;
         width: 4px;
-        background-color: #e9ecef;
+        background-color: var(--border-color); /* MODIFICATION */
         top: 0;
         bottom: 0;
         left: 50%;
@@ -176,7 +160,7 @@
         height: 20px;
         right: -10px;
         background-color: var(--primary-color);
-        border: 4px solid var(--light-gray);
+        border: 4px solid var(--light-bg); /* MODIFICATION */
         top: 25px;
         border-radius: 50%;
         z-index: 1;
@@ -186,30 +170,12 @@
         left: -10px;
     }
 
-    .work-content {
-        padding: 20px 30px;
-        background-color: #fff;
-        position: relative;
-        border-radius: 8px;
-        border: 1px solid #e9ecef;
-    }
-
     /* Portfolio */
     .portfolio-grid {
-        display: grid;
         grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-        gap: 30px;
     }
 
-    .portfolio-card {
-        transition: transform 0.3s ease;
-    }
-
-    .portfolio-card:hover {
-        transform: translateY(-5px);
-    }
-
-    .portfolio-card img {
+    .blueprint-card img {
         width: 100%;
         height: 220px;
         object-fit: cover;
@@ -316,9 +282,11 @@
                     <p class="subtitle">Software Developer</p>
                     <p>I'm a full-stack developer with a passion for crafting dynamic and user-friendly web experiences. Fluent in technologies from front-end languages to back-end powerhouses like Python and PHP, and proficient in cloud platforms like GCP and AWS. My expertise in Bash and Linux empowers me to manage server environments with ease. I am constantly exploring new technologies to stay at the forefront of web development and am excited to leverage my comprehensive skillset to create innovative and impactful solutions.</p>
                     <a href="#portfolio" class="btn btn-primary">View My Work</a>
+                    <!-- MODIFICATION: Corrected asset path -->
                     <a href="<?= base_url('public/assets/Nehemia Obati Resume.pdf') ?>" class="btn btn-outline-primary ms-2" target="_blank">Download Resume</a>
                 </div>
                 <div class="hero-image-container text-center">
+                    <!-- MODIFICATION: Corrected asset path -->
                     <img src="<?= base_url('public/assets/images/potraitwebp.webp') ?>" alt="Nehemia Obati" class="hero-image">
                 </div>
             </div>
@@ -339,7 +307,7 @@
                 <h2>Technical Skills</h2>
             </div>
             <div class="skills-grid">
-                <div class="skill-category">
+                <div class="blueprint-card p-4">
                     <h3>Cloud & Servers</h3>
                     <ul>
                         <li>Cloud Environments Setup (GCP, AWS, Azure)</li>
@@ -348,7 +316,7 @@
                         <li>Windows IIS & Apache2 Web Server Config</li>
                     </ul>
                 </div>
-                <div class="skill-category">
+                <div class="blueprint-card p-4">
                     <h3>Programming & Web</h3>
                     <ul>
                         <li>PHP (CodeIgniter) & Python (Flask)</li>
@@ -356,7 +324,7 @@
                         <li>MySQL Database Management</li>
                     </ul>
                 </div>
-                <div class="skill-category">
+                <div class="blueprint-card p-4">
                     <h3>Automation & Tools</h3>
                     <ul>
                         <li>Power Automate</li>
@@ -374,26 +342,26 @@
                 <h2>Portfolio</h2>
             </div>
             <div class="portfolio-grid">
-                <div class="portfolio-card"> <img src="https://placehold.co/600x400/0d6efd/ffffff?text=PIMIS" alt="Screenshot of the PIMIS - Public Investment Management System for the National Treasury.">
-                    <div class="portfolio-content">
+                <div class="blueprint-card p-0 d-flex flex-column"> <img src="https://placehold.co/600x400/0d6efd/ffffff?text=PIMIS" alt="Screenshot of the PIMIS - Public Investment Management System for the National Treasury.">
+                    <div class="portfolio-content p-4">
                         <h3>PIMIS - Public Investment Management System</h3>
-                        <p>A system for the National Treasury. Project TENDER NO. TNT/025/2020-2021.</p> <a href="https://pimisdev.treasury.go.ke/" target="_blank" class="btn btn-primary">View Project</a>
+                        <p>A system for the National Treasury. Project TENDER NO. TNT/025/2020-2021.</p> <a href="https://pimisdev.treasury.go.ke/" target="_blank" class="btn btn-primary mt-auto">View Project</a>
                     </div>
                 </div>
-                <div class="portfolio-card"> <img src="https://placehold.co/600x400/198754/ffffff?text=ECIPMS" alt="Dashboard of the ECIPMS - County Integrated Planning Management System for Kakamega County.">
-                    <div class="portfolio-content">
+                <div class="blueprint-card p-0 d-flex flex-column"> <img src="https://placehold.co/600x400/198754/ffffff?text=ECIPMS" alt="Dashboard of the ECIPMS - County Integrated Planning Management System for Kakamega County.">
+                    <div class="portfolio-content p-4">
                         <h3>ECIPMS - County Integrated Planning Management System</h3>
-                        <p>Automated M&E system for Kakamega County Government. CONTRACT FOR THE SUPPLY, INSTALLATION AND COMMISSIONING OF STANDARDIZED AUTOMATED MONITORING AND EVALUATION SYSTEM. Project TENDER NO. CGKK/OG/2020/2021/01.</p> <a href="https://ecipms.kingsway.co.ke/" target="_blank" class="btn btn-primary">View Project</a>
+                        <p>Automated M&E system for Kakamega County Government. CONTRACT FOR THE SUPPLY, INSTALLATION AND COMMISSIONING OF STANDARDIZED AUTOMATED MONITORING AND EVALUATION SYSTEM. Project TENDER NO. CGKK/OG/2020/2021/01.</p> <a href="https://ecipms.kingsway.co.ke/" target="_blank" class="btn btn-primary mt-auto">View Project</a>
                     </div>
                 </div>
-                <div class="portfolio-card"> <img src="https://placehold.co/600x400/6f42c1/ffffff?text=IFMIS" alt="The IFMIS e-procurement module for the National Treasury of Kenya.">
-                    <div class="portfolio-content">
+                <div class="blueprint-card p-0 d-flex flex-column"> <img src="https://placehold.co/600x400/6f42c1/ffffff?text=IFMIS" alt="The IFMIS e-procurement module for the National Treasury of Kenya.">
+                    <div class="portfolio-content p-4">
                         <h3>IFMIS - National Treasury</h3>
                         <p>Onsite support for IFMIS applications and E-Procurement enhancement. TENDER FOR PROVISION OF ONSITE SUPPORT FOR IFMIS APPLICATIONS AND ENHANCEMENT OF IFMIS E-PROCUREMENT. Project TENDER NO. TNT/029/2019-2020.</p>
                     </div>
                 </div>
-                <div class="portfolio-card"> <img src="https://placehold.co/600x400/fd7e14/ffffff?text=Oracle+Support" alt="Oracle Database logo representing the application support license project.">
-                    <div class="portfolio-content">
+                <div class="blueprint-card p-0 d-flex flex-column"> <img src="https://placehold.co/600x400/fd7e14/ffffff?text=Oracle+Support" alt="Oracle Database logo representing the application support license project.">
+                    <div class="portfolio-content p-4">
                         <h3>Oracle E-Procurement - National Treasury</h3>
                         <p>Provision of Oracle application support licenses. TENDER FOR THE PROVISION OF ORACLE APPLICATION SUPPORT LICENSES. Project TENDER NO. TNT/026/2019-2020.</p>
                     </div>
@@ -408,7 +376,7 @@
             </div>
             <div class="work-timeline">
                 <div class="work-item">
-                    <div class="work-content">
+                    <div class="blueprint-card p-4">
                         <p class="date">2021-01 - Current</p>
                         <h3>ICT Support</h3>
                         <p class="company">Kingsway Business Systems LTD</p>
@@ -426,18 +394,18 @@
         </section>
 
         <!-- Education & Certifications -->
-        <section id="education" class="py-5 bg-light">
+        <section id="education" class="py-5 bg-body-tertiary">
             <div class="container">
                 <div class="section-title text-center">
                     <h2>Education & Certifications</h2>
                 </div>
                 <div class="education-grid">
-                    <div class="education-item">
+                    <div class="blueprint-card p-4">
                         <h3>Computer Science</h3>
                         <h4>Zetech University - Ruiru</h4>
                         <p>Graduated: 2021-11</p>
                     </div>
-                    <div class="education-item">
+                    <div class="blueprint-card p-4">
                         <h3>Certificate: CCNA 1-3 & Cyber Ops</h3>
                         <h4>Zetech University - Ruiru</h4>
                         <p>Completed: 2020-09</p>
@@ -449,14 +417,14 @@
         <!-- Personal Details -->
         <section id="personal-details" class="py-5">
             <div class="personal-details-grid">
-                <div class="detail-card">
+                <div class="blueprint-card p-4">
                     <h3>Languages</h3>
                     <ul>
                         <li>English</li>
                         <li>Kiswahili</li>
                     </ul>
                 </div>
-                <div class="detail-card">
+                <div class="blueprint-card p-4">
                     <h3>Interests</h3>
                     <ul>
                         <li>E-Sports</li>
@@ -468,18 +436,18 @@
         </section>
 
         <!-- References -->
-        <section id="references" class="py-5 bg-light">
+        <section id="references" class="py-5 bg-body-tertiary">
             <div class="container">
                 <div class="section-title text-center">
                     <h2>References</h2>
                 </div>
                 <div class="references-grid">
-                    <div class="reference-item">
+                    <div class="blueprint-card p-4">
                         <p class="name">Kenneth Kadenge</p>
                         <p class="title">Project Manager, Kingsway Business Service Ltd.</p>
                         <p>Tel: 0722 310 030</p>
                     </div>
-                    <div class="reference-item">
+                    <div class="blueprint-card p-4">
                         <p class="name">Dan Njiru</p>
                         <p class="title">Head of Department, Zetech University</p>
                         <p>Tel: 0719 321 351</p>
@@ -503,7 +471,7 @@
                         <li class="mb-3"><i class="bi bi-telephone-fill text-primary me-2"></i> <a href="tel:+254794587533">+254794587533</a></li>
                     </ul>
                 </div>
-                <div>
+                <div class="blueprint-card p-4">
                     <?= form_open(url_to('portfolio.sendEmail')) ?>
                     <div class="form-floating mb-3"><input type="text" class="form-control" id="name" name="name" placeholder="Name" required><label for="name">Name</label></div>
                     <div class="form-floating mb-3"><input type="email" class="form-control" id="email" name="email" placeholder="Email" required><label for="email">Email</label></div>
@@ -524,9 +492,6 @@
         const quickNavLinks = document.querySelectorAll('.quick-nav .nav-link');
         const sections = document.querySelectorAll('main section[id]');
 
-        // No script needed for click-to-scroll, handled by CSS `scroll-margin-top` and `scroll-behavior: smooth;`
-
-        // Intersection Observer for active link highlighting
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -537,7 +502,7 @@
                 }
             });
         }, {
-            rootMargin: '-170px 0px -50% 0px', // Adjusted root margin to trigger when the title is near the top
+            rootMargin: '-170px 0px -50% 0px',
             threshold: 0
         });
 
