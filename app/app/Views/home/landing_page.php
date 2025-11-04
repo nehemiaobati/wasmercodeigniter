@@ -4,20 +4,13 @@
 
 <?= $this->section('styles') ?>
 <style>
-    :root {
-        --primary-color: #0d6efd;
-        --secondary-color: #6c757d;
-        --light-gray: #f8f9fa;
-        --dark-bg: #1a1a2e;
-        --light-bg: #ffffff;
-        --text-dark: #343a40;
-        --text-light: #f8f9fa;
-    }
+    /* MODIFICATION: Removed local variables and hardcoded colors. 
+       All theming is now handled by global CSS variables and Bootstrap utilities. */
 
-    /* Hero Section Styling */
+    /* Hero Section Styling (Remains Unchanged - Uses its own theme) */
     .hero-section {
         background: linear-gradient(135deg, rgba(13, 110, 253, 0.9), rgba(26, 26, 46, 0.95));
-        color: var(--text-light);
+        color: #f8f9fa;
         padding: 100px 0;
         text-align: center;
         overflow: hidden;
@@ -56,26 +49,10 @@
         height: 4rem;
         font-size: 2rem;
         border-radius: 50%;
-        color: var(--light-bg);
+        color: #ffffff;
         background-color: var(--primary-color);
         margin-bottom: 1.5rem;
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
-    }
-
-    .feature-card {
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        border: 0;
-    }
-
-    .feature-card:hover {
-        transform: translateY(-10px);
-        box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.15) !important;
-    }
-
-    /* New Custom Development Section Styling */
-    .custom-dev-section {
-        background-color: var(--light-bg);
-        border-radius: 0.75rem;
     }
 
     .custom-dev-section .list-unstyled i {
@@ -89,11 +66,10 @@
         margin-bottom: 1.5rem;
     }
 
-    .process-number {
+    /* MODIFICATION: Uses Bootstrap theme-aware classes instead of hardcoded colors */
+    .process-number, .step-number {
         font-size: 1.5rem;
         font-weight: 700;
-        color: var(--primary-color);
-        background-color: #e7f1ff;
         border-radius: 50%;
         width: 45px;
         height: 45px;
@@ -103,59 +79,22 @@
         justify-content: center;
         margin-right: 15px;
     }
-
-
-    /* How It Works Section Styling */
-    .how-it-works {
-        background-color: var(--light-bg);
-    }
-
     .step-number {
         width: 60px;
         height: 60px;
-        background-color: #e7f1ff;
-        border: 2px solid var(--primary-color);
-        color: var(--primary-color);
-        border-radius: 50%;
-        font-size: 1.5rem;
-        font-weight: 700;
         margin: 0 auto 1rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
     }
 
-    /* Call-to-Action Section Styling */
+    /* Call-to-Action Section Styling (Remains Unchanged - Intentionally Dark) */
     .cta-section {
-        background-color: var(--dark-bg);
-        color: var(--text-light);
+        background-color: #1a1a2e;
+        color: #f8f9fa;
         border-radius: 0.75rem;
     }
 
-    /* Animations for engagement */
-    @keyframes fadeInDown {
-        from {
-            opacity: 0;
-            transform: translateY(-20px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
+    /* Animations */
+    @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
     .fade-in-section {
         opacity: 0;
@@ -191,7 +130,8 @@
             <h2 class="display-5 fw-bold mb-5">Our Core Services</h2>
             <div class="row g-4 justify-content-center">
                 <div class="col-lg-4 col-md-6">
-                    <div class="card h-100 shadow-sm feature-card">
+                    <!-- MODIFICATION: Replaced custom 'feature-card' with standard 'blueprint-card' -->
+                    <div class="card h-100 blueprint-card">
                         <div class="card-body p-4">
                             <div class="feature-icon"><i class="bi bi-robot"></i></div>
                             <h3 class="fs-4 fw-bold">Your Creative AI Co-Pilot</h3>
@@ -200,7 +140,7 @@
                     </div>
                 </div>
                 <div class="col-lg-4 col-md-6">
-                    <div class="card h-100 shadow-sm feature-card">
+                    <div class="card h-100 blueprint-card">
                         <div class="card-body p-4">
                             <div class="feature-icon"><i class="bi bi-search"></i></div>
                             <h3 class="fs-4 fw-bold">Instant Blockchain Insights</h3>
@@ -209,7 +149,7 @@
                     </div>
                 </div>
                 <div class="col-lg-4 col-md-6">
-                    <div class="card h-100 shadow-sm feature-card">
+                    <div class="card h-100 blueprint-card">
                         <div class="card-body p-4">
                             <div class="feature-icon"><i class="bi bi-shield-check"></i></div>
                             <h3 class="fs-4 fw-bold">Pay Your Way. Pay-As-You-Go.</h3>
@@ -221,12 +161,12 @@
         </div>
     </section>
 
-    <!-- NEW: Custom Web Development Section -->
-    <section id="custom-development" class="py-5 my-5 custom-dev-section">
+    <!-- MODIFICATION: Replaced custom 'custom-dev-section' with standard 'blueprint-card' -->
+    <section id="custom-development" class="py-5 my-5 blueprint-card">
         <div class="container fade-in-section">
             <div class="text-center mb-5">
                 <h2 class="display-5 fw-bold">Need a Tailored Solution?</h2>
-                <p class="lead">Beyond our ready-to-use tools, we build bespoke web applications to solve your unique business challenges.</p>
+                <p class="lead text-body-secondary">Beyond our ready-to-use tools, we build bespoke web applications to solve your unique business challenges.</p>
             </div>
             <div class="row g-5 align-items-center">
                 <div class="col-lg-6">
@@ -241,24 +181,25 @@
                 <div class="col-lg-6">
                     <h3 class="fw-bold mb-4">Our Proven Process</h3>
                     <div class="process-step">
-                        <div class="process-number">1</div>
+                        <!-- MODIFICATION: Added theme-aware Bootstrap classes -->
+                        <div class="process-number bg-primary-subtle text-primary-emphasis">1</div>
                         <div>
                             <h5 class="fw-bold">Consultation</h5>
-                            <p class="text-muted">We start by understanding your vision, goals, and technical requirements in a free, no-obligation meeting.</p>
+                            <p class="text-body-secondary">We start by understanding your vision, goals, and technical requirements in a free, no-obligation meeting.</p>
                         </div>
                     </div>
                     <div class="process-step">
-                        <div class="process-number">2</div>
+                        <div class="process-number bg-primary-subtle text-primary-emphasis">2</div>
                         <div>
                             <h5 class="fw-bold">Proposal & Planning</h5>
-                            <p class="text-muted">You receive a detailed project proposal, including timeline, deliverables, and a transparent quote.</p>
+                            <p class="text-body-secondary">You receive a detailed project proposal, including timeline, deliverables, and a transparent quote.</p>
                         </div>
                     </div>
                     <div class="process-step">
-                        <div class="process-number">3</div>
+                        <div class="process-number bg-primary-subtle text-primary-emphasis">3</div>
                         <div>
                             <h5 class="fw-bold">Development & Launch</h5>
-                            <p class="text-muted">We build your application with clean, efficient code and deploy it to a secure, scalable server environment.</p>
+                            <p class="text-body-secondary">We build your application with clean, efficient code and deploy it to a secure, scalable server environment.</p>
                         </div>
                     </div>
                 </div>
@@ -276,23 +217,24 @@
             <div class="row g-4 text-center">
                 <div class="col-md-4">
                     <div class="step-item">
-                        <div class="step-number">1</div>
+                        <!-- MODIFICATION: Added theme-aware Bootstrap classes and border -->
+                        <div class="step-number bg-primary-subtle text-primary-emphasis border border-primary">1</div>
                         <h4 class="fw-bold">Create Account</h4>
-                        <p class="text-muted">Sign up in seconds. We'll gift you <strong>Ksh. 30</strong> in starter credits to begin exploring immediately.</p>
+                        <p class="text-body-secondary">Sign up in seconds. We'll gift you <strong>Ksh. 30</strong> in starter credits to begin exploring immediately.</p>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="step-item">
-                        <div class="step-number">2</div>
+                        <div class="step-number bg-primary-subtle text-primary-emphasis border border-primary">2</div>
                         <h4 class="fw-bold">Add Funds</h4>
-                        <p class="text-muted">Make a secure payment to add balance to your account. Our service is affordable and flexible.</p>
+                        <p class="text-body-secondary">Make a secure payment to add balance to your account. Our service is affordable and flexible.</p>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="step-item">
-                        <div class="step-number">3</div>
+                        <div class="step-number bg-primary-subtle text-primary-emphasis border border-primary">3</div>
                         <h4 class="fw-bold">Start Exploring</h4>
-                        <p class="text-muted">Use your balance to access our Crypto and AI services instantly. No subscriptions needed.</p>
+                        <p class="text-body-secondary">Use your balance to access our Crypto and AI services instantly. No subscriptions needed.</p>
                     </div>
                 </div>
             </div>

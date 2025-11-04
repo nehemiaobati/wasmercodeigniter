@@ -2,14 +2,12 @@
 
 <?= $this->section('styles') ?>
 <style>
-    .blueprint-card {
-        border-radius: 0.75rem;
-        box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.05);
-        border: none;
-    }
+    /* MODIFICATION: Removed blueprint-card styles as they are now global. */
     .hero-section {
-        background-color: var(--light-bg);
+        /* MODIFICATION: Switched to use theme variable for background. */
+        background-color: var(--card-bg);
         padding: 4rem 0;
+        border-bottom: 1px solid var(--border-color);
     }
     .feature-icon {
         font-size: 2.5rem;
@@ -69,12 +67,12 @@
             <p class="text-muted">Our tool simplifies blockchain data access. Just enter an address, select your query, and get immediate results in a clean, easy-to-read format.</p>
         </div>
         <div class="col-md-6">
-            <!-- <img src="https://placehold.co/800x500/e9ecef/6c757d?text=CryptoQuery+Results" class="img-fluid rounded shadow-sm" alt="Example results from the CryptoQuery tool showing a Bitcoin wallet balance."> -->
             <img src="https://images.pexels.com/photos/844124/pexels-photo-844124.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" class="img-fluid rounded shadow-sm" alt="Digital representation of a cryptocurrency blockchain network.">
         </div>
     </div>
 
-    <div class="card blueprint-card bg-light text-center p-4">
+    <!-- MODIFICATION: Removed 'bg-light' and ensured 'blueprint-card' is used for theme compatibility. -->
+    <div class="card blueprint-card text-center p-4">
         <div class="card-body">
             <h4 class="fw-bold">Start Querying the Blockchain</h4>
             <p class="text-muted">Create an account to get instant access to our powerful and affordable CryptoQuery tool.</p>

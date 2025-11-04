@@ -22,7 +22,7 @@
     }
     .card-title {
         font-weight: 600;
-        color: var(--text-dark);
+        color: var(--text-heading);
     }
     .card-text {
         color: var(--text-muted);
@@ -33,16 +33,6 @@
         color: var(--primary-accent);
         margin-bottom: 1rem;
     }
-    .tip-box {
-        background-color: #e7f1ff;
-        border-left: 5px solid var(--primary-accent);
-        border-radius: 0.5rem;
-        padding: 1.5rem;
-    }
-    .tip-box .tip-title {
-        font-weight: 600;
-        color: var(--primary-accent);
-    }
     .balance-amount {
         font-size: 2.5rem;
         font-weight: 700;
@@ -51,7 +41,7 @@
     }
     .prompt-suggestion {
         background-color: var(--light-bg);
-        border: 1px dashed var(--card-border);
+        border: 1px dashed var(--border-color);
         border-radius: 0.5rem;
         padding: 1rem;
         font-size: 0.9rem;
@@ -70,7 +60,7 @@
     }
     .account-info-section ul li {
         padding: 0.75rem 0;
-        border-bottom: 1px solid var(--light-bg);
+        border-bottom: 1px solid var(--border-color);
     }
     .account-info-section ul li:last-child {
         border-bottom: none;
@@ -79,18 +69,11 @@
         color: var(--primary-accent);
         margin-right: 1rem;
     }
-    .low-balance-alert {
-        background-color: #fff3cd;
-        border-color: #ffeeba;
-        color: #856404;
-        border-radius: 0.5rem;
-    }
 </style>
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
 <?php
-    // Educative content: an array of tips to be displayed randomly
     $tips = [
         "**Conversational Memory:** Enable 'Conversational Memory' in the AI Studio to have the AI remember past interactions for better follow-up questions.",
         "**Multi-File Uploads:** Did you know you can upload multiple files (images, PDFs, etc.) to the AI Studio for comprehensive analysis in a single prompt?",
@@ -102,9 +85,9 @@
 ?>
 <div class="container my-5">
 
-    <!-- Low Balance Alert (if applicable) -->
     <?php if (isset($balance) && (float)$balance < 50): ?>
-    <div class="alert low-balance-alert d-flex align-items-center" role="alert">
+    <!-- MODIFICATION: Replaced custom alert with theme-aware Bootstrap alert -->
+    <div class="alert alert-warning d-flex align-items-center" role="alert">
         <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
         <div>
             <h5 class="alert-heading fw-bold">Your Balance is Low!</h5>
@@ -113,22 +96,18 @@
     </div>
     <?php endif; ?>
 
-    <!-- Header -->
     <div class="blueprint-header text-center mt-4">
         <h1>Welcome back, <span class="text-primary"><?= esc($username ?? 'User') ?>!</span></h1>
         <p class="lead text-muted">Your digital toolkit is ready. What will you create today?</p>
     </div>
 
-    <!-- Tip of the Day -->
-    <div class="tip-box mb-5">
-        <p class="tip-title mb-1"><i class="bi bi-lightbulb-fill"></i> Pro Tip:</p>
-        <p class="mb-0"><?= esc(str_replace('**', '', $randomTip)) // Simple formatting for display ?></p>
+    <!-- MODIFICATION: Replaced custom tip-box with theme-aware Bootstrap alert -->
+    <div class="alert alert-primary mb-5">
+        <p class="fw-bold mb-1"><i class="bi bi-lightbulb-fill"></i> Pro Tip:</p>
+        <p class="mb-0"><?= esc(str_replace('**', '', $randomTip)) ?></p>
     </div>
 
-    <!-- Scalable 3-Column Grid for Services -->
     <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
-
-        <!-- AI Studio Card -->
         <div class="col">
             <div class="card blueprint-card h-100">
                 <div class="card-body p-4">
@@ -147,7 +126,6 @@
             </div>
         </div>
 
-        <!-- CryptoQuery Card -->
         <div class="col">
             <div class="card blueprint-card h-100">
                 <div class="card-body p-4">
@@ -159,7 +137,6 @@
             </div>
         </div>
         
-        <!-- Quick Actions Card -->
         <div class="col">
             <div class="card blueprint-card h-100">
                 <div class="card-body p-4">
@@ -176,10 +153,8 @@
                 </div>
             </div>
         </div>
-
     </div>
 
-    <!-- Minimal Account Info Section -->
     <div class="card blueprint-card mt-5">
         <div class="card-body p-4 account-info-section">
             <h4 class="fw-bold mb-3 text-center">Account Information</h4>

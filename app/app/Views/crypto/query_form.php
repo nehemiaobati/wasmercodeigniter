@@ -7,8 +7,9 @@
         color: var(--bs-primary);
         box-shadow: none;
     }
+    /* MODIFICATION: Switched to use theme variables */
     .balance-display {
-        background-color: #e7f1ff;
+        background-color: var(--bs-primary-bg-subtle);
         border-left: 5px solid var(--primary-color);
         padding: 1.5rem;
         border-radius: 0.5rem;
@@ -16,7 +17,7 @@
     .balance-display .balance-amount {
         font-size: 2.5rem;
         font-weight: 700;
-        color: var(--bs-primary);
+        color: var(--bs-primary-text-emphasis);
     }
 </style>
 <?= $this->endSection() ?>

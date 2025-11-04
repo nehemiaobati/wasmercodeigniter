@@ -716,7 +716,7 @@ class GeminiController extends BaseController
             $output = $dompdf->output();
             
             // 5. Save the PDF to a temporary file.
-            $fileName = 'AI-RStudio Output-' . uniqid() . '.pdf';
+            $fileName = 'AI-Studio Output-' . uniqid() . '.pdf';
             $filePath = $tempDir . '/' . $fileName;
             if (file_put_contents($filePath, $output) === false) {
                 log_message('error', '[PDF Generation Failed] Could not write PDF to temporary file: ' . $filePath);

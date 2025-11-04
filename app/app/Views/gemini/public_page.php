@@ -2,14 +2,12 @@
 
 <?= $this->section('styles') ?>
 <style>
-    .blueprint-card {
-        border-radius: 0.75rem;
-        box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.05);
-        border: none;
-    }
+    /* MODIFICATION: Removed blueprint-card styles as they are now global. */
     .hero-section {
-        background-color: var(--light-bg);
+        /* MODIFICATION: Switched to use theme variable for background. */
+        background-color: var(--card-bg); 
         padding: 4rem 0;
+        border-bottom: 1px solid var(--border-color);
     }
     .feature-icon {
         font-size: 2.5rem;
@@ -69,12 +67,12 @@
             <p class="text-muted">The intuitive interface makes it easy to manage your prompts, upload media, and interact with the AI. See your ideas come to life in a clean, organized workspace.</p>
         </div>
         <div class="col-md-6">
-            <!-- <img src="https://placehold.co/800x500/e9ecef/6c757d?text=AI+Studio+Interface" class="img-fluid rounded shadow-sm" alt="The Afrikenkid AI Studio interface showing a chat session."> -->
             <img src="https://images.pexels.com/photos/8386440/pexels-photo-8386440.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" class="img-fluid rounded shadow-sm" alt="Abstract visualization of an artificial intelligence neural network.">
         </div>
     </div>
 
-    <div class="card blueprint-card bg-light text-center p-4">
+    <!-- MODIFICATION: Removed 'bg-light' and ensured 'blueprint-card' is used for theme compatibility. -->
+    <div class="card blueprint-card text-center p-4">
         <div class="card-body">
             <h4 class="fw-bold">Ready to Get Started?</h4>
             <p class="text-muted">Sign up today and experience the future of content creation and analysis.</p>

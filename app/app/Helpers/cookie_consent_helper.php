@@ -8,5 +8,5 @@
 function hasCookieConsent(): bool
 {
     // Use the filter_input function for secure access to cookie data.
-    return filter_input(INPUT_COOKIE, 'user_cookie_consent', FILTER_SANITIZE_STRING) === 'accepted';
+    return filter_input(INPUT_COOKIE, 'user_cookie_consent', FILTER_UNSAFE_RAW) === 'accepted';
 }
