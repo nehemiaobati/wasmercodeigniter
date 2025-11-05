@@ -6,7 +6,7 @@
 
     <p>Below are links to the official documentation:</p>
 
-    <a href="<?= base_url('publicassets/Afrikenkid Web Platform.pdf') ?>" class="btn btn-primary doc-link mt-4" target="_blank">
+    <a href="<?= base_url('public/assets/Afrikenkid Web Platform.pdf') ?>" class="btn btn-primary doc-link mt-4" target="_blank">
         Afrikenkid Web Platform Documentation
     </a>
 

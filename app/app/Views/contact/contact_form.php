@@ -47,7 +47,7 @@
                             <label for="message">Message</label>
                         </div>
                         <div class="mb-3">
-                            <div class="g-recaptcha" data-sitekey="<?= config('Recaptcha')->siteKey ?>"></div>
+                            <div class="g-recaptcha" data-sitekey="<?= config('Config\Custom\Recaptcha')->siteKey ?>"></div>
                         </div>
                         <div class="d-grid">
                             <button type="submit" class="btn btn-primary btn-lg fw-bold">Send Message</button>

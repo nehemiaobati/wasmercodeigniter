@@ -3,7 +3,7 @@
         'name' => 'codeigniter4/framework',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '07fb93f40ad2e95648ec943092478e270bd2f149',
+        'reference' => 'ccc9f2489eed4bb51abdae8c6433dd5fec006e57',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -31,7 +31,7 @@
         'codeigniter4/framework' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '07fb93f40ad2e95648ec943092478e270bd2f149',
+            'reference' => 'ccc9f2489eed4bb51abdae8c6433dd5fec006e57',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
@@ -180,6 +180,15 @@
             'install_path' => __DIR__ . '/../nikic/php-parser',
             'aliases' => array(),
             'dev_requirement' => true,
+        ),
+        'nlp-tools/nlp-tools' => array(
+            'pretty_version' => 'v0.1.3',
+            'version' => '0.1.3.0',
+            'reference' => 'bbccab0f3ca7277bdf7b292ba67ca644efd0cefe',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../nlp-tools/nlp-tools',
+            'aliases' => array(),
+            'dev_requirement' => false,
         ),
         'phar-io/manifest' => array(
             'pretty_version' => '2.0.4',

@@ -6,7 +6,7 @@ class RecaptchaService
 {
     public function verify(string $response): bool
     {
-        $secret = config('Recaptcha')->secretKey;
+        $secret = config('Config\Custom\Recaptcha')->secretKey;
         $credential = [
             'secret'   => $secret,
             'response' => $response,

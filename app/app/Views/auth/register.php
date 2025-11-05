@@ -87,7 +87,7 @@
                                     <label class="form-check-label" for="terms">I agree to the <a href="<?= url_to('terms') ?>" target="_blank">Terms and Conditions</a></label>
                                 </div>
                                 <div class="mb-3">
-                                    <div class="g-recaptcha" data-sitekey="<?= config('Recaptcha')->siteKey ?>"></div>
+                                    <div class="g-recaptcha" data-sitekey="<?= config('Config\Custom\Recaptcha')->siteKey ?>"></div>
                                 </div>
                                 <div class="d-grid">
                                     <button type="submit" id="submitButton" class="btn btn-primary btn-lg">Register</button>

@@ -5,6 +5,7 @@ namespace Config;
 use CodeIgniter\Config\BaseService;
 use App\Libraries\EmbeddingService;
 use App\Libraries\MemoryService;
+use App\Libraries\TokenService;
 
 /**
  * Services Configuration file.
@@ -84,5 +85,12 @@ class Services extends BaseService
             return static::getSharedInstance('memory', $userId);
         }
         return new MemoryService($userId);
+    }
+    public static function tokenService($getShared = true): TokenService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('tokenService');
+        }
+        return new TokenService();
     }
 }

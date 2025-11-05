@@ -103,7 +103,6 @@
                         <textarea id="prompt" name="prompt" style="visibility: hidden;"><?= old('prompt') ?></textarea>
                     </div>
                     <div class="p-4 border-top action-footer ">
-                        <!-- MODIFICATION: REMOVED the redundant 'bg-body-tertiary' class from this child div. It now inherits the background from its parent. -->
                         <div id="mediaUploadArea" class="mb-3 bg-body-tertiary ">
                             <input type="file" id="media-input-trigger" multiple class="d-none">
                             <label for="media-input-trigger" class="btn btn-outline-secondary w-100"><i class="bi bi-paperclip"></i> Attach Files or Drag & Drop</label>
@@ -335,7 +334,19 @@
             },
             handleUsePrompt() {
                 const selectedOption = this.elements.savedPromptsSelect.options[this.elements.savedPromptsSelect.selectedIndex];
-                if (selectedOption?.value) tinymce.get('prompt').setContent(selectedOption.value);
+                const selectedPromptText = selectedOption?.value;
+
+                if (selectedPromptText) {
+                    const editor = tinymce.get('prompt');
+                    const currentContent = editor.getContent({ format: 'html' });
+
+                    if (currentContent.trim() === '') {
+                        editor.setContent(selectedPromptText);
+                    } else {
+                        const newContent = selectedPromptText + '<br><br>' + currentContent;
+                        editor.setContent(newContent);
+                    }
+                }
             },
             handleDeletePrompt() {
                 const selectedOption = this.elements.savedPromptsSelect.options[this.elements.savedPromptsSelect.selectedIndex];

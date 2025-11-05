@@ -5,11 +5,10 @@
     /* MODIFICATION: Removed blueprint-card styles as they are now global. */
     .hero-section {
         /* MODIFICATION: Switched to use theme variable for background. */
-        background-color: var(--card-bg);
+        background-color: var(--card-bg); 
         padding: 4rem 0;
         border-bottom: 1px solid var(--border-color);
     }
-
     .feature-icon {
         font-size: 2.5rem;
         color: var(--primary-color);

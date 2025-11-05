@@ -1,6 +1,6 @@
 <?php
 
-namespace Config;
+namespace Config\Custom; // Changed namespace
 
 use CodeIgniter\Config\BaseConfig;
 
@@ -167,4 +167,37 @@ class AGI extends BaseConfig
      * @var float
      */
     public float $userFeedbackPenalty = -0.5;
+
+    // --- NLP Configuration ---
+    /**
+     * A list of common words and HTML tags to filter out during keyword extraction.
+     * This list is used by the TokenService to improve the quality of
+     * the keywords (tokens) identified from user input, preventing common language
+     * and markup from cluttering the AI's memory.
+     * @var array<string>
+     */
+    public array $nlpStopWords = [
+        // Standard English Stop Words
+        'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'he',
+        'in', 'is', 'it', 'its', 'of', 'on', 'that', 'the', 'to', 'was', 'were',
+        'will', 'with', 'what', 'when', 'where', 'who', 'why', 'how', 'my', 'we',
+        'user', 'note', 'system', 'please',
+
+        // Common HTML Tags
+        'a', 'abbr', 'address', 'area', 'article', 'aside', 'audio', 'b', 'base',
+        'bdi', 'bdo', 'blockquote', 'body', 'br', 'button', 'canvas', 'caption',
+        'cite', 'code', 'col', 'colgroup', 'data', 'datalist', 'dd', 'del', 'details',
+        'dfn', 'dialog', 'div', 'dl', 'dt', 'em', 'embed', 'fieldset', 'figcaption',
+        'figure', 'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head',
+        'header', 'hr', 'html', 'i', 'iframe', 'img', 'input', 'ins', 'kbd', 'label',
+        'legend', 'li', 'link', 'main', 'map', 'mark', 'meta', 'meter', 'nav',
+        'noscript', 'object', 'ol', 'optgroup', 'option', 'output', 'p', 'param',
+        'picture', 'pre', 'progress', 'q', 'rp', 'rt', 'ruby', 's', 'samp',
+        'script', 'section', 'select', 'small', 'source', 'span', 'strong', 'style',
+        'sub', 'summary', 'sup', 'table', 'tbody', 'td', 'template', 'textarea',
+        'tfoot', 'th', 'thead', 'time', 'title', 'tr', 'track', 'u', 'ul', 'var',
+        'video', 'wbr',  'nbsp'
+
+
+    ];
 }

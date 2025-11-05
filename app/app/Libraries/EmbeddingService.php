@@ -2,7 +2,7 @@
 
 namespace App\Libraries;
 
-use Config\AGI;
+use Config\Custom\AGI;
 
 /**
  * Handles the generation of vector embeddings via the Gemini API.

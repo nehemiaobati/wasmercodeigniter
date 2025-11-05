@@ -298,6 +298,34 @@ class GeminiController extends BaseController
     }
 
     /**
+     * [ISOLATED/UNUSED] - Placeholder for future intent classification.
+     * This function is not currently used in the application flow. It demonstrates
+     * where intent classification logic would be placed. To enable this, a training
+     * pipeline and model loading mechanism would be required.
+     *
+     * @param string $text The user's input text.
+     * @return string The predicted intent, or 'unknown'.
+     */
+    private function _classifyIntent(string $text): string
+    {
+        // 1. Load the pre-trained classifier and feature factory models.
+        //    (This would typically be done once in the constructor and stored in properties).
+        //    $featureFactory = unserialize(file_get_contents(WRITEPATH . 'models/feature_factory.model'));
+        //    $classifier = unserialize(file_get_contents(WRITEPATH . 'models/classifier.model'));
+
+        // 2. Preprocess the input text using the same pipeline as the training script.
+        //    $tokenService = service('tokenService');
+        //    $processedTokens = $tokenService->processText($text);
+        //    $document = new \NlpTools\Documents\TokensDocument($processedTokens);
+
+        // 3. Classify the document to get the predicted intent.
+        //    $predictedIntent = $classifier->classify(['label1', 'label2'], $document);
+        //    return $predictedIntent;
+
+        return 'unknown'; // Default return since this is not implemented.
+    }
+
+    /**
      * [NEW] Handles an AJAX request to update the user's assistant mode setting.
      *
      * @return ResponseInterface A JSON response indicating the status of the operation.

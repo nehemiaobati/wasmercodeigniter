@@ -20,8 +20,7 @@
         position: sticky;
         top: 85px;
         z-index: 999;
-        background-color: rgba(var(--card-bg-rgb), 0.9);
-        /* MODIFICATION: Theme-aware background */
+        background-color: rgba(var(--card-bg-rgb), 0.9); /* MODIFICATION: Theme-aware background */
         backdrop-filter: blur(10px);
         border-radius: 0.75rem;
         padding: 0.5rem 1rem;
@@ -132,8 +131,7 @@
         content: '';
         position: absolute;
         width: 4px;
-        background-color: var(--border-color);
-        /* MODIFICATION */
+        background-color: var(--border-color); /* MODIFICATION */
         top: 0;
         bottom: 0;
         left: 50%;
@@ -162,8 +160,7 @@
         height: 20px;
         right: -10px;
         background-color: var(--primary-color);
-        border: 4px solid var(--light-bg);
-        /* MODIFICATION */
+        border: 4px solid var(--light-bg); /* MODIFICATION */
         top: 25px;
         border-radius: 50%;
         z-index: 1;
@@ -264,7 +261,7 @@
             "@type": "Person",
             "name": "Nehemia Obati",
             "url": "<?= url_to('portfolio.index') ?>",
-            "image": "<?= base_url('assets/images/potraitwebp.webp') ?>",
+            "image": "<?= base_url('public/assets/images/potraitwebp.webp') ?>",
             "sameAs": [
                 "https://www.linkedin.com/in/nehemia-obati-b74886344"
             ],
@@ -288,6 +285,7 @@
                     <!-- MODIFICATION: Corrected asset path -->
                     <a href="<?= base_url('public/assets/Nehemia Obati Resume.pdf') ?>" class="btn btn-outline-primary ms-2" target="_blank">Download Resume</a>
                 </div>
+                <div class="hero-image-container text-center">
                 <div class="hero-image-container text-center">
                     <!-- MODIFICATION: Corrected asset path -->
                     <img src="<?= base_url('public/assets/images/potraitwebp.webp') ?>" alt="Nehemia Obati" class="hero-image">

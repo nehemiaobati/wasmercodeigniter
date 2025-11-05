@@ -1,6 +1,6 @@
 <?php
 
-namespace Config;
+namespace Config\Custom; // Changed namespace
 
 use CodeIgniter\Config\BaseConfig;
 

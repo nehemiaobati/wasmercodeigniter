@@ -6,7 +6,7 @@ use App\Models\InteractionModel;
 use App\Models\EntityModel;
 use App\Entities\Interaction;
 use App\Entities\AGIEntity;
-use Config\AGI;
+use Config\Custom\AGI;
 
 /**
  * Manages the AI's memory, including storage, retrieval, and relevance scoring.
@@ -17,6 +17,7 @@ class MemoryService
     private InteractionModel $interactionModel;
     private EntityModel $entityModel;
     private EmbeddingService $embeddingService;
+    private TokenService $tokenService;
     private AGI $config;
 
     /**
@@ -29,6 +30,7 @@ class MemoryService
         $this->interactionModel = model(InteractionModel::class);
         $this->entityModel = model(EntityModel::class);
         $this->embeddingService = service('embedding');
+        $this->tokenService = service('tokenService');
         $this->config = config(AGI::class);
     }
 
@@ -230,10 +232,6 @@ class MemoryService
 
     private function extractEntities(string $text): array
     {
-        $text = strtolower($text);
-        $text = preg_replace('/https?:\/\/[^\s]+/', ' ', $text);
-        $words = preg_split('/[\s,\.\?\!\[\]:]+/', $text);
-        $stopWords = ['a', 'an', 'the', 'is', 'in', 'it', 'of', 'for', 'on', 'what', 'were', 'my', 'that', 'we', 'to', 'user', 'note', 'system', 'please'];
-        return array_values(array_filter(array_unique($words), fn($word) => !in_array($word, $stopWords) && strlen($word) > 3));
+        return $this->tokenService->processText($text);
     }
 }
