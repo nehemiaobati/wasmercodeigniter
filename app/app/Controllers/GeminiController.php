@@ -297,6 +297,7 @@ class GeminiController extends BaseController
             ->with('raw_result', $apiResponse['result']);
     }
 
+    
     /**
      * [ISOLATED/UNUSED] - Placeholder for future intent classification.
      * This function is not currently used in the application flow. It demonstrates
