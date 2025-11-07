@@ -438,8 +438,10 @@ class GeminiController extends BaseController
             ];
         }
 
-        $inputPricePerMillion  = 7.00;
-        $outputPricePerMillion = 21.00;
+        // Pricing for Gemini 2.5 Pro (160%)
+        $isTierOne = $inputTokens <= 128000;
+        $inputPricePerMillion  = $isTierOne ? 3.25 : 4.00;
+        $outputPricePerMillion = $isTierOne ? 16.00 : 24.00;
 
         $inputCostUSD  = ($inputTokens / 1000000) * $inputPricePerMillion;
         $outputCostUSD = ($outputTokens / 1000000) * $outputPricePerMillion;
