@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace App\Controllers;
 
@@ -26,22 +24,10 @@ class GeminiController extends BaseController
     protected UserSettingsModel $userSettingsModel;
 
     private const SUPPORTED_MIME_TYPES = [
-        'image/png',
-        'image/jpeg',
-        'image/webp',
-        'audio/mpeg',
-        'audio/mp3',
-        'audio/wav',
-        'video/mov',
-        'video/mpeg',
-        'video/mp4',
-        'video/mpg',
-        'video/avi',
-        'video/wmv',
-        'video/mpegps',
-        'video/flv',
-        'application/pdf',
-        'text/plain'
+        'image/png', 'image/jpeg', 'image/webp', 'audio/mpeg', 'audio/mp3',
+        'audio/wav', 'video/mov', 'video/mpeg', 'video/mp4', 'video/mpg',
+        'video/avi', 'video/wmv', 'video/mpegps', 'video/flv',
+        'application/pdf', 'text/plain'
     ];
     private const MAX_FILE_SIZE = 10 * 1024 * 1024;
     private const USD_TO_KSH_RATE = 129;
@@ -75,7 +61,7 @@ class GeminiController extends BaseController
 
         // **FIX STARTS HERE: Fetch settings and provide defaults**
         $userSetting = $this->userSettingsModel->where('user_id', $userId)->first();
-
+        
         // If a user has no settings row, default assistant mode to ON and voice to OFF.
         // If they do have a row, use the values from the database.
         // The boolean cast in the Entity ensures '0'/'1' become false/true.
@@ -157,14 +143,14 @@ class GeminiController extends BaseController
         if (empty($fileId)) {
             return $this->response->setStatusCode(400)->setJSON(['status' => 'error', 'message' => 'File ID is missing.']);
         }
-
+        
         $sanitizedId = basename($fileId);
         $filePath = WRITEPATH . 'uploads/gemini_temp/' . $userId . '/' . $sanitizedId;
 
         if (file_exists($filePath) && is_file($filePath)) {
             if (unlink($filePath)) {
                 return $this->response->setStatusCode(200)->setJSON([
-                    'status' => 'success',
+                    'status' => 'success', 
                     'message' => 'File deleted.',
                     'csrf_token' => csrf_hash(),
                 ]);
@@ -194,7 +180,7 @@ class GeminiController extends BaseController
 
         $contextData = $this->_prepareContext($userId, $inputText, $isAssistantMode);
         $finalPrompt = $contextData['finalPrompt'];
-
+        
         $uploadResult = $this->_handlePreUploadedFiles($uploadedFileIds, $userId);
         if (isset($uploadResult['error'])) {
             $this->_cleanupTempFiles($uploadedFileIds, $userId);
@@ -219,7 +205,7 @@ class GeminiController extends BaseController
 
         $apiResponse = $this->geminiService->generateContent($parts);
         $this->_logApiPayload($apiResponse);
-
+        
         $this->_cleanupTempFiles($uploadedFileIds, $userId);
 
         if (isset($apiResponse['error'])) {
@@ -248,7 +234,7 @@ class GeminiController extends BaseController
         $redirect = redirect()->back()->withInput()
             ->with('result', $htmlResult)
             ->with('raw_result', $rawTextResult);
-
+            
         if ($audioUrl) {
             $redirect->with('audio_url', $audioUrl);
         }
@@ -317,7 +303,7 @@ class GeminiController extends BaseController
             'csrf_token' => csrf_hash()
         ]);
     }
-
+    
     private function _prepareContext(int $userId, string $inputText, bool $isAssistantMode): array
     {
         $contextData = [
@@ -343,7 +329,7 @@ class GeminiController extends BaseController
 
         return $contextData;
     }
-
+    
     private function _handlePreUploadedFiles(array $fileIds, int $userId): array
     {
         $parts = [];
@@ -365,16 +351,16 @@ class GeminiController extends BaseController
 
             $fileContents = file_get_contents($filePath);
             if ($fileContents === false) {
-                return ['error' => "Could not read file: " . esc($sanitizedId)];
+                 return ['error' => "Could not read file: " . esc($sanitizedId)];
             }
-
+            
             $base64Content = base64_encode($fileContents);
             $parts[] = ['inlineData' => ['mimeType' => $mimeType, 'data' => $base64Content]];
         }
 
         return ['parts' => $parts];
     }
-
+    
     private function _cleanupTempFiles(array $fileIds, int $userId): void
     {
         $userTempPath = WRITEPATH . 'uploads/gemini_temp/' . $userId . '/';
@@ -402,7 +388,7 @@ class GeminiController extends BaseController
 
         if (bccomp((string) $user->balance, (string) $requiredBalance, 2) < 0) {
             $errorMessage = "Insufficient balance. This query costs approx. KSH " . number_format($requiredBalance, 2) .
-                ", but you only have KSH " . $user->balance . ".";
+                            ", but you only have KSH " . $user->balance . ".";
             return ['error' => $errorMessage];
         }
 
@@ -559,58 +545,49 @@ class GeminiController extends BaseController
      *
      * @return ResponseInterface|RedirectResponse|void
      */
-    // In GeminiController.php
-
     public function downloadDocument()
     {
-        try {
-            $markdownContent = $this->request->getPost('raw_response');
-            if (empty($markdownContent)) {
-                return redirect()->back()->with('error', 'No content provided to generate document.');
-            }
+        $markdownContent = $this->request->getPost('raw_response');
+        $format = $this->request->getPost('format');
 
-            $documentService = new DocumentService();
-            $result = $documentService->generate($markdownContent, 'pdf');
-
-            // MODIFICATION: Handle the two different success cases
-            switch ($result['status']) {
-                case 'success':
-                    // Pandoc was successful, so we send the file from the path
-                    $filePath = $result['filePath'];
-                    if (!is_file($filePath)) {
-                        log_message('error', 'Pandoc reported success but file was not found at: ' . $filePath);
-                        return redirect()->back()->with('error', 'Document file could not be found after generation.');
-                    }
-
-                    // Read the file and force download
-                    $fileContent = file_get_contents($filePath);
-                    unlink($filePath); // Clean up the temp file
-
-                    return $this->response
-                        ->setHeader('Content-Type', 'application/pdf')
-                        ->setHeader('Content-Disposition', 'attachment; filename="AI-Studio-Output.pdf"')
-                        ->setBody($fileContent);
-
-                case 'success_fallback':
-                    // DomPDF was successful, so we stream the object
-                    $dompdf = $result['dompdf_object'];
-                    $filename = 'AI-Studio-Output.pdf';
-
-                    // This sends the headers and the file directly to the browser
-                    $dompdf->stream($filename, ['Attachment' => 1]);
-
-                    // IMPORTANT: We must exit here to prevent CodeIgniter from
-                    // appending other data to the PDF stream, which would corrupt it.
-                    exit;
-
-                case 'error':
-                    // Both Pandoc and the fallback failed
-                    return redirect()->back()->with('error', $result['message']);
-            }
-        } catch (\Throwable $e) {
-            log_message('error', '[Document Generation Failed] ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Could not generate the document due to a server error.');
+        if (empty($markdownContent) || !in_array($format, ['pdf', 'docx'])) {
+            return redirect()->back()->with('error', 'Invalid content or format for document generation.');
         }
+
+        /** @var DocumentService $documentService */
+        $documentService = service('documentService');
+        $result = $documentService->generate($markdownContent, $format);
+
+        if (str_starts_with($result['status'], 'success')) {
+            // Pandoc success (file path) or Dompdf success (raw data)
+            $filename = 'AI-Studio-Output-' . uniqid() . '.' . ($format === 'docx' ? 'docx' : 'pdf');
+
+            // Clean output buffer before sending the file
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+
+            if ($result['status'] === 'success' && isset($result['filePath'])) {
+                // Pandoc generated a file
+                $filePath = $result['filePath'];
+                header('Content-Type: ' . ($format === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'application/pdf'));
+                header('Content-Disposition: attachment; filename="' . $filename . '"');
+                header('Content-Length: ' . filesize($filePath));
+                readfile($filePath);
+                unlink($filePath); // Clean up the temp file
+                exit();
+            } elseif ($result['status'] === 'success_fallback' && isset($result['fileData'])) {
+                // Dompdf generated raw data
+                return $this->response
+                    ->setStatusCode(200)
+                    ->setContentType('application/pdf')
+                    ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
+                    ->setBody($result['fileData']);
+            }
+        }
+
+        // If we reach here, both Pandoc and the fallback failed.
+        return redirect()->back()->with('error', $result['message'] ?? 'An unknown error occurred during document generation.');
     }
 
     /**

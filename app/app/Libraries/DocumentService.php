@@ -25,7 +25,7 @@ class DocumentService
      *
      * @param string $markdownContent The input content in Markdown format.
      * @param string $format The desired output format ('pdf' or 'docx').
-     * @return array An array with status, message, and either filePath or a Dompdf object.
+     * @return array An array with status, message, and either filePath or fileData.
      */
     public function generate(string $markdownContent, string $format): array
     {
@@ -69,7 +69,7 @@ class DocumentService
      * Generates a PDF using the Dompdf library as a fallback.
      *
      * @param string $htmlContent The fully-styled HTML to convert.
-     * @return array An array containing the status and the prepared Dompdf object.
+     * @return array An array containing the status and raw PDF data.
      */
     private function generateWithDompdf(string $htmlContent): array
     {
@@ -92,10 +92,11 @@ class DocumentService
             $dompdf->loadHtml($htmlContent, 'UTF-8');
             $dompdf->setPaper('A4', 'portrait');
             $dompdf->render();
+            $output = $dompdf->output();
 
             return [
                 'status' => 'success_fallback',
-                'dompdf_object' => $dompdf,
+                'fileData' => $output,
                 'message' => 'Document generated using fallback PDF converter.'
             ];
 
