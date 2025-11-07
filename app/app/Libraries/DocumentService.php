@@ -36,23 +36,29 @@ class DocumentService
         // Add basic styling for better output
         $fullHtml = $this->getStyledHtml($htmlContent);
 
-        // 2. Try to generate with Pandoc
-        $pandocResult = $this->pandocService->generate($fullHtml, $format, 'AI-Studio-Output-' . uniqid());
-
-        if ($pandocResult['status'] === 'success') {
-            return $pandocResult;
+        // 2. Try to generate with Pandoc within a try...catch block
+        try {
+            if ($this->pandocService->isAvailable()) {
+                $pandocResult = $this->pandocService->generate($fullHtml, $format, 'AI-Studio-Output-' . uniqid());
+                if ($pandocResult['status'] === 'success') {
+                    return $pandocResult;
+                }
+                // If status is 'error', log it and fall through to the fallback.
+                log_message('warning', '[DocumentService] Pandoc failed: ' . ($pandocResult['message'] ?? 'Unknown error') . '. Checking for fallback options.');
+            }
+        } catch (\Throwable $e) {
+            // This will catch any error, including the ErrorException from a disabled shell_exec.
+            log_message('error', '[DocumentService] A critical error occurred while trying to use Pandoc: ' . $e->getMessage() . '. Falling back.');
         }
 
-        // 3. Pandoc failed. Log the reason and check for fallback.
-        log_message('warning', '[DocumentService] Pandoc failed: ' . ($pandocResult['message'] ?? 'Unknown error') . '. Checking for fallback options.');
 
-        // 4. Fallback to Dompdf ONLY for PDF format
+        // 3. Fallback to Dompdf ONLY for PDF format
         if ($format === 'pdf') {
             log_message('info', '[DocumentService] Falling back to Dompdf for PDF generation.');
             return $this->generateWithDompdf($fullHtml);
         }
 
-        // 5. No fallback available for other formats (like docx)
+        // 4. No fallback available for other formats (like docx)
         return [
             'status' => 'error',
             'message' => 'Could not generate the Word document. The primary converter failed and no fallback is available for this format.'
