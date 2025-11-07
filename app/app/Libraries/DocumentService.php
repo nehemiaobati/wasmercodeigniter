@@ -75,7 +75,7 @@ class DocumentService
             set_time_limit(300); // Increase time limit for Dompdf
 
             $options = new Options();
-            $options->set('defaultFont', 'DejaVu Sans');
+            $options->set('defaultFont', 'Helvetica');
             $options->set('isHtml5ParserEnabled', true);
             $options->set('isRemoteEnabled', true);
             
