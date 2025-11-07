@@ -36,16 +36,18 @@ class DocumentService
         // Add basic styling for better output
         $fullHtml = $this->getStyledHtml($htmlContent);
 
-        // 2. Try to generate with Pandoc
+        // 2. Try to generate with Pandoc within a try...catch block
         try {
             if ($this->pandocService->isAvailable()) {
                 $pandocResult = $this->pandocService->generate($fullHtml, $format, 'AI-Studio-Output-' . uniqid());
                 if ($pandocResult['status'] === 'success') {
                     return $pandocResult;
                 }
+                // If status is 'error', log it and fall through to the fallback.
                 log_message('warning', '[DocumentService] Pandoc failed: ' . ($pandocResult['message'] ?? 'Unknown error') . '. Checking for fallback options.');
             }
         } catch (\Throwable $e) {
+            // This will catch any error, including the ErrorException from a disabled shell_exec.
             log_message('error', '[DocumentService] A critical error occurred while trying to use Pandoc: ' . $e->getMessage() . '. Falling back.');
         }
 
@@ -75,12 +77,10 @@ class DocumentService
             set_time_limit(300); // Increase time limit for Dompdf
 
             $options = new Options();
-            $options->set('defaultFont', 'Helvetica');
+            $options->set('defaultFont', 'DejaVu Sans');
             $options->set('isHtml5ParserEnabled', true);
             $options->set('isRemoteEnabled', true);
-            
-            // --- THE CRITICAL FIX IS ADDING THE LINE BELOW ---
-            $options->set('chroot', ROOTPATH);
+            $options->set('isFontSubsettingEnabled', false);
 
             $userId = (int) session()->get('userId');
             $tempDir = WRITEPATH . 'uploads/dompdf_temp/' . $userId;
