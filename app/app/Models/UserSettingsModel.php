@@ -14,5 +14,5 @@ class UserSettingsModel extends Model
     protected $primaryKey       = 'id';
     protected $returnType       = UserSetting::class;
     protected $useTimestamps    = true;
-    protected $allowedFields    = ['user_id', 'assistant_mode_enabled'];
+    protected $allowedFields    = ['user_id', 'assistant_mode_enabled', 'voice_output_enabled'];
 }

@@ -18,7 +18,8 @@
         "laminas/laminas-escaper": "^2.17",
         "psr/log": "^3.0",
         "dompdf/dompdf": "^2.0",
-        "nlp-tools/nlp-tools": "^0.1.3"
+        "nlp-tools/nlp-tools": "^0.1.3",
+        "php-ffmpeg/php-ffmpeg": "^1.2"
     },
     "require-dev": {
         "codeigniter/coding-standard": "^1.7",

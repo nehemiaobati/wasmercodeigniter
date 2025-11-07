@@ -1,0 +1,7 @@
+"text","label"
+"That was a fantastic response, thank you!","feedback_positive"
+"You're doing a great job.","feedback_positive"
+"This is not what I asked for at all.","feedback_negative"
+"This is completely wrong.","feedback_negative"
+"Excellent work, I'm impressed.","feedback_positive"
+"That's terrible, you're not helpful.","feedback_negative"

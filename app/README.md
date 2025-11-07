@@ -1,60 +1,90 @@
-# CodeIgniter 4 Framework
+# CodeIgniter 4 Project Setup and Usage
 
-## What is CodeIgniter?
+## Project Overview
 
-CodeIgniter is a PHP full-stack web framework that is light, fast, flexible and secure.
-More information can be found at the [official site](https://codeigniter.com).
+This project is a CodeIgniter 4 application designed to [**briefly describe the project's purpose here - e.g., manage user accounts, process payments, interact with AI services**]. It leverages the power and flexibility of the CodeIgniter framework to provide a robust and secure web application.
 
-This repository holds the distributable version of the framework.
-It has been built from the
-[development repository](https://github.com/codeigniter4/CodeIgniter4).
+## Key Features
 
-More information about the plans for version 4 can be found in [CodeIgniter 4](https://forum.codeigniter.com/forumdisplay.php?fid=28) on the forums.
+*   [**Feature 1: e.g., User Authentication**]
+*   [**Feature 2: e.g., Payment Gateway Integration (Paystack)**]
+*   [**Feature 3: e.g., AI Service Integration (Gemini API)**]
+*   [**Feature 4: e.g., Secure Data Handling**]
 
-You can read the [user guide](https://codeigniter.com/user_guide/)
-corresponding to the latest version of the framework.
+## Prerequisites
 
-## Important Change with index.php
+Before you begin, ensure you have the following installed on your Ubuntu server:
 
-`index.php` is no longer in the root of the project! It has been moved inside the *public* folder,
-for better security and separation of components.
+*   **Ubuntu Server:** This script is optimized for Ubuntu.
+*   **Sudo Access:** You will need root privileges to run the setup script.
+*   **PHP:** Version 8.1 or higher is required. The script installs PHP 8.2 with necessary extensions.
+*   **MySQL Server:** Required for database storage.
+*   **Composer:** For managing PHP dependencies.
+*   **Node.js & NPM:** For frontend asset management (if applicable).
+*   **Git:** For cloning the project repository.
 
-This means that you should configure your web server to "point" to your project's *public* folder, and
-not to the project root. A better practice would be to configure a virtual host to point there. A poor practice would be to point your web server to the project root and expect to enter *public/...*, as the rest of your logic and the
-framework are exposed.
+## Automated Setup Script (`setup.sh`)
 
-**Please** read the user guide for a better explanation of how CI4 works!
+The `setup.sh` script automates the entire installation and configuration process. It performs the following actions:
 
-## Repository Management
+1.  **System Update:** Updates package lists and upgrades existing packages.
+2.  **Essential Utilities:** Installs `openssl`, `unzip`, `git`, `sudo`, `nano`, and `perl`.
+3.  **Apache Installation:** Installs the Apache2 web server.
+4.  **PHP Installation:** Installs PHP 8.2 and essential extensions (`mysql`, `intl`, `mbstring`, `bcmath`, `curl`, `xml`, `zip`, `gd`).
+5.  **MySQL Setup:** Installs MySQL server, creates a secure database (`${DB_NAME}`) and user (`${DB_USER}`), and grants necessary privileges.
+6.  **Composer Installation:** Installs the latest version of Composer globally.
+7.  **Node.js Installation:** Installs Node.js (version 20.x) and NPM.
+8.  **Project Cloning:** Clones the project repository from `${GIT_REPO_URL}` into `${PROJECT_PATH}`.
+9.  **Project Configuration:**
+    *   Installs PHP dependencies using Composer.
+    *   Creates and configures the `.env` file with generated database credentials and encryption key.
+    *   Runs database migrations using `php spark migrate`.
+    *   Sets appropriate file permissions for the `writable` directory.
+10. **Apache Virtual Host Configuration:** Sets up a virtual host for Apache to serve the project from the `public` directory and enables the `mod_rewrite` module.
+11. **Final Summary:** Displays a summary of the installation, including database credentials, installed versions, and next steps.
 
-We use GitHub issues, in our main repository, to track **BUGS** and to track approved **DEVELOPMENT** work packages.
-We use our [forum](http://forum.codeigniter.com) to provide SUPPORT and to discuss
-FEATURE REQUESTS.
+## Running the Setup Script
 
-This repository is a "distribution" one, built by our release preparation script.
-Problems with it can be raised on our forum, or as issues in the main repository.
+1.  **Save the script:** Save the content of this `setup.sh` file to your server.
+2.  **Make it executable:** `chmod +x setup.sh`
+3.  **Run with sudo:** `sudo ./setup.sh`
+
+## Project Configuration (`.env` file)
+
+After the script completes, you will need to configure the `.env` file located at `${PROJECT_PATH}/.env` with your specific details:
+
+*   **`CI_ENVIRONMENT`**: Set to `production` for live environments.
+*   **`app.baseURL`**: The base URL of your application (e.g., `http://yourdomain.com`).
+*   **`database.default.*`**: The script generates these, but you can modify them if needed.
+*   **`encryption.key`**: The script generates this for encryption purposes.
+*   **`PAYSTACK_SECRET_KEY`**: Your Paystack secret key.
+*   **`GEMINI_API_KEY`**: Your Google Gemini API key.
+*   **`recaptcha_siteKey` & `recaptcha_secretKey`**: Your reCAPTCHA site and secret keys.
+*   **`email.*`**: Your email server configuration (host, port, credentials, etc.).
+
+**IMPORTANT:** Never commit your `.env` file to version control, as it contains sensitive credentials.
+
+## Post-Installation Steps
+
+1.  **Edit `.env`:** As mentioned above, configure your API keys and email settings in the `.env` file.
+2.  **Domain Configuration:** Point your domain's DNS 'A' record to this server's IP address.
+3.  **HTTPS Setup (Recommended):** For enhanced security, install Certbot to enable HTTPS:
+    ```bash
+    sudo apt install certbot python3-certbot-apache
+    sudo certbot --apache
+    ```
+
+## Security Best Practices
+
+*   **`.env` File:** Ensure the `.env` file is never committed to your Git repository. Add it to your `.gitignore` file.
+*   **Server Updates:** Regularly update your server and its packages to patch security vulnerabilities.
+*   **Firewall:** Configure a firewall (e.g., `ufw`) to restrict access to only necessary ports.
+*   **Database Security:** Use strong, unique passwords for your database users and limit their privileges.
 
 ## Contributing
 
-We welcome contributions from the community.
+Contributions are welcome! Please refer to the CodeIgniter documentation for guidelines on contributing to the framework itself. For project-specific contributions, please open an issue or submit a pull request.
 
-Please read the [*Contributing to CodeIgniter*](https://github.com/codeigniter4/CodeIgniter4/blob/develop/CONTRIBUTING.md) section in the development repository.
+## License
 
-## Server Requirements
-
-PHP version 8.1 or higher is required, with the following extensions installed:
-
-- [intl](http://php.net/manual/en/intl.requirements.php)
-- [mbstring](http://php.net/manual/en/mbstring.installation.php)
-
-> [!WARNING]
-> - The end of life date for PHP 7.4 was November 28, 2022.
-> - The end of life date for PHP 8.0 was November 26, 2023.
-> - If you are still using PHP 7.4 or 8.0, you should upgrade immediately.
-> - The end of life date for PHP 8.1 will be December 31, 2025.
-
-Additionally, make sure that the following extensions are enabled in your PHP:
-
-- json (enabled by default - don't turn it off)
-- [mysqlnd](http://php.net/manual/en/mysqlnd.install.php) if you plan to use MySQL
-- [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
+This project is open-sourced software licensed under the [MIT license](LICENSE).

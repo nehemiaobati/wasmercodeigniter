@@ -286,7 +286,6 @@
                     <a href="<?= base_url('public/assets/Nehemia Obati Resume.pdf') ?>" class="btn btn-outline-primary ms-2" target="_blank">Download Resume</a>
                 </div>
                 <div class="hero-image-container text-center">
-                <div class="hero-image-container text-center">
                     <!-- MODIFICATION: Corrected asset path -->
                     <img src="<?= base_url('public/assets/images/potraitwebp.webp') ?>" alt="Nehemia Obati" class="hero-image">
                 </div>

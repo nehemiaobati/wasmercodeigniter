@@ -1,5 +1,10 @@
 User-agent: *
 Allow: /
 Disallow: /admin
+Disallow: /home/
+Disallow: /account/
+Disallow: /gemini/
+Disallow: /crypto/
+Disallow: /payment/
 
 Sitemap: https://afrikenkid.com/sitemap.xml

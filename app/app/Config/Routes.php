@@ -7,6 +7,12 @@ use CodeIgniter\Router\RouteCollection;
  */
 
 //--------------------------------------------------------------------
+// CLI Routes
+//--------------------------------------------------------------------
+// These routes are only accessible from the command line.
+$routes->cli('train', 'TrainingController::index', ['as' => 'train.run']);
+
+//--------------------------------------------------------------------
 // Public Routes (No Authentication Required)
 //--------------------------------------------------------------------
 // These routes are accessible to everyone.
@@ -106,8 +112,10 @@ $routes->group('', ['filter' => 'auth'], static function ($routes) {
         $routes->post('delete-media', 'GeminiController::deleteMedia', ['as' => 'gemini.delete_media']);
         // [NEW] Route for updating assistant mode setting
         $routes->post('settings/update-assistant-mode', 'GeminiController::updateAssistantMode', ['as' => 'gemini.settings.updateAssistantMode']);
-        // Route for downloading generated content as PDF
-        $routes->post('download-pdf', 'GeminiController::downloadPdf', ['as' => 'gemini.download_pdf']);
+        // [NEW] Route for updating voice output setting
+        $routes->post('settings/update-voice-output', 'GeminiController::updateVoiceOutputMode', ['as' => 'gemini.settings.updateVoiceOutputMode']);
+        // [REVISED] Route for downloading generated content as PDF or Word.
+        $routes->post('download-document', 'GeminiController::downloadDocument', ['as' => 'gemini.download_document']);
     });
 
 });

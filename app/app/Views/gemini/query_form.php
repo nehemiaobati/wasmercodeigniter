@@ -18,7 +18,6 @@
         position: relative;
     }
 
-    /* --- Necessary Custom Components (Unchanged) --- */
     .code-block-wrapper {
         position: relative;
         margin: 1rem 0;
@@ -56,7 +55,6 @@
     }
 
     #mediaUploadArea {
-        /* MODIFICATION: Removed hardcoded background color. It's now handled by a Bootstrap class. */
         border: 2px dashed var(--border-color);
         border-radius: 0.5rem;
         padding: 1.5rem;
@@ -93,6 +91,8 @@
         <p class="text-muted lead">Your creative canvas to chat, analyze, or generate anything.</p>
     </div>
 
+    <div id="audio-player-container" class="mb-4"></div>
+
     <div class="row g-4">
         <div class="col-lg-8">
             <form id="geminiForm" action="<?= url_to('gemini.generate') ?>" method="post" enctype="multipart/form-data">
@@ -123,12 +123,22 @@
         <div class="col-lg-4">
             <div class="blueprint-card p-4">
                 <h4 class="card-title fw-bold mb-4"><i class="bi bi-gear-fill"></i> Settings</h4>
-                <div id="settingsContainer" class="pb-3 mb-3 border-bottom">
-                    <div class="form-check form-switch p-0 d-flex justify-content-between align-items-center">
-                        <label class="form-check-label h5 mb-0" for="assistantModeToggle">Conversational Memory</label>
-                        <input class="form-check-input" type="checkbox" role="switch" id="assistantModeToggle" name="assistant_mode" value="1" <?= $assistant_mode_enabled ? 'checked' : '' ?>>
+                <div id="settingsContainer">
+                    <div class="pb-3 mb-3 border-bottom">
+                        <div class="form-check form-switch p-0 d-flex justify-content-between align-items-center">
+                            <label class="form-check-label h5 mb-0" for="assistantModeToggle">Conversational Memory</label>
+                            <input class="form-check-input" type="checkbox" role="switch" id="assistantModeToggle" name="assistant_mode" value="1" <?= $assistant_mode_enabled ? 'checked' : '' ?>>
+                        </div>
+                        <small class="text-muted d-block mt-1">Remember previous conversations for follow-up questions.</small>
                     </div>
-                    <small class="text-muted d-block mt-1">Remember previous conversations for follow-up questions.</small>
+
+                    <div class="pb-3 mb-3 border-bottom">
+                        <div class="form-check form-switch p-0 d-flex justify-content-between align-items-center">
+                            <label class="form-check-label h5 mb-0" for="voiceOutputToggle">Voice Output</label>
+                            <input class="form-check-input" type="checkbox" role="switch" id="voiceOutputToggle" name="voice_output" value="1" <?= $voice_output_enabled ? 'checked' : '' ?>>
+                        </div>
+                        <small class="text-muted d-block mt-1">Automatically play the AI's response as audio.</small>
+                    </div>
                 </div>
                 <?php if (!empty($prompts)): ?>
                     <div class="pb-3 mb-3 border-bottom">
@@ -153,8 +163,20 @@
         <div class="row g-4 mt-4">
             <div class="col-12">
                 <div class="blueprint-card p-4 p-md-5" id="results-card">
-                    <h3 class="fw-bold mb-4 d-flex justify-content-between align-items-center flex-wrap"><span>Studio Output</span>
-                        <div class="btn-group mt-2 mt-sm-0" role="group"><button id="copy-response-btn" class="btn btn-sm btn-outline-secondary" title="Copy Full Response"><i class="bi bi-clipboard"></i></button><button id="download-pdf-btn" class="btn btn-sm btn-outline-secondary" title="Download as PDF"><i class="bi bi-file-earmark-pdf"></i></button></div>
+                    <h3 class="fw-bold mb-4 d-flex justify-content-between align-items-center flex-wrap">
+                        <span>Studio Output</span>
+                        <div class="btn-group mt-2 mt-sm-0" role="group">
+                            <button id="copy-response-btn" class="btn btn-sm btn-outline-secondary" title="Copy Full Response"><i class="bi bi-clipboard"></i></button>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                                    <i class="bi bi-download"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="#" id="download-pdf-btn">Download as PDF</a></li>
+                                    <li><a class="dropdown-item" href="#" id="download-word-btn">Download as Word (DOCX)</a></li>
+                                </ul>
+                            </div>
+                        </div>
                     </h3>
                     <div id="ai-response-wrapper"></div>
                     <textarea id="raw-response-for-copy" class="visually-hidden"><?= esc(session()->getFlashdata('raw_result') ?? strip_tags($result)) ?></textarea>
@@ -165,7 +187,6 @@
     <?php endif; ?>
 </div>
 
-<!-- Modal and Toast Sections (unchanged) -->
 <div class="modal fade" id="savePromptModal" tabindex="-1" aria-labelledby="savePromptModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content blueprint-card">
@@ -188,7 +209,11 @@
         </div>
     </div>
 </div>
-<form id="pdfDownloadForm" action="<?= url_to('gemini.download_pdf') ?>" method="post" target="_blank" class="d-none"> <?= csrf_field() ?> <textarea name="raw_response" id="pdf-raw-response"></textarea></form>
+<form id="documentDownloadForm" action="<?= url_to('gemini.download_document') ?>" method="post" target="_blank" class="d-none">
+    <?= csrf_field() ?>
+    <textarea name="raw_response" id="download-raw-response"></textarea>
+    <input type="hidden" name="format" id="download-format">
+</form>
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
@@ -196,6 +221,20 @@
 <script src="<?= base_url('public/assets/tinymce/tinymce.min.js') ?>" referrerpolicy="origin"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+        <?php if ($audio_url = session()->getFlashdata('audio_url')): ?>
+            const audioUrl = '<?= esc($audio_url, 'js') ?>';
+            const audioPlayerContainer = document.getElementById('audio-player-container');
+            if (audioUrl && audioPlayerContainer) {
+                const audioPlayer = document.createElement('audio');
+                audioPlayer.controls = true;
+                audioPlayer.autoplay = true;
+                audioPlayer.src = audioUrl;
+                audioPlayer.classList.add('w-100');
+                audioPlayerContainer.innerHTML = ''; 
+                audioPlayerContainer.appendChild(audioPlayer);
+            }
+        <?php endif; ?>
+
         const app = {
             csrfToken: document.querySelector('input[name="<?= csrf_token() ?>"]').value,
             elements: {
@@ -204,6 +243,7 @@
                 generateBtn: document.getElementById('generateBtn'),
                 clearMemoryBtn: document.getElementById('clearMemoryBtn'),
                 assistantModeToggle: document.getElementById('assistantModeToggle'),
+                voiceOutputToggle: document.getElementById('voiceOutputToggle'),
                 settingsToast: new bootstrap.Toast(document.getElementById('settingsToast')),
                 mediaInput: document.getElementById('media-input-trigger'),
                 mediaUploadArea: document.getElementById('mediaUploadArea'),
@@ -217,11 +257,13 @@
                 responseWrapper: document.getElementById('ai-response-wrapper'),
                 copyBtn: document.getElementById('copy-response-btn'),
                 downloadPdfBtn: document.getElementById('download-pdf-btn'),
+                downloadWordBtn: document.getElementById('download-word-btn'),
             },
             urls: {
                 upload: "<?= route_to('gemini.upload_media') ?>",
                 deleteMedia: "<?= route_to('gemini.delete_media') ?>",
                 updateSettings: "<?= route_to('gemini.settings.updateAssistantMode') ?>",
+                updateVoiceSettings: "<?= route_to('gemini.settings.updateVoiceOutputMode') ?>",
                 deletePromptBase: "<?= rtrim(route_to('gemini.prompts.delete', 0), '0') ?>",
             },
 
@@ -254,12 +296,10 @@
             bindEvents() {
                 this.elements.geminiForm?.addEventListener('submit', this.handleFormSubmit.bind(this));
                 this.elements.clearMemoryForm?.addEventListener('submit', this.handleClearMemorySubmit.bind(this));
-                this.elements.assistantModeToggle?.addEventListener('change', this.handleSettingsChange.bind(this));
+                this.elements.assistantModeToggle?.addEventListener('change', this.handleAssistantSettingsChange.bind(this));
+                this.elements.voiceOutputToggle?.addEventListener('change', this.handleVoiceSettingsChange.bind(this));
                 const dndEvents = ['dragenter', 'dragover', 'dragleave', 'drop'];
-                dndEvents.forEach(eName => this.elements.mediaUploadArea?.addEventListener(eName, e => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }));
+                dndEvents.forEach(eName => this.elements.mediaUploadArea?.addEventListener(eName, e => { e.preventDefault(); e.stopPropagation(); }));
                 ['dragenter', 'dragover'].forEach(eName => this.elements.mediaUploadArea?.addEventListener(eName, () => this.elements.mediaUploadArea.classList.add('dragover')));
                 ['dragleave', 'drop'].forEach(eName => this.elements.mediaUploadArea?.addEventListener(eName, () => this.elements.mediaUploadArea.classList.remove('dragover')));
                 this.elements.mediaInput?.addEventListener('change', (e) => this.handleFiles(e.target.files));
@@ -270,46 +310,53 @@
                 this.elements.deletePromptBtn?.addEventListener('click', this.handleDeletePrompt.bind(this));
                 this.elements.savePromptModal?.addEventListener('show.bs.modal', this.handleModalShow.bind(this));
                 this.elements.copyBtn?.addEventListener('click', this.handleCopyResponse.bind(this));
-                this.elements.downloadPdfBtn?.addEventListener('click', this.handleDownloadPdf.bind(this));
+                this.elements.downloadPdfBtn?.addEventListener('click', (e) => { e.preventDefault(); this.handleDownload('pdf'); });
+                this.elements.downloadWordBtn?.addEventListener('click', (e) => { e.preventDefault(); this.handleDownload('docx'); });
                 window.addEventListener('pageshow', this.restoreButtonStates.bind(this));
             },
+
             handleFormSubmit(e) {
                 tinymce.triggerSave();
-                if (!tinymce.get('prompt').getContent({
-                        format: 'text'
-                    }).trim()) {
+                if (!tinymce.get('prompt').getContent({ format: 'text' }).trim() && this.elements.uploadedFilesContainer.children.length === 0) {
                     e.preventDefault();
-                    alert('Please enter a prompt before generating.');
+                    alert('Please enter a prompt or upload a file before generating.');
                     return;
                 }
                 this.setLoadingState(this.elements.generateBtn, 'Generating...');
             },
+
             handleClearMemorySubmit(e) {
                 if (!confirm('Are you sure you want to permanently delete your entire conversation history? This action cannot be undone.')) {
                     e.preventDefault();
-                    return;
                 }
                 this.setLoadingState(this.elements.clearMemoryBtn, 'Clearing...');
             },
-            async handleSettingsChange(e) {
-                const isEnabled = e.target.checked;
+
+            async handleAssistantSettingsChange(e) {
+                await this.updateSetting(this.urls.updateSettings, e.target.checked, 'Conversational Memory');
+            },
+            
+            async handleVoiceSettingsChange(e) {
+                await this.updateSetting(this.urls.updateVoiceSettings, e.target.checked, 'Voice Output');
+            },
+
+            async updateSetting(url, isEnabled, featureName) {
                 const formData = new FormData();
                 formData.append('enabled', isEnabled);
                 try {
-                    const data = await this.fetchWithCsrf(this.urls.updateSettings, {
-                        method: 'POST',
-                        body: formData
-                    });
-                    this.showToast(data.status === 'success' ? `Conversational Memory ${isEnabled ? 'enabled' : 'disabled'}.` : 'Error saving setting.');
+                    const data = await this.fetchWithCsrf(url, { method: 'POST', body: formData });
+                    this.showToast(data.status === 'success' ? `${featureName} ${isEnabled ? 'enabled' : 'disabled'}.` : 'Error saving setting.');
                 } catch (error) {
-                    this.showToast('Network error. Could not save setting.');
-                    console.error('Error updating setting:', error);
+                    this.showToast(`Network error. Could not save ${featureName} setting.`);
+                    console.error(`Error updating ${featureName} setting:`, error);
                 }
             },
+
             handleFiles(files) {
                 [...files].forEach(file => this.uploadFile(file));
                 this.elements.mediaInput.value = '';
             },
+
             async handleFileDelete(e) {
                 const removeBtn = e.target.closest('.remove-file-btn');
                 if (!removeBtn) return;
@@ -318,10 +365,7 @@
                 const formData = new FormData();
                 formData.append('file_id', fileToDelete);
                 try {
-                    const data = await this.fetchWithCsrf(this.urls.deleteMedia, {
-                        method: 'POST',
-                        body: formData
-                    });
+                    const data = await this.fetchWithCsrf(this.urls.deleteMedia, { method: 'POST', body: formData });
                     if (data.status === 'success') {
                         document.getElementById(uiElementId)?.remove();
                         document.getElementById(`hidden-${uiElementId}`)?.remove();
@@ -332,22 +376,15 @@
                     console.error('Error deleting file:', error);
                 }
             },
+            
             handleUsePrompt() {
                 const selectedOption = this.elements.savedPromptsSelect.options[this.elements.savedPromptsSelect.selectedIndex];
                 const selectedPromptText = selectedOption?.value;
-
                 if (selectedPromptText) {
-                    const editor = tinymce.get('prompt');
-                    const currentContent = editor.getContent({ format: 'html' });
-
-                    if (currentContent.trim() === '') {
-                        editor.setContent(selectedPromptText);
-                    } else {
-                        const newContent = selectedPromptText + '<br><br>' + currentContent;
-                        editor.setContent(newContent);
-                    }
+                    tinymce.get('prompt').setContent(selectedPromptText);
                 }
             },
+
             handleDeletePrompt() {
                 const selectedOption = this.elements.savedPromptsSelect.options[this.elements.savedPromptsSelect.selectedIndex];
                 const selectedPromptId = selectedOption?.dataset.id;
@@ -361,31 +398,32 @@
                     tempForm.submit();
                 }
             },
+
             handleModalShow() {
-                this.elements.modalPromptTextarea.value = tinymce.get('prompt').getContent({
-                    format: 'html'
-                });
+                this.elements.modalPromptTextarea.value = tinymce.get('prompt').getContent({ format: 'html' });
             },
+
             handleResponseOutput() {
                 this.elements.responseWrapper.innerHTML = document.getElementById('final-rendered-content').innerHTML;
                 this.setupResponseFormatting();
                 setTimeout(() => {
-                    document.getElementById('results-card')?.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
+                    document.getElementById('results-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }, 100);
             },
+            
             handleCopyResponse() {
                 const rawText = document.getElementById('raw-response-for-copy').value;
                 navigator.clipboard.writeText(rawText).then(() => {
                     this.setButtonFeedback(this.elements.copyBtn, '<i class="bi bi-check-lg"></i>', '<i class="bi bi-clipboard"></i>');
                 });
             },
-            handleDownloadPdf() {
-                document.getElementById('pdf-raw-response').value = document.getElementById('raw-response-for-copy').value;
-                document.getElementById('pdfDownloadForm').submit();
+
+            handleDownload(format) {
+                document.getElementById('download-raw-response').value = document.getElementById('raw-response-for-copy').value;
+                document.getElementById('download-format').value = format;
+                document.getElementById('documentDownloadForm').submit();
             },
+
             uploadFile(file) {
                 const fileId = `file-${Math.random().toString(36).substr(2, 9)}`;
                 const progressItem = document.createElement('div');
@@ -393,14 +431,18 @@
                 progressItem.id = fileId;
                 progressItem.innerHTML = `<span class="file-name" title="${file.name}">${file.name}</span><div class="progress flex-grow-1" style="height: 8px;"><div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div></div><span class="status-icon text-muted fs-5"><i class="bi bi-hourglass-split"></i></span>`;
                 this.elements.progressContainer.appendChild(progressItem);
+
                 const xhr = new XMLHttpRequest();
                 const formData = new FormData();
                 formData.append('file', file);
                 formData.append('<?= csrf_token() ?>', this.csrfToken);
+
                 xhr.open('POST', this.urls.upload, true);
+
                 xhr.upload.onprogress = e => {
                     if (e.lengthComputable) progressItem.querySelector('.progress-bar').style.width = `${(e.loaded / e.total) * 100}%`;
                 };
+
                 xhr.onload = () => {
                     const progressBar = progressItem.querySelector('.progress-bar');
                     const statusIcon = progressItem.querySelector('.status-icon');
@@ -426,13 +468,16 @@
                         statusIcon.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-danger" title="An unknown error occurred."></i>`;
                     }
                 };
+
                 xhr.onerror = () => {
                     const progressBar = progressItem.querySelector('.progress-bar');
                     progressBar.classList.remove('progress-bar-striped', 'progress-bar-animated', 'bg-success').add('bg-danger');
                     progressItem.querySelector('.status-icon').innerHTML = `<i class="bi bi-exclamation-triangle-fill text-danger" title="Network error."></i>`;
                 };
+
                 xhr.send(formData);
             },
+
             setupResponseFormatting() {
                 this.elements.responseWrapper.querySelectorAll('pre').forEach(pre => {
                     if (pre.parentElement.classList.contains('code-block-wrapper')) return;
@@ -457,29 +502,27 @@
                     });
                 }
             },
+
             async fetchWithCsrf(url, options = {}) {
                 options.body.append('<?= csrf_token() ?>', this.csrfToken);
-                const response = await fetch(url, {
-                    ...options,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        ...options.headers
-                    }
-                });
+                const response = await fetch(url, { ...options, headers: { 'X-Requested-With': 'XMLHttpRequest', ...options.headers } });
                 const data = await response.json();
                 if (data.csrf_token) this.updateCsrfToken(data.csrf_token);
                 if (!response.ok) throw new Error(data.message || 'Request failed');
                 return data;
             },
+
             updateCsrfToken(newToken) {
                 if (!newToken) return;
                 this.csrfToken = newToken;
                 document.querySelectorAll('input[name="<?= csrf_token() ?>"]').forEach(input => input.value = newToken);
             },
+
             setLoadingState(button, text) {
                 button.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ${text}`;
                 button.disabled = true;
             },
+
             setButtonFeedback(button, feedbackText, originalText) {
                 const originalWidth = button.offsetWidth;
                 button.style.width = `${originalWidth}px`;
@@ -488,10 +531,12 @@
                     button.innerHTML = originalText;
                 }, 2000);
             },
+
             showToast(message) {
                 this.elements.settingsToast._element.querySelector('.toast-body').textContent = message;
                 this.elements.settingsToast.show();
             },
+
             restoreButtonStates() {
                 if (this.elements.generateBtn) {
                     this.elements.generateBtn.innerHTML = `<i class="bi bi-sparkles"></i> Generate`;
