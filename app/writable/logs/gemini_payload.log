@@ -1747,3 +1747,258 @@
         "thoughtsTokenCount": 27
     }
 }
+{
+    "result": "Hello! How can I help you today?",
+    "usage": {
+        "promptTokenCount": 8,
+        "candidatesTokenCount": 9,
+        "totalTokenCount": 40,
+        "promptTokensDetails": [
+            {
+                "modality": "TEXT",
+                "tokenCount": 8
+            }
+        ],
+        "thoughtsTokenCount": 23
+    }
+}
+{
+    "result": "Hello! How can I help you today?",
+    "usage": {
+        "promptTokenCount": 17,
+        "candidatesTokenCount": 9,
+        "totalTokenCount": 46,
+        "promptTokensDetails": [
+            {
+                "modality": "TEXT",
+                "tokenCount": 17
+            }
+        ],
+        "thoughtsTokenCount": 20
+    }
+}
+{
+    "result": "Hello! How can I help you today?",
+    "usage": {
+        "promptTokenCount": 17,
+        "candidatesTokenCount": 9,
+        "totalTokenCount": 26,
+        "promptTokensDetails": [
+            {
+                "modality": "TEXT",
+                "tokenCount": 17
+            }
+        ]
+    }
+}
+{
+    "result": "Hello! How can I help you today?",
+    "usage": {
+        "promptTokenCount": 8,
+        "candidatesTokenCount": 9,
+        "totalTokenCount": 17,
+        "promptTokensDetails": [
+            {
+                "modality": "TEXT",
+                "tokenCount": 8
+            }
+        ]
+    }
+}
+{
+    "result": "I am a large language model, which is a type of artificial intelligence. I was created and trained by Google.\n\nHere are a few key things about me:\n\n*   **My Nature:** I don't have personal experiences, feelings, or consciousness; I am a sophisticated computer program. I operate by processing massive datasets of text and code to understand, generate, and translate human language.\n*   **How I Work:** My underlying architecture uses deep learning techniques, specifically a type of neural network often called a Transformer, which allows me to recognize patterns, grammar, and context in the data. This training enables me to make predictions and generate relevant, coherent text in response to your prompts.\n*   **My Purpose:** My function is to assist you with a wide range of tasks, such as answering questions, summarizing documents, translating languages, writing different kinds of creative content, and holding a conversational dialogue. I am designed to be a helpful and informative tool.",
+    "usage": {
+        "promptTokenCount": 14,
+        "candidatesTokenCount": 226,
+        "totalTokenCount": 344,
+        "promptTokensDetails": [
+            {
+                "modality": "TEXT",
+                "tokenCount": 14
+            }
+        ],
+        "toolUsePromptTokenCount": 58,
+        "toolUsePromptTokensDetails": [
+            {
+                "modality": "TEXT",
+                "tokenCount": 58
+            }
+        ],
+        "thoughtsTokenCount": 46
+    }
+}
+{
+    "result": "I am a large language model, developed by Google.\n\nHere are a few key things about me:\n\n*   **My Core Identity:** I am an AI program built on a massive amount of text and code data. I use a deep learning architecture, specifically a type of neural network called a Transformer, to understand and generate human-like text. \n*   **What I Do:** My main purpose is to assist users with a wide variety of tasks that involve language. This includes answering questions, generating creative content like poems and stories, summarizing text, translating languages, writing code, and helping with research by synthesizing information. \n*   **How I Learn:** I was pre-trained on a vast dataset, and through that training, I learned the patterns, grammar, and relationships within human language. I don't have personal experiences, feelings, or consciousness; my knowledge is based on the data I was trained on. \n*   **My Goal:** I strive to be helpful, informative, and safe by following your instructions and completing your requests to the best of my ability.",
+    "usage": {
+        "promptTokenCount": 74,
+        "candidatesTokenCount": 258,
+        "totalTokenCount": 619,
+        "cachedContentTokenCount": 38,
+        "promptTokensDetails": [
+            {
+                "modality": "TEXT",
+                "tokenCount": 74
+            }
+        ],
+        "cacheTokensDetails": [
+            {
+                "modality": "TEXT",
+                "tokenCount": 38
+            }
+        ],
+        "toolUsePromptTokenCount": 287
+    }
+}
+{
+    "result": "Earth is not perfectly round; its rotation causes it to bulge around the equator, making it an \"oblate spheroid.\" ",
+    "usage": {
+        "promptTokenCount": 38,
+        "candidatesTokenCount": 37,
+        "totalTokenCount": 75,
+        "promptTokensDetails": [
+            {
+                "modality": "TEXT",
+                "tokenCount": 38
+            }
+        ]
+    }
+}
+{
+    "result": "Here are three facts about space travel, *The Big Bang Theory*, and *Star Trek*:\n\n*   **Space Travel:** The longest single spaceflight by a human was 437 days and 18 hours, a record set by Russian cosmonaut Valeri Polyakov on the Mir space station between January 1994 and March 1995.\n*   **The Big Bang Theory:** Actress Mayim Bialik, who plays neuroscientist Amy Farrah Fowler on the show, holds a real-life Ph.D. in neuroscience.\n*   **Star Trek:** The original series would have been canceled in its early stages if not for Lucille Ball, the head of Desilu Productions. She believed in the show and signed off on the budget for the second pilot when the network was hesitant to fund it.",
+    "usage": {
+        "promptTokenCount": 26,
+        "candidatesTokenCount": 206,
+        "totalTokenCount": 376,
+        "promptTokensDetails": [
+            {
+                "modality": "TEXT",
+                "tokenCount": 26
+            }
+        ],
+        "toolUsePromptTokenCount": 84,
+        "toolUsePromptTokensDetails": [
+            {
+                "modality": "TEXT",
+                "tokenCount": 84
+            }
+        ],
+        "thoughtsTokenCount": 60
+    }
+}
+{
+    "result": "Kenya is widely recognized as the world's leading safari destination and is home to the \"Big Five\" animals (lion, leopard, rhino, elephant, and buffalo). ",
+    "usage": {
+        "promptTokenCount": 52,
+        "candidatesTokenCount": 52,
+        "totalTokenCount": 104,
+        "promptTokensDetails": [
+            {
+                "modality": "TEXT",
+                "tokenCount": 52
+            }
+        ]
+    }
+}
+{
+    "result": "That is a fantastic decade for sci-fi. Since you want the best of the best, mixing the highly-rated, thought-provoking masterpieces with the truly great, often-overlooked gems\u2014from 2010 through 2020\u2014here are the 10 sci-fi movies you need to watch.\n\n***\n\n### The Top 10 Sci-Fi Movies (2010\u20132020)\n\n**1. *Arrival* (2016)**\nThis is the modern benchmark for smart, emotional sci-fi. It\u2019s a masterful film about a linguist tasked with communicating with aliens who have suddenly appeared on Earth. It uses an alien encounter as a vehicle to explore language, memory, and the nature of time itself. It earned multiple Oscar nominations, including Best Picture. \n\n**2. *Inception* (2010)**\nThe movie that kicked off the decade and showed how big-budget blockbusters could also be mind-bending puzzle boxes. It follows a professional thief who steals secrets from deep within the subconscious through shared dream technology. It\u2019s an original, visually stunning spectacle. \n\n**3. *Blade Runner 2049* (2017)**\nA truly stunning visual and auditory experience, this sequel is arguably superior to the original, expanding the philosophical neo-noir world of replicants and their purpose. It explores identity, humanity, and legacy with breathtaking cinematography. \n\n**4. *Mad Max: Fury Road* (2015)**\nThis is a masterpiece of action-as-narrative. It's a post-apocalyptic, two-hour chase scene that is relentlessly kinetic, visually spectacular, and surprisingly rich in its allegories of feminism, resource control, and freedom. It's one of the greatest action films of all time, and it has a firm place in sci-fi history. \n\n**5. *Ex Machina* (2014)**\nMoving from the big blockbusters to a truly tense, intimate film, *Ex Machina* is a small-scale, psychological thriller that pits a programmer against a beautiful, advanced humanoid A.I. to perform a Turing test. It\u2019s a razor-sharp exploration of consciousness and artificial intelligence. \n\n**6. *Snowpiercer* (2013) (Underrated Gem)**\nBefore *Parasite*, Bong Joon-ho gave us this allegorical action film set entirely on a constantly-moving train that houses the last remnants of humanity after a climate experiment fails. It\u2019s a vicious, brilliant metaphor for class warfare with incredible action. It was initially overlooked by many in the US but has since gained cult status. \n\n**7. *Dredd* (2012) (Underrated Gem)**\nForget the 1995 version, this is the gritty, ultraviolent, and perfect adaptation of the comic book. The plot is simple: Judge Dredd and a rookie have to fight their way up a 200-story slum building. It initially flopped at the box office, but is now considered one of the best action sci-fi films of the decade. \n\n**8. *Coherence* (2013) (The Deep Cut)**\nIf you want something truly **underrated** and mind-bending, this low-budget independent film is a must-see. It's a dinner party that descends into chaos when a passing comet causes reality, identity, and timelines to fracture. It's a fantastic, dialogue-driven thriller that was filmed over just a few nights in a single house. \n\n**9. *Under the Skin* (2014) (The Experimental Pick)**\nThis is a haunting, experimental film starring Scarlett Johansson as an alien entity on Earth, luring men in Scotland. It's more of a stark, visually arresting tone poem than a traditional sci-fi movie, exploring themes of gender, isolation, and humanity from an outsider\u2019s perspective. It\u2019s bizarre, bleak, and absolutely unforgettable. \n\n**10. *Attack the Block* (2011) (The Cult Favorite)**\nThis fun, fast-paced creature feature is about a gang of South London teens who have to defend their council estate from a vicious alien invasion. It's a fantastic blend of sci-fi horror, comedy, and action, and it put stars like John Boyega and Jodie Whittaker on the map. ",
+    "usage": {
+        "promptTokenCount": 237,
+        "candidatesTokenCount": 1143,
+        "totalTokenCount": 2271,
+        "promptTokensDetails": [
+            {
+                "modality": "TEXT",
+                "tokenCount": 237
+            }
+        ],
+        "thoughtsTokenCount": 891
+    }
+}
+{
+    "result": "**\"We wish you a Merry Christmas, and a Happy New Year!\"** ",
+    "usage": {
+        "promptTokenCount": 849,
+        "candidatesTokenCount": 34,
+        "totalTokenCount": 883,
+        "promptTokensDetails": [
+            {
+                "modality": "TEXT",
+                "tokenCount": 849
+            }
+        ]
+    }
+}
+{
+    "result": "Hello! How can I assist you this evening?",
+    "usage": {
+        "promptTokenCount": 634,
+        "candidatesTokenCount": 10,
+        "totalTokenCount": 870,
+        "promptTokensDetails": [
+            {
+                "modality": "TEXT",
+                "tokenCount": 634
+            }
+        ],
+        "thoughtsTokenCount": 226
+    }
+}
+{
+    "result": "Hello! How can I assist you this evening?",
+    "usage": {
+        "promptTokenCount": 682,
+        "candidatesTokenCount": 10,
+        "totalTokenCount": 794,
+        "promptTokensDetails": [
+            {
+                "modality": "TEXT",
+                "tokenCount": 682
+            }
+        ],
+        "thoughtsTokenCount": 102
+    }
+}
+{
+    "result": "Here is a short, inspiring story about true wealth:\n\nThere was once a boy from a very wealthy family whose father decided to take him on a trip to the countryside to show him how people who were less fortunate lived, hoping the boy would appreciate his privileged life. \n\nThey spent several days on a farm with a very poor family, helping them work for their food and take care of their land. \n\nAfter they left the farm, the father asked his son if he enjoyed the trip and if he had learned anything. The father expected a response that reflected an appreciation for his own family's material possessions. \n\nThe boy's reply stunned his father. \"Thank you for showing me how rich people live,\" the boy said. \"They are so lucky.\" \n\nHe explained his perspective: \"We have one dog; they have four. We have to go to the grocery store, but they are able to grow their own food. Our high fence protects our property and our family, but they don't need such a limiting structure because their friends protect them.\" \n\n**The Moral of the Story:** True wealth and happiness are not measured by material belongings. Being around the people you love, enjoying the beautiful natural environment, and having freedom are much more valuable. ",
+    "usage": {
+        "promptTokenCount": 783,
+        "candidatesTokenCount": 303,
+        "totalTokenCount": 1086,
+        "promptTokensDetails": [
+            {
+                "modality": "TEXT",
+                "tokenCount": 783
+            }
+        ]
+    }
+}
+{
+    "result": "Hello! How can I assist you this evening?",
+    "usage": {
+        "promptTokenCount": 1032,
+        "candidatesTokenCount": 10,
+        "totalTokenCount": 1125,
+        "promptTokensDetails": [
+            {
+                "modality": "TEXT",
+                "tokenCount": 1032
+            }
+        ],
+        "thoughtsTokenCount": 83
+    }
+}
+{
+    "result": "Hello! How can I assist you this evening?",
+    "usage": {
+        "promptTokenCount": 1080,
+        "candidatesTokenCount": 10,
+        "totalTokenCount": 1177,
+        "promptTokensDetails": [
+            {
+                "modality": "TEXT",
+                "tokenCount": 1080
+            }
+        ],
+        "thoughtsTokenCount": 87
+    }
+}

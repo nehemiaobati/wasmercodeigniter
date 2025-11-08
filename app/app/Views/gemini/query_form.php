@@ -9,8 +9,8 @@
     }
 
     .prompt-card {
-        height: calc(100vh - 260px);
-        min-height: 500px;
+        height: calc(100vh - 300px);
+        min-height: 250px;
     }
 
     .prompt-editor-wrapper {

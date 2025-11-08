@@ -79,8 +79,12 @@ class TrainingService
         $model->train($featureFactory, $trainingSet);
         $classifier = new MultinomialNBClassifier($featureFactory, $model);
         // --- 5. Serialize and Save Models ---
-        file_put_contents($featureFactoryModelFile, serialize($featureFactory));
-        file_put_contents($classifierModelFile, serialize($classifier));
+        if (file_put_contents($featureFactoryModelFile, serialize($featureFactory)) === false) {
+            return ['success' => false, 'message' => 'Error: Failed to save feature factory model to ' . $featureFactoryModelFile];
+        }
+        if (file_put_contents($classifierModelFile, serialize($classifier)) === false) {
+            return ['success' => false, 'message' => 'Error: Failed to save classifier model to ' . $classifierModelFile];
+        }
 
         return [
             'success' => true,

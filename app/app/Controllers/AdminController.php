@@ -215,8 +215,15 @@ class AdminController extends BaseController
         if ($selectedFile && in_array($selectedFile, $logFiles)) {
             // Sanitize filename to prevent directory traversal
             $safeFile = basename($selectedFile);
-            if (file_exists($logPath . $safeFile)) {
-                $logContent = file_get_contents($logPath . $safeFile);
+            $fullFilePath = $logPath . $safeFile;
+            if (file_exists($fullFilePath)) {
+                $content = file_get_contents($fullFilePath);
+                if ($content === false) {
+                    $logContent = "Error: Could not read the selected log file. Please check file permissions on the server.";
+                    log_message('error', "AdminController: Failed to read log file '{$fullFilePath}' due to permissions or other issue.");
+                } else {
+                    $logContent = $content;
+                }
             }
         }
 

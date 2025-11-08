@@ -31,12 +31,26 @@ class PaystackService
      *
      * @throws \Exception If the Paystack secret key is not configured.
      */
+    private bool $isConfigured = false;
+
     public function __construct()
     {
         $this->secretKey = env('PAYSTACK_SECRET_KEY');
-        if (empty($this->secretKey)) {
-            throw new \Exception('Paystack secret key is not set in .env file.');
+        if (!empty($this->secretKey)) {
+            $this->isConfigured = true;
+        } else {
+            log_message('critical', '[PaystackService] Paystack secret key is not set in .env file. PaystackService will be unavailable.');
         }
+    }
+
+    /**
+     * Checks if the PaystackService is configured with a secret key.
+     *
+     * @return bool True if configured, false otherwise.
+     */
+    public function isConfigured(): bool
+    {
+        return $this->isConfigured;
     }
 
     /**
@@ -50,6 +64,10 @@ class PaystackService
      */
     public function initializeTransaction(string $email, int $amount, string $callbackUrl, ?string $currency = null): array
     {
+        if (! $this->isConfigured()) {
+            return ['status' => false, 'message' => 'Payment provider is not configured.'];
+        }
+
         $url = $this->baseUrl . '/transaction/initialize';
         $fields = [
             'email'        => $email,
@@ -69,6 +87,10 @@ class PaystackService
      */
     public function verifyTransaction(string $reference): array
     {
+        if (! $this->isConfigured()) {
+            return ['status' => false, 'message' => 'Payment provider is not configured.'];
+        }
+
         $url = $this->baseUrl . '/transaction/verify/' . rawurlencode($reference);
 
         return $this->sendRequest('GET', $url);

@@ -64,13 +64,27 @@ class PandocService
         );
 
 
-        $output = null;
-        $return_var = null;
-        exec($command . ' 2>&1', $output, $return_var);
+        try {
+            $output = null;
+            $return_var = null;
+            exec($command . ' 2>&1', $output, $return_var);
 
-        // Clean up the input file immediately
-        if (file_exists($inputFilePath)) {
-            unlink($inputFilePath);
+            // Clean up the input file immediately
+            if (file_exists($inputFilePath)) {
+                unlink($inputFilePath);
+            }
+        } catch (\Throwable $e) { // Catch both Exceptions and Errors
+            $error_message = "Pandoc execution failed at system level. Error: " . $e->getMessage();
+            log_message('critical', '[PandocService] ' . $error_message);
+            // Clean up input file if it exists
+            if (file_exists($inputFilePath)) {
+                unlink($inputFilePath);
+            }
+            // Clean up failed output file if it was partially created
+            if (file_exists($outputFilePath)) {
+                unlink($outputFilePath);
+            }
+            return ['status' => 'error', 'message' => 'Document generation failed due to a critical server error. Please contact support.'];
         }
 
         if ($return_var !== 0) {

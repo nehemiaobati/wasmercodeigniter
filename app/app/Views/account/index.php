@@ -5,8 +5,7 @@
     .details-list .list-group-item {
         border-left: 0;
         border-right: 0;
-        padding-left: 0;
-        padding-right: 0;
+        /* REMOVED padding-left and padding-right to allow card padding to take effect */
     }
     .details-list .list-group-item strong {
         min-width: 100px;

@@ -80,7 +80,7 @@ class FfmpegService
             }
 
             return file_exists($mp3FilePath);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) { // Broaden catch to Throwable
             log_message('error', '[FfmpegService] Conversion failed: ' . $e->getMessage());
             return false;
         }

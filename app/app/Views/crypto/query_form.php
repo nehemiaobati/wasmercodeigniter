@@ -67,14 +67,14 @@
         </div>
 
         <?php if ($result = session()->getFlashdata('result')): ?>
-        <div class="col-lg-9">
+        <div class="col-lg-8">
             <div class="card blueprint-card mt-4">
                 <div class="card-body p-4 p-md-5">
                     <h3 class="fw-bold mb-4">Query Results</h3>
                     <div class="list-group list-group-flush mb-4">
-                        <div class="list-group-item d-flex justify-content-between align-items-center px-0"><strong>Asset:</strong> <span><?= esc($result['asset'] ?? 'N/A') ?></span></div>
-                        <div class="list-group-item d-flex justify-content-between align-items-center px-0"><strong>Address:</strong> <span class="text-muted text-truncate"><?= esc($result['address'] ?? 'N/A') ?></span></div>
-                        <div class="list-group-item d-flex justify-content-between align-items-center px-0"><strong>Query:</strong> <span><?= esc($result['query'] ?? 'N/A') ?></span></div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center"><strong>Asset:</strong> <span><?= esc($result['asset'] ?? 'N/A') ?></span></div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center"><strong>Address:</strong> <span class="text-muted text-truncate"><?= esc($result['address'] ?? 'N/A') ?></span></div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center"><strong>Query:</strong> <span><?= esc($result['query'] ?? 'N/A') ?></span></div>
                     </div>
 
                     <?php if (isset($result['balance'])): ?>

@@ -120,15 +120,20 @@ class GeminiController extends BaseController
         }
 
         $fileName = $file->getRandomName();
-        $file->move($userTempPath, $fileName);
+        if (! $file->move($userTempPath, $fileName)) {
+            log_message('error', "Failed to move uploaded file for user {$userId}. Error: " . $file->getErrorString());
+            return $this->response
+                ->setStatusCode(500)
+                ->setJSON(['status' => 'error', 'message' => 'Failed to save the uploaded file. Please check server permissions.']);
+        }
 
         return $this->response
             ->setStatusCode(200)
             ->setJSON([
-                'status' => 'success',
-                'file_id' => $fileName,
+                'status'        => 'success',
+                'file_id'       => $fileName,
                 'original_name' => $file->getClientName(),
-                'csrf_token' => csrf_hash(),
+                'csrf_token'    => csrf_hash(),
             ]);
     }
 
@@ -461,7 +466,9 @@ class GeminiController extends BaseController
     {
         $logFilePath = WRITEPATH . 'logs/gemini_payload.log';
         $logContent  = json_encode($apiResponse, JSON_PRETTY_PRINT);
-        file_put_contents($logFilePath, $logContent . PHP_EOL, FILE_APPEND);
+        if (file_put_contents($logFilePath, $logContent . PHP_EOL, FILE_APPEND) === false) {
+            log_message('error', '[GeminiController] Failed to write API payload log to: ' . $logFilePath);
+        }
     }
 
     public function addPrompt(): RedirectResponse
@@ -573,8 +580,16 @@ class GeminiController extends BaseController
                 header('Content-Type: ' . ($format === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'application/pdf'));
                 header('Content-Disposition: attachment; filename="' . $filename . '"');
                 header('Content-Length: ' . filesize($filePath));
-                readfile($filePath);
-                unlink($filePath); // Clean up the temp file
+                if (readfile($filePath) === false) {
+                    log_message('error', '[GeminiController] Failed to read file for download: ' . $filePath);
+                    // Fallback to a generic error if readfile fails after headers sent
+                    // This might not be seen by the user if headers are already sent.
+                    // A more robust solution might involve buffering the file first.
+                    exit('Error: Could not read file for download.');
+                }
+                if (unlink($filePath) === false) {
+                    log_message('warning', '[GeminiController] Failed to delete temporary file after download: ' . $filePath);
+                }
                 exit();
             } elseif ($result['status'] === 'success_fallback' && isset($result['fileData'])) {
                 // Dompdf generated raw data
