@@ -14,9 +14,9 @@ use FFMpeg\Format\Audio\DefaultAudio;
 class FfmpegService
 {
     /**
-     * @var FFMpeg
+     * @var FFMpeg|null
      */
-    private FFMpeg $ffmpeg;
+    private ?FFMpeg $ffmpeg = null;
 
     /**
      * Constructor.
@@ -25,10 +25,16 @@ class FfmpegService
      */
     public function __construct()
     {
-        // The create() method will automatically attempt to locate FFmpeg.
-        // On a properly configured server (e.g., with FFmpeg in the system's PATH),
-        // no configuration array is needed.
-        $this->ffmpeg = FFMpeg::create();
+        try {
+            // The create() method will automatically attempt to locate FFmpeg.
+            // On a properly configured server (e.g., with FFmpeg in the system's PATH),
+            // no configuration array is needed.
+            $this->ffmpeg = FFMpeg::create();
+        } catch (\Throwable $e) {
+            // This will catch any error, including the "Unable to fork" ErrorException.
+            log_message('error', '[FfmpegService] Failed to initialize FFmpeg. The exec() function may be disabled or FFmpeg not installed. Error: ' . $e->getMessage());
+            $this->ffmpeg = null; // Ensure ffmpeg property is null on failure.
+        }
     }
 
     /**
@@ -43,6 +49,12 @@ class FfmpegService
      */
     public function convertPcmToMp3(string $rawFilePath, string $mp3FilePath): bool
     {
+        // Check if FFmpeg was successfully initialized in the constructor.
+        if ($this->ffmpeg === null) {
+            log_message('error', '[FfmpegService] Cannot convert audio because FFmpeg is not available.');
+            return false;
+        }
+
         try {
             // Use the ffmpeg binary directly to convert raw PCM to MP3, avoiding incompatible library method signatures.
             $input  = escapeshellarg($rawFilePath);

@@ -589,24 +589,27 @@ class GeminiController extends BaseController
         // If we reach here, both Pandoc and the fallback failed.
         return redirect()->back()->with('error', $result['message'] ?? 'An unknown error occurred during document generation.');
     }
-
-    /**
-     * Processes raw audio data: saves, converts, and returns a public URL.
+    
+/**
+     * Processes raw audio data: saves, converts, and returns the secure filename.
      *
      * @param string $base64AudioData Base64 encoded raw PCM audio data.
-     * @return string|null Public URL to the converted MP3 file, or null on failure.
+     * @return string|null The filename of the converted MP3 file, or null on failure.
      */
     private function _processAudioData(string $base64AudioData): ?string
     {
         // 1. Define paths and ensure directories exist
         $userId = (int) session()->get('userId');
         $tempPath = WRITEPATH . 'uploads/ttsaudio_temp/' . $userId . '/';
-        $publicPath = WRITEPATH . 'uploads/ttsaudio_public/' . $userId . '/';
+
+        // --- FIX: Save the final file to a secure, non-public directory inside WRITEPATH ---
+        $securePath = WRITEPATH . 'uploads/ttsaudio_secure/' . $userId . '/';
+
         if (!is_dir($tempPath)) {
             mkdir($tempPath, 0775, true);
         }
-        if (!is_dir($publicPath)) {
-            mkdir($publicPath, 0775, true);
+        if (!is_dir($securePath)) {
+            mkdir($securePath, 0775, true);
         }
 
         // 2. Save temporary raw file
@@ -620,7 +623,7 @@ class GeminiController extends BaseController
 
         // 3. Convert to MP3
         $mp3FileName = str_replace('.raw', '.mp3', $rawFileName);
-        $mp3FilePath = $publicPath . $mp3FileName;
+        $mp3FilePath = $securePath . $mp3FileName;
         $ffmpegService = service('ffmpegService');
         $conversionSuccess = $ffmpegService->convertPcmToMp3($rawFilePath, $mp3FilePath);
 
@@ -629,12 +632,38 @@ class GeminiController extends BaseController
             unlink($rawFilePath);
         }
 
-        // 5. Return public URL on success
+        // 5. Return just the filename on success, not the full URL.
         if ($conversionSuccess) {
-            return base_url('uploads/ttsaudio_public/' . $userId . '/' . $mp3FileName);
+            return $mp3FileName;
         }
 
         log_message('error', 'Failed to convert audio file to MP3.');
         return null;
+    }
+
+
+    public function serveAudio(string $fileName)
+    {
+        // Security Check 1: Ensure user is logged in
+        if (! session()->get('isLoggedIn')) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+
+        // Security Check 2: Sanitize filename to prevent directory traversal attacks
+        $sanitizedName = basename($fileName);
+        $userId = (int) session()->get('userId');
+        
+        // Construct the full, secure path (this MUST match the path in _processAudioData)
+        $filePath = WRITEPATH . 'uploads/ttsaudio_secure/' . $userId . '/' . $sanitizedName;
+
+        if (file_exists($filePath)) {
+            // Use CodeIgniter's built-in download response, which handles headers.
+            // The first parameter is the path, and the second is the raw data (null here).
+            // This will stream the file without revealing its location.
+            return $this->response->download($filePath, null)->setFileName($sanitizedName);
+        }
+
+        // If file not found, show a 404 error
+        throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
     }
 }

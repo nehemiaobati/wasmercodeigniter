@@ -209,6 +209,7 @@
         </div>
     </div>
 </div>
+<!-- FIX: Re-added the download form that was missing -->
 <form id="documentDownloadForm" action="<?= url_to('gemini.download_document') ?>" method="post" target="_blank" class="d-none">
     <?= csrf_field() ?>
     <textarea name="raw_response" id="download-raw-response"></textarea>
@@ -218,11 +219,12 @@
 
 <?= $this->section('scripts') ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<script src="<?= base_url('public/assets/tinymce/tinymce.min.js') ?>" referrerpolicy="origin"></script>
+<script src="<?= base_url('assets/tinymce/tinymce.min.js') ?>" referrerpolicy="origin"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         <?php if ($audio_url = session()->getFlashdata('audio_url')): ?>
-            const audioUrl = '<?= esc($audio_url, 'js') ?>';
+            // --- FIX: Use the secure audio serving route ---
+            const audioUrl = '<?= url_to("gemini.serve_audio", basename(esc($audio_url, 'js'))) ?>';
             const audioPlayerContainer = document.getElementById('audio-player-container');
             if (audioUrl && audioPlayerContainer) {
                 const audioPlayer = document.createElement('audio');
