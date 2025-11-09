@@ -13,6 +13,11 @@
         min-height: 250px;
     }
 
+    /* ENHANCEMENT: Added scroll-margin-top to prevent the output card from being hidden under a fixed header when scrolling. */
+    #results-card {
+        scroll-margin-top: 6rem;
+    }
+
     .prompt-editor-wrapper {
         overflow-y: auto;
         position: relative;
