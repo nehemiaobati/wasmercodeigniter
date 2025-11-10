@@ -2,13 +2,7 @@
 
 <?= $this->section('styles') ?>
 <style>
-    .details-card .list-group-item {
-        border: none;
-        /* REMOVED px-0 to allow card padding to apply */
-    }
-    .details-card .list-group-item strong {
-        min-width: 150px;
-    }
+    /* MODIFICATION: Entire <style> block removed. */
 </style>
 <?= $this->endSection() ?>
 
@@ -21,13 +15,14 @@
 
     <div class="row g-4">
         <div class="col-lg-5">
-            <div class="card blueprint-card details-card">
+            <div class="card blueprint-card">
                 <div class="card-body p-4">
                     <h4 class="card-title fw-bold mb-3">Account Information</h4>
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item d-flex justify-content-between"><strong>Username:</strong> <span><?= esc($user->username) ?></span></li>
-                        <li class="list-group-item d-flex justify-content-between"><strong>Email:</strong> <span class="text-truncate"><?= esc($user->email) ?></span></li>
-                        <li class="list-group-item d-flex justify-content-between"><strong>Current Balance:</strong> <span class="fw-bold h5 text-success mb-0">Ksh. <?= number_format($user->balance, 2) ?></span></li>
+                    <!-- MODIFICATION: Changed to a simpler <ul> with spacing utilities -->
+                    <ul class="list-unstyled">
+                        <li class="list-group-item d-flex justify-content-between py-2 border-bottom"><strong>Username:</strong> <span><?= esc($user->username) ?></span></li>
+                        <li class="list-group-item d-flex justify-content-between py-2 border-bottom"><strong>Email:</strong> <span class="text-truncate"><?= esc($user->email) ?></span></li>
+                        <li class="list-group-item d-flex justify-content-between py-2"><strong>Current Balance:</strong> <span class="fw-bold h5 text-success mb-0">Ksh. <?= number_format($user->balance, 2) ?></span></li>
                     </ul>
                 </div>
             </div>

@@ -20,7 +20,8 @@
         position: sticky;
         top: 85px;
         z-index: 999;
-        background-color: rgba(var(--card-bg-rgb), 0.9); /* MODIFICATION: Theme-aware background */
+        /* MODIFICATION: Use a theme-aware RGBA variable for transparency */
+        background-color: rgba(var(--bs-body-bg-rgb), 0.9);
         backdrop-filter: blur(10px);
         border-radius: 0.75rem;
         padding: 0.5rem 1rem;
@@ -131,7 +132,8 @@
         content: '';
         position: absolute;
         width: 4px;
-        background-color: var(--border-color); /* MODIFICATION */
+        /* MODIFICATION: Use theme-aware variable */
+        background-color: var(--border-color); 
         top: 0;
         bottom: 0;
         left: 50%;
@@ -160,7 +162,8 @@
         height: 20px;
         right: -10px;
         background-color: var(--primary-color);
-        border: 4px solid var(--light-bg); /* MODIFICATION */
+         /* MODIFICATION: Use theme-aware variable */
+        border: 4px solid var(--bs-body-bg);
         top: 25px;
         border-radius: 50%;
         z-index: 1;

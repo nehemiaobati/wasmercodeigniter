@@ -2,19 +2,7 @@
 
 <?= $this->section('styles') ?>
 <style>
-    .details-list .list-group-item {
-        border-left: 0;
-        border-right: 0;
-        /* REMOVED padding-left and padding-right to allow card padding to take effect */
-    }
-    .details-list .list-group-item strong {
-        min-width: 100px;
-    }
-    .details-list .list-group-item i {
-        color: var(--primary-color);
-        margin-right: 10px;
-        width: 20px;
-    }
+    /* MODIFICATION: The .details-list styling is removed. The card's padding is sufficient. */
     .status-badge {
         font-size: 0.8rem;
         padding: 0.4em 0.7em;
@@ -35,19 +23,20 @@
             <div class="card blueprint-card">
                 <div class="card-body p-4">
                     <h4 class="fw-bold mb-4">Profile Information</h4>
-                    <ul class="list-group list-group-flush details-list">
-                        <li class="list-group-item d-flex align-items-center">
-                            <i class="bi bi-person-fill"></i>
+                    <!-- MODIFICATION: Replaced custom list with Bootstrap utilities -->
+                    <ul class="list-unstyled">
+                        <li class="d-flex align-items-center py-2 border-bottom">
+                            <i class="bi bi-person-fill text-primary me-3"></i>
                             <strong>Username:</strong>
                             <span class="ms-auto text-muted"><?= esc($user->username) ?></span>
                         </li>
-                        <li class="list-group-item d-flex align-items-center">
-                            <i class="bi bi-envelope-fill"></i>
+                        <li class="d-flex align-items-center py-2 border-bottom">
+                            <i class="bi bi-envelope-fill text-primary me-3"></i>
                             <strong>Email:</strong>
                             <span class="ms-auto text-muted text-truncate"><?= esc($user->email) ?></span>
                         </li>
-                        <li class="list-group-item d-flex align-items-center">
-                            <i class="bi bi-wallet2"></i>
+                        <li class="d-flex align-items-center py-2">
+                            <i class="bi bi-wallet2 text-primary me-3"></i>
                             <strong>Balance:</strong>
                             <span class="ms-auto fw-bold h5 text-success mb-0">Ksh. <?= esc(number_format($user->balance, 2)) ?></span>
                         </li>
@@ -59,7 +48,7 @@
             </div>
         </div>
 
-        <!-- Transaction History Column -->
+        <!-- Transaction History Column (No changes needed here) -->
         <div class="col-lg-8">
             <div class="card blueprint-card d-flex flex-column">
                 <div class="card-body p-4 flex-grow-1">

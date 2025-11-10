@@ -4,18 +4,21 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
 <style>
     :root {
-        --border-color: #dadce0;
+        /* Centralized theme variables */
+        --border-color: var(--bs-border-color); /* Use Bootstrap's variable for consistency */
         --code-bg: #282c34;
+        --upload-area-bg: var(--bs-tertiary-bg);
+        --upload-area-border-hover: var(--bs-primary);
+        --upload-area-bg-hover: #e8f0fe; /* Note: This is a light-theme specific color. For full dark mode, this would need a variable. */
     }
 
     .prompt-card {
-        height: calc(100vh - 300px);
+        height: calc(100vh - 270px);
         min-height: 250px;
     }
 
-    /* ENHANCEMENT: Added scroll-margin-top to prevent the output card from being hidden under a fixed header when scrolling. */
     #results-card {
-        scroll-margin-top: 6rem;
+        scroll-margin-top: 6rem; /* Good for UX, no change needed */
     }
 
     .prompt-editor-wrapper {
@@ -63,22 +66,16 @@
         border: 2px dashed var(--border-color);
         border-radius: 0.5rem;
         padding: 1.5rem;
+        background-color: var(--upload-area-bg);
         transition: background-color 0.2s ease, border-color 0.2s ease;
     }
 
     #mediaUploadArea.dragover {
-        background-color: #e8f0fe;
-        border-color: var(--bs-primary);
+        background-color: var(--upload-area-bg-hover);
+        border-color: var(--upload-area-border-hover);
     }
 
-    #file-progress-container .file-name {
-        font-size: 0.9rem;
-        color: #5f6368;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 150px;
-    }
+    /* REPLACEMENT: Replaced custom CSS for .file-name with Bootstrap's .text-truncate utility class in the HTML */
 
     .tox-tinymce {
         border-radius: 0.5rem !important;
@@ -107,8 +104,8 @@
                         <label for="prompt" class="form-label fw-bold visually-hidden">Your Prompt</label>
                         <textarea id="prompt" name="prompt" style="visibility: hidden;"><?= old('prompt') ?></textarea>
                     </div>
-                    <div class="p-4 border-top action-footer ">
-                        <div id="mediaUploadArea" class="mb-3 bg-body-tertiary ">
+                    <div class="p-4 border-top action-footer">
+                        <div id="mediaUploadArea" class="mb-3">
                             <input type="file" id="media-input-trigger" multiple class="d-none">
                             <label for="media-input-trigger" class="btn btn-outline-secondary w-100"><i class="bi bi-paperclip"></i> Attach Files or Drag & Drop</label>
                             <div id="upload-list-wrapper" class="mt-3 text-start" style="max-height: 120px; overflow-y: auto; padding-right: 10px;">
@@ -116,9 +113,11 @@
                             </div>
                             <div id="uploaded-files-container"></div>
                         </div>
-                        <div class="d-flex justify-content-end align-items-center gap-2 ">
+                        <div class="d-flex justify-content-end align-items-center gap-2">
                             <button type="button" class="btn btn-link text-decoration-none" data-bs-toggle="modal" data-bs-target="#savePromptModal" title="Save this prompt"><i class="bi bi-bookmark-plus"></i> Save</button>
-                            <button type="submit" id="generateBtn" class="btn btn-primary btn-lg fw-bold"><i class="bi bi-sparkles"></i> Generate</button>
+                            <button type="submit" id="generateBtn" class="btn btn-primary btn-lg fw-bold" data-loading-text="Generating...">
+                                <i class="bi bi-sparkles"></i> Generate
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -136,7 +135,6 @@
                         </div>
                         <small class="text-muted d-block mt-1">Remember previous conversations for follow-up questions.</small>
                     </div>
-
                     <div class="pb-3 mb-3 border-bottom">
                         <div class="form-check form-switch p-0 d-flex justify-content-between align-items-center">
                             <label class="form-check-label h5 mb-0" for="voiceOutputToggle">Voice Output</label>
@@ -145,19 +143,35 @@
                         <small class="text-muted d-block mt-1">Automatically play the AI's response as audio.</small>
                     </div>
                 </div>
+
                 <?php if (!empty($prompts)): ?>
                     <div class="pb-3 mb-3 border-bottom">
                         <h5 class="fw-bold">Saved Prompts</h5>
-                        <div class="input-group"><select class="form-select" id="savedPrompts">
-                                <option selected disabled>Select a prompt...</option><?php foreach ($prompts as $p): ?><option value="<?= esc($p->prompt_text) ?>" data-id="<?= $p->id ?>"><?= esc($p->title) ?></option><?php endforeach; ?>
-                            </select></div>
-                        <div class="d-flex gap-2 mt-2"><button type="button" id="usePromptBtn" class="btn btn-sm btn-outline-secondary w-100"><i class="bi bi-arrow-down-circle"></i> Use</button><button type="button" id="deletePromptBtn" class="btn btn-sm btn-outline-danger w-100" disabled><i class="bi bi-trash"></i> Delete</button></div>
+                        <div class="input-group">
+                            <select class="form-select" id="savedPrompts">
+                                <option selected disabled>Select a prompt...</option>
+                                <?php foreach ($prompts as $p): ?>
+                                    <option value="<?= esc($p->prompt_text, 'attr') ?>" data-id="<?= $p->id ?>"><?= esc($p->title) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="d-flex gap-2 mt-2">
+                            <button type="button" id="usePromptBtn" class="btn btn-sm btn-outline-secondary w-100"><i class="bi bi-arrow-down-circle"></i> Use</button>
+                            <button type="button" id="deletePromptBtn" class="btn btn-sm btn-outline-danger w-100" disabled><i class="bi bi-trash"></i> Delete</button>
+                        </div>
                     </div>
                 <?php endif; ?>
+
                 <div>
                     <h5 class="fw-bold">Memory Management</h5>
                     <p class="small text-muted mb-2">Permanently delete all past interactions from conversation history.</p>
-                    <form id="clearMemoryForm" action="<?= url_to('gemini.memory.clear') ?>" method="post"><?= csrf_field() ?><div class="d-grid"><button type="submit" id="clearMemoryBtn" class="btn btn-outline-danger w-100"><i class="bi bi-trash"></i> Clear All Memory</button></div>
+                    <form id="clearMemoryForm" action="<?= url_to('gemini.memory.clear') ?>" method="post">
+                        <?= csrf_field() ?>
+                        <div class="d-grid">
+                            <button type="submit" id="clearMemoryBtn" class="btn btn-outline-danger w-100" data-loading-text="Clearing..." data-confirm-text="Are you sure you want to permanently delete your entire conversation history? This action cannot be undone.">
+                                <i class="bi bi-trash"></i> Clear All Memory
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -192,29 +206,44 @@
     <?php endif; ?>
 </div>
 
+<!-- MODALS & TOASTS -->
 <div class="modal fade" id="savePromptModal" tabindex="-1" aria-labelledby="savePromptModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content blueprint-card">
             <form id="savePromptForm" action="<?= url_to('gemini.prompts.add') ?>" method="post">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="savePromptModalLabel">Save New Prompt</h5> <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title fw-bold" id="savePromptModalLabel">Save New Prompt</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body"> <?= csrf_field() ?> <div class="form-floating mb-3"> <input type="text" class="form-control" id="promptTitle" name="title" placeholder="Prompt Title" required> <label for="promptTitle">Prompt Title</label> </div>
-                    <div class="form-floating"> <textarea class="form-control" placeholder="Prompt Text" id="modalPromptText" name="prompt_text" style="height: 100px" required></textarea> <label for="modalPromptText">Prompt Text</label> </div>
+                <div class="modal-body">
+                    <?= csrf_field() ?>
+                    <div class="form-floating mb-3">
+                        <input type="text" class="form-control" id="promptTitle" name="title" placeholder="Prompt Title" required>
+                        <label for="promptTitle">Prompt Title</label>
+                    </div>
+                    <div class="form-floating">
+                        <textarea class="form-control" placeholder="Prompt Text" id="modalPromptText" name="prompt_text" style="height: 100px" required></textarea>
+                        <label for="modalPromptText">Prompt Text</label>
+                    </div>
                 </div>
-                <div class="modal-footer"> <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button> <button type="submit" class="btn btn-primary">Save Prompt</button> </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Save Prompt</button>
+                </div>
             </form>
         </div>
     </div>
 </div>
+
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
     <div id="settingsToast" class="toast align-items-center text-white bg-dark border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="3000">
         <div class="d-flex">
-            <div class="toast-body"></div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            <div class="toast-body"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
     </div>
 </div>
-<!-- FIX: Re-added the download form that was missing -->
+
 <form id="documentDownloadForm" action="<?= url_to('gemini.download_document') ?>" method="post" target="_blank" class="d-none">
     <?= csrf_field() ?>
     <textarea name="raw_response" id="download-raw-response"></textarea>
@@ -228,7 +257,6 @@
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         <?php if ($audio_url = session()->getFlashdata('audio_url')): ?>
-            // --- FIX: Use the secure audio serving route ---
             const audioUrl = '<?= url_to("gemini.serve_audio", basename(esc($audio_url, 'js'))) ?>';
             const audioPlayerContainer = document.getElementById('audio-player-container');
             if (audioUrl && audioPlayerContainer) {
@@ -243,29 +271,54 @@
         <?php endif; ?>
 
         const app = {
-            csrfToken: document.querySelector('input[name="<?= csrf_token() ?>"]').value,
+            csrfTokenName: '<?= csrf_token() ?>',
+            csrfTokenValue: document.querySelector(`input[name="<?= csrf_token() ?>"]`).value,
+            
+            // IMPROVEMENT: Centralized constants for strings and selectors
+            config: {
+                i18n: {
+                    deletePromptConfirm: 'Are you sure you want to delete this prompt?',
+                    validationFail: 'Please enter a prompt or upload a file before generating.',
+                    copySuccess: 'Copied!',
+                    copyDefault: '<i class="bi bi-clipboard"></i> Copy'
+                },
+                selectors: {
+                    copyButton: '.copy-code-btn',
+                    codeBlock: 'pre code',
+                    rawResponse: '#raw-response-for-copy',
+                    finalContent: '#final-rendered-content'
+                }
+            },
+            
             elements: {
+                // Forms
                 geminiForm: document.getElementById('geminiForm'),
                 clearMemoryForm: document.getElementById('clearMemoryForm'),
+                // Buttons
                 generateBtn: document.getElementById('generateBtn'),
                 clearMemoryBtn: document.getElementById('clearMemoryBtn'),
+                usePromptBtn: document.getElementById('usePromptBtn'),
+                deletePromptBtn: document.getElementById('deletePromptBtn'),
+                copyBtn: document.getElementById('copy-response-btn'),
+                downloadPdfBtn: document.getElementById('download-pdf-btn'),
+                downloadWordBtn: document.getElementById('download-word-btn'),
+                // Toggles
                 assistantModeToggle: document.getElementById('assistantModeToggle'),
                 voiceOutputToggle: document.getElementById('voiceOutputToggle'),
-                settingsToast: new bootstrap.Toast(document.getElementById('settingsToast')),
+                // Media Upload
                 mediaInput: document.getElementById('media-input-trigger'),
                 mediaUploadArea: document.getElementById('mediaUploadArea'),
                 progressContainer: document.getElementById('file-progress-container'),
                 uploadedFilesContainer: document.getElementById('uploaded-files-container'),
+                // Prompts
                 savedPromptsSelect: document.getElementById('savedPrompts'),
-                usePromptBtn: document.getElementById('usePromptBtn'),
-                deletePromptBtn: document.getElementById('deletePromptBtn'),
                 savePromptModal: document.getElementById('savePromptModal'),
                 modalPromptTextarea: document.getElementById('modalPromptText'),
+                // Output
                 responseWrapper: document.getElementById('ai-response-wrapper'),
-                copyBtn: document.getElementById('copy-response-btn'),
-                downloadPdfBtn: document.getElementById('download-pdf-btn'),
-                downloadWordBtn: document.getElementById('download-word-btn'),
+                settingsToast: new bootstrap.Toast(document.getElementById('settingsToast')),
             },
+
             urls: {
                 upload: "<?= route_to('gemini.upload_media') ?>",
                 deleteMedia: "<?= route_to('gemini.delete_media') ?>",
@@ -285,7 +338,7 @@
             initTinyMCE() {
                 tinymce.init({
                     selector: '#prompt',
-                    plugins: 'autolink link lists ',
+                    plugins: 'autolink link lists',
                     height: '100%',
                     menubar: false,
                     statusbar: false,
@@ -294,17 +347,20 @@
                     content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 16px }',
                     placeholder: 'Enter your prompt here...',
                     license_key: 'gpl',
-                    init_instance_callback: (editor) => {
-                        editor.getContainer().style.visibility = 'visible';
-                    }
+                    init_instance_callback: (editor) => editor.getContainer().style.visibility = 'visible'
                 });
             },
 
             bindEvents() {
+                // Main form submissions
                 this.elements.geminiForm?.addEventListener('submit', this.handleFormSubmit.bind(this));
                 this.elements.clearMemoryForm?.addEventListener('submit', this.handleClearMemorySubmit.bind(this));
-                this.elements.assistantModeToggle?.addEventListener('change', this.handleAssistantSettingsChange.bind(this));
-                this.elements.voiceOutputToggle?.addEventListener('change', this.handleVoiceSettingsChange.bind(this));
+                
+                // Settings toggles
+                this.elements.assistantModeToggle?.addEventListener('change', (e) => this.updateSetting(this.urls.updateSettings, e.target.checked, 'Conversational Memory'));
+                this.elements.voiceOutputToggle?.addEventListener('change', (e) => this.updateSetting(this.urls.updateVoiceSettings, e.target.checked, 'Voice Output'));
+
+                // Drag & Drop media upload
                 const dndEvents = ['dragenter', 'dragover', 'dragleave', 'drop'];
                 dndEvents.forEach(eName => this.elements.mediaUploadArea?.addEventListener(eName, e => { e.preventDefault(); e.stopPropagation(); }));
                 ['dragenter', 'dragover'].forEach(eName => this.elements.mediaUploadArea?.addEventListener(eName, () => this.elements.mediaUploadArea.classList.add('dragover')));
@@ -312,13 +368,19 @@
                 this.elements.mediaInput?.addEventListener('change', (e) => this.handleFiles(e.target.files));
                 this.elements.mediaUploadArea?.addEventListener('drop', e => this.handleFiles(e.dataTransfer.files));
                 this.elements.progressContainer?.addEventListener('click', this.handleFileDelete.bind(this));
+
+                // Saved prompts functionality
                 this.elements.savedPromptsSelect?.addEventListener('change', e => this.elements.deletePromptBtn.disabled = !e.target.options[e.target.selectedIndex].dataset.id);
                 this.elements.usePromptBtn?.addEventListener('click', this.handleUsePrompt.bind(this));
                 this.elements.deletePromptBtn?.addEventListener('click', this.handleDeletePrompt.bind(this));
                 this.elements.savePromptModal?.addEventListener('show.bs.modal', this.handleModalShow.bind(this));
+
+                // Response output actions
                 this.elements.copyBtn?.addEventListener('click', this.handleCopyResponse.bind(this));
                 this.elements.downloadPdfBtn?.addEventListener('click', (e) => { e.preventDefault(); this.handleDownload('pdf'); });
                 this.elements.downloadWordBtn?.addEventListener('click', (e) => { e.preventDefault(); this.handleDownload('docx'); });
+
+                // Page lifecycle
                 window.addEventListener('pageshow', this.restoreButtonStates.bind(this));
             },
 
@@ -326,25 +388,18 @@
                 tinymce.triggerSave();
                 if (!tinymce.get('prompt').getContent({ format: 'text' }).trim() && this.elements.uploadedFilesContainer.children.length === 0) {
                     e.preventDefault();
-                    alert('Please enter a prompt or upload a file before generating.');
+                    alert(this.config.i18n.validationFail);
                     return;
                 }
-                this.setLoadingState(this.elements.generateBtn, 'Generating...');
+                this.setLoadingState(this.elements.generateBtn);
             },
 
             handleClearMemorySubmit(e) {
-                if (!confirm('Are you sure you want to permanently delete your entire conversation history? This action cannot be undone.')) {
+                if (!confirm(this.elements.clearMemoryBtn.dataset.confirmText)) {
                     e.preventDefault();
+                    return;
                 }
-                this.setLoadingState(this.elements.clearMemoryBtn, 'Clearing...');
-            },
-
-            async handleAssistantSettingsChange(e) {
-                await this.updateSetting(this.urls.updateSettings, e.target.checked, 'Conversational Memory');
-            },
-            
-            async handleVoiceSettingsChange(e) {
-                await this.updateSetting(this.urls.updateVoiceSettings, e.target.checked, 'Voice Output');
+                this.setLoadingState(this.elements.clearMemoryBtn);
             },
 
             async updateSetting(url, isEnabled, featureName) {
@@ -371,6 +426,7 @@
                 const uiElementId = removeBtn.dataset.uiId;
                 const formData = new FormData();
                 formData.append('file_id', fileToDelete);
+
                 try {
                     const data = await this.fetchWithCsrf(this.urls.deleteMedia, { method: 'POST', body: formData });
                     if (data.status === 'success') {
@@ -386,9 +442,8 @@
             
             handleUsePrompt() {
                 const selectedOption = this.elements.savedPromptsSelect.options[this.elements.savedPromptsSelect.selectedIndex];
-                const selectedPromptText = selectedOption?.value;
-                if (selectedPromptText) {
-                    tinymce.get('prompt').setContent(selectedPromptText);
+                if (selectedOption?.value) {
+                    tinymce.get('prompt').setContent(selectedOption.value);
                 }
             },
 
@@ -396,11 +451,12 @@
                 const selectedOption = this.elements.savedPromptsSelect.options[this.elements.savedPromptsSelect.selectedIndex];
                 const selectedPromptId = selectedOption?.dataset.id;
                 if (!selectedPromptId || this.elements.deletePromptBtn.disabled) return;
-                if (confirm('Are you sure you want to delete this prompt?')) {
+                
+                if (confirm(this.config.i18n.deletePromptConfirm)) {
                     const tempForm = document.createElement('form');
                     tempForm.method = 'post';
                     tempForm.action = `${this.urls.deletePromptBase}${selectedPromptId}`;
-                    tempForm.innerHTML = `<input type="hidden" name="<?= csrf_token() ?>" value="${this.csrfToken}">`;
+                    tempForm.innerHTML = `<input type="hidden" name="${this.csrfTokenName}" value="${this.csrfTokenValue}">`;
                     document.body.appendChild(tempForm);
                     tempForm.submit();
                 }
@@ -411,22 +467,25 @@
             },
 
             handleResponseOutput() {
-                this.elements.responseWrapper.innerHTML = document.getElementById('final-rendered-content').innerHTML;
-                this.setupResponseFormatting();
-                setTimeout(() => {
-                    document.getElementById('results-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }, 100);
+                const finalContent = document.querySelector(this.config.selectors.finalContent);
+                if (finalContent) {
+                    this.elements.responseWrapper.innerHTML = finalContent.innerHTML;
+                    this.setupResponseFormatting();
+                    setTimeout(() => {
+                        document.getElementById('results-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
+                }
             },
             
             handleCopyResponse() {
-                const rawText = document.getElementById('raw-response-for-copy').value;
+                const rawText = document.querySelector(this.config.selectors.rawResponse).value;
                 navigator.clipboard.writeText(rawText).then(() => {
                     this.setButtonFeedback(this.elements.copyBtn, '<i class="bi bi-check-lg"></i>', '<i class="bi bi-clipboard"></i>');
                 });
             },
 
             handleDownload(format) {
-                document.getElementById('download-raw-response').value = document.getElementById('raw-response-for-copy').value;
+                document.getElementById('download-raw-response').value = document.querySelector(this.config.selectors.rawResponse).value;
                 document.getElementById('download-format').value = format;
                 document.getElementById('documentDownloadForm').submit();
             },
@@ -436,16 +495,18 @@
                 const progressItem = document.createElement('div');
                 progressItem.className = 'progress-item d-flex align-items-center gap-3 mb-3';
                 progressItem.id = fileId;
-                progressItem.innerHTML = `<span class="file-name" title="${file.name}">${file.name}</span><div class="progress flex-grow-1" style="height: 8px;"><div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div></div><span class="status-icon text-muted fs-5"><i class="bi bi-hourglass-split"></i></span>`;
+                // IMPROVEMENT: Replaced custom CSS class with Bootstrap's .text-truncate utility class
+                progressItem.innerHTML = `<span class="file-name text-truncate" title="${file.name}">${file.name}</span><div class="progress flex-grow-1" style="height: 8px;"><div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div></div><span class="status-icon text-muted fs-5"><i class="bi bi-hourglass-split"></i></span>`;
                 this.elements.progressContainer.appendChild(progressItem);
 
                 const xhr = new XMLHttpRequest();
                 const formData = new FormData();
                 formData.append('file', file);
-                formData.append('<?= csrf_token() ?>', this.csrfToken);
+                formData.append(this.csrfTokenName, this.csrfTokenValue);
 
                 xhr.open('POST', this.urls.upload, true);
-
+                
+                // Note: Using XHR here is acceptable because its 'upload.onprogress' is simpler for progress bars than fetch.
                 xhr.upload.onprogress = e => {
                     if (e.lengthComputable) progressItem.querySelector('.progress-bar').style.width = `${(e.loaded / e.total) * 100}%`;
                 };
@@ -494,24 +555,24 @@
                     wrapper.appendChild(pre);
                     const copyButton = document.createElement('button');
                     copyButton.className = 'copy-code-btn';
-                    copyButton.innerHTML = '<i class="bi bi-clipboard"></i> Copy';
+                    copyButton.innerHTML = this.config.i18n.copyDefault;
                     copyButton.addEventListener('click', () => {
                         const codeToCopy = pre.querySelector('code')?.innerText || pre.innerText;
                         navigator.clipboard.writeText(codeToCopy).then(() => {
-                            this.setButtonFeedback(copyButton, 'Copied!', '<i class="bi bi-clipboard"></i> Copy');
+                            this.setButtonFeedback(copyButton, this.config.i18n.copySuccess, this.config.i18n.copyDefault);
                         });
                     });
                     wrapper.appendChild(copyButton);
                 });
                 if (typeof hljs !== 'undefined') {
-                    this.elements.responseWrapper.querySelectorAll('pre code').forEach((block) => {
+                    this.elements.responseWrapper.querySelectorAll(this.config.selectors.codeBlock).forEach((block) => {
                         hljs.highlightElement(block);
                     });
                 }
             },
 
             async fetchWithCsrf(url, options = {}) {
-                options.body.append('<?= csrf_token() ?>', this.csrfToken);
+                options.body.append(this.csrfTokenName, this.csrfTokenValue);
                 const response = await fetch(url, { ...options, headers: { 'X-Requested-With': 'XMLHttpRequest', ...options.headers } });
                 const data = await response.json();
                 if (data.csrf_token) this.updateCsrfToken(data.csrf_token);
@@ -521,13 +582,22 @@
 
             updateCsrfToken(newToken) {
                 if (!newToken) return;
-                this.csrfToken = newToken;
-                document.querySelectorAll('input[name="<?= csrf_token() ?>"]').forEach(input => input.value = newToken);
+                this.csrfTokenValue = newToken;
+                document.querySelectorAll(`input[name="${this.csrfTokenName}"]`).forEach(input => input.value = newToken);
             },
 
-            setLoadingState(button, text) {
-                button.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ${text}`;
+            setLoadingState(button) {
+                const loadingText = button.dataset.loadingText || 'Loading...';
+                button.dataset.originalHtml = button.innerHTML;
+                button.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ${loadingText}`;
                 button.disabled = true;
+            },
+            
+            restoreLoadingState(button) {
+                if (button && button.dataset.originalHtml) {
+                    button.innerHTML = button.dataset.originalHtml;
+                    button.disabled = false;
+                }
             },
 
             setButtonFeedback(button, feedbackText, originalText) {
@@ -545,14 +615,8 @@
             },
 
             restoreButtonStates() {
-                if (this.elements.generateBtn) {
-                    this.elements.generateBtn.innerHTML = `<i class="bi bi-sparkles"></i> Generate`;
-                    this.elements.generateBtn.disabled = false;
-                }
-                if (this.elements.clearMemoryBtn) {
-                    this.elements.clearMemoryBtn.innerHTML = `<i class="bi bi-trash"></i> Clear All Memory`;
-                    this.elements.clearMemoryBtn.disabled = false;
-                }
+                this.restoreLoadingState(this.elements.generateBtn);
+                this.restoreLoadingState(this.elements.clearMemoryBtn);
             }
         };
 

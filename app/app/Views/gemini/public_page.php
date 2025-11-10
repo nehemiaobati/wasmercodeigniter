@@ -2,10 +2,9 @@
 
 <?= $this->section('styles') ?>
 <style>
-    /* MODIFICATION: Removed blueprint-card styles as they are now global. */
+    /* MODIFICATION: Removed blueprint-card styles. Only page-specific styles remain. */
     .hero-section {
-        /* MODIFICATION: Switched to use theme variable for background. */
-        background-color: var(--card-bg); 
+        background-color: var(--bs-tertiary-bg); /* Use theme-aware variable */
         padding: 4rem 0;
         border-bottom: 1px solid var(--border-color);
     }
