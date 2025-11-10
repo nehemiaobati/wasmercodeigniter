@@ -99,10 +99,16 @@ class PaymentsController extends BaseController
             $db = \Config\Database::connect();
             $db->transStart();
 
-            $this->paymentModel->update($payment->id, [
-                'status'            => 'success',
-                'paystack_response' => json_encode($response['data']),
-            ]);
+// Refactored success case
+$jsonResponse = json_encode($response['data']);
+if ($jsonResponse === false) {
+    log_message('error', 'Failed to encode Paystack success response for reference: ' . $paystackReference);
+    $jsonResponse = json_encode(['error' => 'JSON encoding failed']);
+}
+$this->paymentModel->update($payment->id, [
+    'status'            => 'success',
+    'paystack_response' => $jsonResponse,
+]);
 
             if ($payment->user_id) {
                 $this->userModel->addBalance((int) $payment->user_id, (string) $payment->amount);
@@ -118,10 +124,16 @@ class PaymentsController extends BaseController
             return redirect()->to(url_to('payment.index'))->with('success', 'Payment successful!');
         }
 
-        $this->paymentModel->update($payment->id, [
-            'status'            => 'failed',
-            'paystack_response' => json_encode($response['data'] ?? $response),
-        ]);
+// Refactored failure case
+$jsonResponse = json_encode($response['data'] ?? $response);
+if ($jsonResponse === false) {
+    log_message('error', 'Failed to encode Paystack failure response for reference: ' . $paystackReference);
+    $jsonResponse = json_encode(['error' => 'JSON encoding failed']);
+}
+$this->paymentModel->update($payment->id, [
+    'status'            => 'failed',
+    'paystack_response' => $jsonResponse,
+]);
 
         return redirect()->to(url_to('payment.index'))->with('error', ['payment' => $response['message'] ?? 'Payment verification failed.']);
     }

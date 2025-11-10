@@ -32,17 +32,34 @@ class PortfolioController extends BaseController
             return redirect()->back()->withInput()->with('error', $this->validator->getErrors());
         }
 
-        $name    = $this->request->getPost('name');
-        $email   = $this->request->getPost('email');
-        $subject = $this->request->getPost('subject');
-        $message = $this->request->getPost('message');
+        $name    = $this->request->getPost('name', FILTER_SANITIZE_SPECIAL_CHARS);
+        $email   = $this->request->getPost('email', FILTER_SANITIZE_EMAIL);
+        $subject = $this->request->getPost('subject', FILTER_SANITIZE_SPECIAL_CHARS);
+        $message = $this->request->getPost('message', FILTER_SANITIZE_SPECIAL_CHARS);
 
         $emailService = service('email');
 
         $emailService->setFrom(config('Email')->fromEmail, config('Email')->fromName);
         $emailService->setTo('nehemiahobati@gmail.com');
         $emailService->setSubject($subject);
-        $emailService->setMessage("Name: {$name}\nEmail: {$email}\n\nMessage:\n{$message}");
+        // --- FIX START: Construct an HTML email body ---
+        // We build an HTML string for proper formatting and escape all user input
+        // to prevent XSS attacks.
+        $emailContent = '
+        <html>
+        <body>
+            <p><strong>Name:</strong> ' . esc($name) . '</p>
+            <p><strong>Email:</strong> ' . esc($email) . '</p>
+            <p><strong>Subject:</strong> ' . esc($subject) . '</p>
+            <p><strong>Message:</strong></p>
+            <p>' . nl2br(esc($message)) . '</p>
+        </body>
+        </html>';
+
+        $emailService->setMessage($emailContent);
+        // Ensure the email client renders this as HTML
+        $emailService->setMailType('html');
+        // --- FIX END ---
 
         if ($emailService->send()) {
             return redirect()->back()->with('success', 'Your message has been sent successfully!');

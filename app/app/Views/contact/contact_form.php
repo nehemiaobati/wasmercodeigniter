@@ -4,6 +4,22 @@
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 <?= $this->endSection() ?>
 
+<?= $this->section('scripts') ?>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const contactForm = document.getElementById('contactForm');
+        const sendMessageButton = document.getElementById('sendMessageButton');
+
+        if (contactForm && sendMessageButton) {
+            contactForm.addEventListener('submit', function() {
+                sendMessageButton.setAttribute('disabled', 'disabled');
+                sendMessageButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sending...';
+            });
+        }
+    });
+</script>
+<?= $this->endSection() ?>
+
 <?= $this->section('content') ?>
 <script type="application/ld+json">
 {
@@ -29,7 +45,7 @@
                         <p class="text-muted">Have a question, a project idea, or need support? Fill out the form below and I'll get back to you shortly.</p>
                     </div>
 
-                    <?= form_open(url_to('contact.send')) ?>
+                    <?= form_open(url_to('contact.send'), ['id' => 'contactForm']) ?>
                         <div class="form-floating mb-3">
                             <input type="text" class="form-control" id="name" name="name" placeholder="Your Name" value="<?= old('name') ?>" required>
                             <label for="name">Name</label>
@@ -50,7 +66,7 @@
                             <div class="g-recaptcha" data-sitekey="<?= config('Config\Custom\Recaptcha')->siteKey ?>"></div>
                         </div>
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg fw-bold">Send Message</button>
+                            <button type="submit" class="btn btn-primary btn-lg fw-bold" id="sendMessageButton">Send Message</button>
                         </div>
                     <?= form_close() ?>
                 </div>

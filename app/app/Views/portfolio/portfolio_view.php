@@ -472,12 +472,12 @@
                     </ul>
                 </div>
                 <div class="blueprint-card p-4">
-                    <?= form_open(url_to('portfolio.sendEmail')) ?>
+                    <?= form_open(url_to('portfolio.sendEmail'), ['id' => 'contactForm']) ?>
                     <div class="form-floating mb-3"><input type="text" class="form-control" id="name" name="name" placeholder="Name" required><label for="name">Name</label></div>
                     <div class="form-floating mb-3"><input type="email" class="form-control" id="email" name="email" placeholder="Email" required><label for="email">Email</label></div>
                     <div class="form-floating mb-3"><input type="text" class="form-control" id="subject" name="subject" placeholder="Subject" required><label for="subject">Subject</label></div>
                     <div class="form-floating mb-3"><textarea class="form-control" placeholder="Your Message" id="message" name="message" style="height: 120px" required></textarea><label for="message">Your Message</label></div>
-                    <button type="submit" class="btn btn-primary">Send Message</button>
+                    <button type="submit" class="btn btn-primary" id="sendMessageButton">Send Message</button>
                     <?= form_close() ?>
                 </div>
             </div>
@@ -509,6 +509,16 @@
         sections.forEach(section => {
             observer.observe(section);
         });
+
+        const contactForm = document.getElementById('contactForm');
+        const sendMessageButton = document.getElementById('sendMessageButton');
+
+        if (contactForm && sendMessageButton) {
+            contactForm.addEventListener('submit', function() {
+                sendMessageButton.setAttribute('disabled', 'disabled');
+                sendMessageButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sending...';
+            });
+        }
     });
 </script>
 <?= $this->endSection() ?>

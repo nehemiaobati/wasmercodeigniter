@@ -21,9 +21,13 @@
         </div>
         <div class="content">
             <p>Hi, <?= esc($username) ?>,</p>
-            <!-- The body content is not escaped here because we trust the admin to provide valid HTML -->
-            <?= $body_content ?>
-        </div>
+    <?php
+        // Sanitize the HTML content to allow only a safe subset of tags.
+        // This prevents XSS attacks while preserving basic formatting.
+        $allowed_tags = '<p><a><strong><em><ul><ol><li><br><h1><h2><h3><h4><h5><h6>';
+        echo strip_tags($body_content, $allowed_tags);
+    ?>
+</div>
         <div class="footer">
             <p>&copy; <?= date('Y') ?> AFRIKENKID. All rights reserved.</p>
             <p>You are receiving this email because you are a registered user of our service.</p>
