@@ -234,7 +234,7 @@
         </div>
     </div>
 
-    <main>
+    <main class="min-vh-100">
         <div class="container my-4">
             <?= $this->include('partials/flash_messages') ?>
         </div>
