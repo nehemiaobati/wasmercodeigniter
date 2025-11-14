@@ -31,6 +31,7 @@ class DocumentService
     {
         // 1. Convert Markdown to HTML
         $parsedown = new Parsedown();
+        $parsedown->setBreaksEnabled(true);
         $htmlContent = $parsedown->text($markdownContent);
 
         // Add basic styling for better output

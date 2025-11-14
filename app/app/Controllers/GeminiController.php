@@ -234,6 +234,7 @@ class GeminiController extends BaseController
         $this->_processApiResponse($user, $apiResponse, $isAssistantMode, $contextData);
 
         $parsedown  = new Parsedown();
+        $parsedown->setBreaksEnabled(true);
         $parsedown->setSafeMode(true); // Enable built-in sanitization
         $htmlResult = $parsedown->text($rawTextResult);
 
