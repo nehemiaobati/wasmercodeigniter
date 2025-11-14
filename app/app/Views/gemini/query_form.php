@@ -13,8 +13,7 @@
     }
 
     .prompt-card {
-        height: calc(100vh - 270px);
-        min-height: 250px;
+        min-height: calc(100vh - 270px);
     }
 
     #results-card {
@@ -24,6 +23,7 @@
     .prompt-editor-wrapper {
         overflow-y: auto;
         position: relative;
+        height: 250px;
     }
 
     .code-block-wrapper {
@@ -100,7 +100,7 @@
             <form id="geminiForm" action="<?= url_to('gemini.generate') ?>" method="post" enctype="multipart/form-data">
                 <?= csrf_field() ?>
                 <div class="blueprint-card p-0 prompt-card d-flex flex-column">
-                    <div class="prompt-editor-wrapper p-4 flex-grow-1" style="min-height: 200px;">
+                    <div class="prompt-editor-wrapper p-4 flex-grow-1">
                         <label for="prompt" class="form-label fw-bold visually-hidden">Your Prompt</label>
                         <textarea id="prompt" name="prompt" style="visibility: hidden;"><?= old('prompt') ?></textarea>
                     </div>
