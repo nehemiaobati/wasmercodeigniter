@@ -24,6 +24,7 @@
         overflow-y: auto;
         position: relative;
         height: 250px;
+
     }
 
     .code-block-wrapper {
@@ -414,8 +415,28 @@
                 }
             },
 
-            handleFiles(files) {
-                [...files].forEach(file => this.uploadFile(file));
+            // =================================================================
+            // REFACTOR START: Sequential File Upload Queue
+            // The original `handleFiles` function fired all uploads in parallel,
+            // causing a CSRF token race condition. This refactored version uses
+            // async/await to process the files one by one, ensuring each upload
+            // uses the fresh CSRF token returned by the previous successful upload.
+            // =================================================================
+            async handleFiles(files) {
+                // Use a modern `for...of` loop which works correctly with `await`.
+                for (const file of files) {
+                    try {
+                        // `await` pauses the loop until the `uploadFile` promise
+                        // is either resolved (success) or rejected (failure).
+                        await this.uploadFile(file);
+                    } catch (error) {
+                        // If any file fails to upload, log the error and stop
+                        // processing the rest of the files in the batch.
+                        console.error("Upload failed for a file, stopping the queue.", error.message);
+                        break;
+                    }
+                }
+                // Clear the file input value after processing all files.
                 this.elements.mediaInput.value = '';
             },
 
@@ -490,61 +511,78 @@
                 document.getElementById('documentDownloadForm').submit();
             },
 
+            // =================================================================
+            // REFACTOR START: Promise-based File Upload
+            // The `uploadFile` function is now wrapped in a Promise. This allows
+            // the `async handleFiles` function to `await` its completion.
+            // It resolves on a successful upload and rejects on any failure,
+            // passing control back to the `handleFiles` queue manager.
+            // =================================================================
             uploadFile(file) {
-                const fileId = `file-${Math.random().toString(36).substr(2, 9)}`;
-                const progressItem = document.createElement('div');
-                progressItem.className = 'progress-item d-flex align-items-center gap-3 mb-3';
-                progressItem.id = fileId;
-                // IMPROVEMENT: Replaced custom CSS class with Bootstrap's .text-truncate utility class
-                progressItem.innerHTML = `<span class="file-name text-truncate" title="${file.name}">${file.name}</span><div class="progress flex-grow-1" style="height: 8px;"><div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div></div><span class="status-icon text-muted fs-5"><i class="bi bi-hourglass-split"></i></span>`;
-                this.elements.progressContainer.appendChild(progressItem);
+                return new Promise((resolve, reject) => {
+                    const fileId = `file-${Math.random().toString(36).substr(2, 9)}`;
+                    const progressItem = document.createElement('div');
+                    progressItem.className = 'progress-item d-flex align-items-center gap-3 mb-3';
+                    progressItem.id = fileId;
+                    progressItem.innerHTML = `<span class="file-name text-truncate" title="${file.name}">${file.name}</span><div class="progress flex-grow-1" style="height: 8px;"><div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div></div><span class="status-icon text-muted fs-5"><i class="bi bi-hourglass-split"></i></span>`;
+                    this.elements.progressContainer.appendChild(progressItem);
 
-                const xhr = new XMLHttpRequest();
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append(this.csrfTokenName, this.csrfTokenValue);
+                    const xhr = new XMLHttpRequest();
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    // CRITICAL: Always read the *current* CSRF token value for each new request.
+                    formData.append(this.csrfTokenName, this.csrfTokenValue);
 
-                xhr.open('POST', this.urls.upload, true);
-                
-                // Note: Using XHR here is acceptable because its 'upload.onprogress' is simpler for progress bars than fetch.
-                xhr.upload.onprogress = e => {
-                    if (e.lengthComputable) progressItem.querySelector('.progress-bar').style.width = `${(e.loaded / e.total) * 100}%`;
-                };
+                    xhr.open('POST', this.urls.upload, true);
+                    
+                    xhr.upload.onprogress = e => {
+                        if (e.lengthComputable) progressItem.querySelector('.progress-bar').style.width = `${(e.loaded / e.total) * 100}%`;
+                    };
 
-                xhr.onload = () => {
-                    const progressBar = progressItem.querySelector('.progress-bar');
-                    const statusIcon = progressItem.querySelector('.status-icon');
-                    progressBar.classList.remove('progress-bar-striped', 'progress-bar-animated');
-                    try {
-                        const response = JSON.parse(xhr.responseText);
-                        this.updateCsrfToken(response.csrf_token);
-                        if (xhr.status === 200) {
-                            progressBar.classList.add('bg-success');
-                            statusIcon.innerHTML = `<button type="button" class="btn btn-sm btn-link text-danger p-0 remove-file-btn" data-file-id="${response.file_id}" data-ui-id="${fileId}"><i class="bi bi-x-circle-fill"></i></button>`;
-                            const hiddenInput = document.createElement('input');
-                            hiddenInput.type = 'hidden';
-                            hiddenInput.name = 'uploaded_media[]';
-                            hiddenInput.value = response.file_id;
-                            hiddenInput.id = `hidden-${fileId}`;
-                            this.elements.uploadedFilesContainer.appendChild(hiddenInput);
-                        } else {
+                    xhr.onload = () => {
+                        const progressBar = progressItem.querySelector('.progress-bar');
+                        const statusIcon = progressItem.querySelector('.status-icon');
+                        progressBar.classList.remove('progress-bar-striped', 'progress-bar-animated');
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            // CRITICAL: Update the app's CSRF token with the new one from the response.
+                            this.updateCsrfToken(response.csrf_token);
+
+                            if (xhr.status === 200) {
+                                progressBar.classList.add('bg-success');
+                                statusIcon.innerHTML = `<button type="button" class="btn btn-sm btn-link text-danger p-0 remove-file-btn" data-file-id="${response.file_id}" data-ui-id="${fileId}"><i class="bi bi-x-circle-fill"></i></button>`;
+                                const hiddenInput = document.createElement('input');
+                                hiddenInput.type = 'hidden';
+                                hiddenInput.name = 'uploaded_media[]';
+                                hiddenInput.value = response.file_id;
+                                hiddenInput.id = `hidden-${fileId}`;
+                                this.elements.uploadedFilesContainer.appendChild(hiddenInput);
+                                resolve(); // Signal success to the calling async function.
+                            } else {
+                                progressBar.classList.add('bg-danger');
+                                statusIcon.innerHTML = `<i class="bi bi-x-circle-fill text-danger" title="${response.message || 'Upload failed'}"></i>`;
+                                reject(new Error(response.message || 'Upload failed')); // Signal failure.
+                            }
+                        } catch (e) {
                             progressBar.classList.add('bg-danger');
-                            statusIcon.innerHTML = `<i class="bi bi-x-circle-fill text-danger" title="${response.message || 'Upload failed'}"></i>`;
+                            statusIcon.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-danger" title="An unknown error occurred."></i>`;
+                            reject(e); // Signal failure.
                         }
-                    } catch (e) {
-                        progressBar.classList.add('bg-danger');
-                        statusIcon.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-danger" title="An unknown error occurred."></i>`;
-                    }
-                };
+                    };
 
-                xhr.onerror = () => {
-                    const progressBar = progressItem.querySelector('.progress-bar');
-                    progressBar.classList.remove('progress-bar-striped', 'progress-bar-animated', 'bg-success').add('bg-danger');
-                    progressItem.querySelector('.status-icon').innerHTML = `<i class="bi bi-exclamation-triangle-fill text-danger" title="Network error."></i>`;
-                };
+                    xhr.onerror = () => {
+                        const progressBar = progressItem.querySelector('.progress-bar');
+                        progressBar.classList.remove('progress-bar-striped', 'progress-bar-animated', 'bg-success').add('bg-danger');
+                        progressItem.querySelector('.status-icon').innerHTML = `<i class="bi bi-exclamation-triangle-fill text-danger" title="Network error."></i>`;
+                        reject(new Error('Network error during upload.')); // Signal failure.
+                    };
 
-                xhr.send(formData);
+                    xhr.send(formData);
+                });
             },
+            // =================================================================
+            // REFACTOR END
+            // =================================================================
 
             setupResponseFormatting() {
                 this.elements.responseWrapper.querySelectorAll('pre').forEach(pre => {
