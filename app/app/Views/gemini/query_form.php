@@ -100,7 +100,7 @@
             <form id="geminiForm" action="<?= url_to('gemini.generate') ?>" method="post" enctype="multipart/form-data">
                 <?= csrf_field() ?>
                 <div class="blueprint-card p-0 prompt-card d-flex flex-column">
-                    <div class="prompt-editor-wrapper p-4 flex-grow-1">
+                    <div class="prompt-editor-wrapper p-4 flex-grow-1" style="min-height: 200px;">
                         <label for="prompt" class="form-label fw-bold visually-hidden">Your Prompt</label>
                         <textarea id="prompt" name="prompt" style="visibility: hidden;"><?= old('prompt') ?></textarea>
                     </div>
