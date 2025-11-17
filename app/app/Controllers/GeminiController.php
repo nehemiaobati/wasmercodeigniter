@@ -79,6 +79,8 @@ class GeminiController extends BaseController
             'assistant_mode_enabled' => $assistantModeEnabled,
             'voice_output_enabled'   => $voiceOutputEnabled,
             'audio_url'              => session()->getFlashdata('audio_url'),
+            'maxFileSize'            => self::MAX_FILE_SIZE,
+            'supportedMimeTypes'     => json_encode(self::SUPPORTED_MIME_TYPES),
         ];
         $data['robotsTag'] = 'noindex, follow';
         return view('gemini/query_form', $data);

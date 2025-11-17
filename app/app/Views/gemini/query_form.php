@@ -1,7 +1,7 @@
 <?= $this->extend('layouts/default') ?>
 
 <?= $this->section('styles') ?>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<link rel="stylesheet" href="<?= base_url('public/assets/highlight/styles/atom-one-dark.min.css') ?>">
 <style>
     :root {
         /* Centralized theme variables */
@@ -253,10 +253,13 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="<?= base_url('public/assets/highlight/highlight.js') ?>"></script>
 <script src="<?= base_url('public/assets/tinymce/tinymce.min.js') ?>" referrerpolicy="origin"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+        const MAX_FILE_SIZE = <?= $maxFileSize ?? 10 * 1024 * 1024 ?>;
+        const SUPPORTED_MIME_TYPES = <?= $supportedMimeTypes ?? '[]' ?>;
+
         <?php if ($audio_url = session()->getFlashdata('audio_url')): ?>
             const audioUrl = '<?= url_to("gemini.serve_audio", basename(esc($audio_url, 'js'))) ?>';
             const audioPlayerContainer = document.getElementById('audio-player-container');
@@ -415,25 +418,24 @@
                 }
             },
 
-            // =================================================================
-            // REFACTOR START: Sequential File Upload Queue
-            // The original `handleFiles` function fired all uploads in parallel,
-            // causing a CSRF token race condition. This refactored version uses
-            // async/await to process the files one by one, ensuring each upload
-            // uses the fresh CSRF token returned by the previous successful upload.
-            // =================================================================
             async handleFiles(files) {
-                // Use a modern `for...of` loop which works correctly with `await`.
                 for (const file of files) {
+                    // NEW: Client-side validation before upload attempt
+                    if (file.size > MAX_FILE_SIZE) {
+                        this.displayValidationError(file, `Exceeds max size of ${Math.round(MAX_FILE_SIZE / 1024 / 1024)} MB`);
+                        continue; // Skip this file and proceed to the next one
+                    }
+                    if (!SUPPORTED_MIME_TYPES.includes(file.type)) {
+                        this.displayValidationError(file, 'Unsupported file type');
+                        continue; // Skip this file and proceed to the next one
+                    }
+
                     try {
-                        // `await` pauses the loop until the `uploadFile` promise
-                        // is either resolved (success) or rejected (failure).
                         await this.uploadFile(file);
                     } catch (error) {
-                        // If any file fails to upload, log the error and stop
-                        // processing the rest of the files in the batch.
-                        console.error("Upload failed for a file, stopping the queue.", error.message);
-                        break;
+                        // BUG FIX #2: The queue no longer stops on failure.
+                        // The 'break;' statement was removed.
+                        console.error("Upload failed for a file, continuing with next in queue.", error.message);
                     }
                 }
                 // Clear the file input value after processing all files.
@@ -443,21 +445,31 @@
             async handleFileDelete(e) {
                 const removeBtn = e.target.closest('.remove-file-btn');
                 if (!removeBtn) return;
+
                 const fileToDelete = removeBtn.dataset.fileId;
                 const uiElementId = removeBtn.dataset.uiId;
-                const formData = new FormData();
-                formData.append('file_id', fileToDelete);
 
-                try {
-                    const data = await this.fetchWithCsrf(this.urls.deleteMedia, { method: 'POST', body: formData });
-                    if (data.status === 'success') {
-                        document.getElementById(uiElementId)?.remove();
-                        document.getElementById(`hidden-${uiElementId}`)?.remove();
-                    } else {
-                        alert('Could not remove file: ' + data.message);
+                // BUG FIX #1: Conditionally delete file on server
+                // If fileToDelete has a value, it exists on the server. Otherwise, it was a validation error and only exists in the UI.
+                if (fileToDelete) {
+                    const formData = new FormData();
+                    formData.append('file_id', fileToDelete);
+
+                    try {
+                        const data = await this.fetchWithCsrf(this.urls.deleteMedia, { method: 'POST', body: formData });
+                        if (data.status === 'success') {
+                            document.getElementById(uiElementId)?.remove();
+                            document.getElementById(`hidden-${uiElementId}`)?.remove();
+                        } else {
+                            alert('Could not remove file: ' + data.message);
+                        }
+                    } catch (error) {
+                        console.error('Error deleting file:', error);
+                        alert('An error occurred while trying to delete the file.');
                     }
-                } catch (error) {
-                    console.error('Error deleting file:', error);
+                } else {
+                    // This handles deleting UI elements for files that failed client-side or server-side validation.
+                    document.getElementById(uiElementId)?.remove();
                 }
             },
             
@@ -511,13 +523,22 @@
                 document.getElementById('documentDownloadForm').submit();
             },
 
-            // =================================================================
-            // REFACTOR START: Promise-based File Upload
-            // The `uploadFile` function is now wrapped in a Promise. This allows
-            // the `async handleFiles` function to `await` its completion.
-            // It resolves on a successful upload and rejects on any failure,
-            // passing control back to the `handleFiles` queue manager.
-            // =================================================================
+            displayValidationError(file, message) {
+                const fileId = `file-invalid-${Math.random().toString(36).substr(2, 9)}`;
+                const errorItem = document.createElement('div');
+                errorItem.className = 'progress-item d-flex align-items-center gap-3 mb-3';
+                errorItem.id = fileId;
+                errorItem.innerHTML = `
+                    <span class="file-name text-truncate" title="${file.name}">${file.name}</span>
+                    <div class="flex-grow-1 text-danger small">${message}</div>
+                    <span class="status-icon text-muted fs-5">
+                        <button type="button" class="btn btn-sm btn-link text-danger p-0 remove-file-btn" data-ui-id="${fileId}">
+                            <i class="bi bi-x-circle-fill"></i>
+                        </button>
+                    </span>`;
+                this.elements.progressContainer.appendChild(errorItem);
+            },
+            
             uploadFile(file) {
                 return new Promise((resolve, reject) => {
                     const fileId = `file-${Math.random().toString(36).substr(2, 9)}`;
@@ -530,7 +551,6 @@
                     const xhr = new XMLHttpRequest();
                     const formData = new FormData();
                     formData.append('file', file);
-                    // CRITICAL: Always read the *current* CSRF token value for each new request.
                     formData.append(this.csrfTokenName, this.csrfTokenValue);
 
                     xhr.open('POST', this.urls.upload, true);
@@ -545,7 +565,6 @@
                         progressBar.classList.remove('progress-bar-striped', 'progress-bar-animated');
                         try {
                             const response = JSON.parse(xhr.responseText);
-                            // CRITICAL: Update the app's CSRF token with the new one from the response.
                             this.updateCsrfToken(response.csrf_token);
 
                             if (xhr.status === 200) {
@@ -557,32 +576,29 @@
                                 hiddenInput.value = response.file_id;
                                 hiddenInput.id = `hidden-${fileId}`;
                                 this.elements.uploadedFilesContainer.appendChild(hiddenInput);
-                                resolve(); // Signal success to the calling async function.
+                                resolve();
                             } else {
                                 progressBar.classList.add('bg-danger');
-                                statusIcon.innerHTML = `<i class="bi bi-x-circle-fill text-danger" title="${response.message || 'Upload failed'}"></i>`;
-                                reject(new Error(response.message || 'Upload failed')); // Signal failure.
+                                statusIcon.innerHTML = `<button type="button" class="btn btn-sm btn-link text-danger p-0 remove-file-btn" data-ui-id="${fileId}"><i class="bi bi-x-circle-fill" title="${response.message || 'Upload failed'}"></i></button>`;
+                                reject(new Error(response.message || 'Upload failed'));
                             }
                         } catch (e) {
                             progressBar.classList.add('bg-danger');
-                            statusIcon.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-danger" title="An unknown error occurred."></i>`;
-                            reject(e); // Signal failure.
+                            statusIcon.innerHTML = `<button type="button" class="btn btn-sm btn-link text-danger p-0 remove-file-btn" data-ui-id="${fileId}"><i class="bi bi-x-circle-fill" title="An unknown error occurred."></i></button>`;
+                            reject(e);
                         }
                     };
 
                     xhr.onerror = () => {
                         const progressBar = progressItem.querySelector('.progress-bar');
                         progressBar.classList.remove('progress-bar-striped', 'progress-bar-animated', 'bg-success').add('bg-danger');
-                        progressItem.querySelector('.status-icon').innerHTML = `<i class="bi bi-exclamation-triangle-fill text-danger" title="Network error."></i>`;
-                        reject(new Error('Network error during upload.')); // Signal failure.
+                        progressItem.querySelector('.status-icon').innerHTML = `<button type="button" class="btn btn-sm btn-link text-danger p-0 remove-file-btn" data-ui-id="${fileId}"><i class="bi bi-x-circle-fill" title="Network error."></i></button>`;
+                        reject(new Error('Network error during upload.'));
                     };
 
                     xhr.send(formData);
                 });
             },
-            // =================================================================
-            // REFACTOR END
-            // =================================================================
 
             setupResponseFormatting() {
                 this.elements.responseWrapper.querySelectorAll('pre').forEach(pre => {
