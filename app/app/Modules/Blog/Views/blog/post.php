@@ -1,7 +1,7 @@
 <?= $this->extend('layouts/default') ?>
 
 <?= $this->section('styles') ?>
-<link rel="stylesheet" href="<?= base_url('ppublic/assets/highlight/styles/atom-one-dark.min.css') ?>">
+<link rel="stylesheet" href="<?= base_url('public/assets/highlight/styles/atom-one-dark.min.css') ?>">
 <style>
     .article-body h2, .article-body h3 {
         margin-top: 2.5rem;
