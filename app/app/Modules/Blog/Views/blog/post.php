@@ -69,6 +69,6 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
-<script src="<?= base_url('assets/highlight/highlight.js') ?>"></script>
+<script src="<?= base_url('public/assets/highlight/highlight.js') ?>"></script>
 <script>hljs.highlightAll();</script>
 <?= $this->endSection() ?>
