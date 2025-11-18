@@ -4,7 +4,7 @@ namespace App\Controllers;
 
 use App\Controllers\BaseController;
 use App\Models\UserModel;
-use App\Models\PaymentModel;
+use App\Modules\Payments\Models\PaymentModel;
 
 /**
  * Handles user account-related functionalities, including displaying user information,

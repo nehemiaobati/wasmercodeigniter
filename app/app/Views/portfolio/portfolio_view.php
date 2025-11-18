@@ -264,7 +264,7 @@
             "@type": "Person",
             "name": "Nehemia Obati",
             "url": "<?= url_to('portfolio.index') ?>",
-            "image": "<?= base_url('public/assets/images/potraitwebp.webp') ?>",
+            "image": "<?= base_url('assets/images/potraitwebp.webp') ?>",
             "sameAs": [
                 "https://www.linkedin.com/in/nehemia-obati-b74886344"
             ],

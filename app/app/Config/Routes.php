@@ -20,8 +20,12 @@ $routes->group('', static function ($routes) {
     // Home & Welcome Page
     $routes->get('/', 'HomeController::landing', ['as' => 'landing']);
 
+
     // Documentation Page
-    $routes->get('/documentation', 'DocumentationController::index', ['as' => 'documentation']);
+    $routes->get('documentation', 'DocumentationController::index', ['as' => 'documentation']);
+    $routes->get('documentation/web', 'DocumentationController::web', ['as' => 'web']);
+    $routes->get('documentation/agi', 'DocumentationController::agi', ['as' => 'agi']);
+    
 
     // Sitemap Route for SEO
     $routes->get('sitemap.xml', 'SitemapController::index', ['as' => 'sitemap']);
@@ -53,8 +57,6 @@ $routes->group('', static function ($routes) {
     $routes->get('privacy', 'HomeController::privacy', ['as' => 'privacy']);
 
     // Public Service Pages
-    $routes->get('ai-studio', 'GeminiController::publicPage', ['as' => 'gemini.public']);
-    $routes->get('crypto-query', 'CryptoController::publicPage', ['as' => 'crypto.public']);
 });
 
 //--------------------------------------------------------------------
@@ -84,40 +86,7 @@ $routes->group('', ['filter' => 'auth'], static function ($routes) {
         $routes->post('campaign/send', 'CampaignController::send', ['as' => 'admin.campaign.send']);
         $routes->post('campaign/save', 'CampaignController::save', ['as' => 'admin.campaign.save']);
         $routes->post('campaign/delete/(:num)', 'CampaignController::delete/$1', ['as' => 'admin.campaign.delete']); // ADDED THIS LINE
-    });
 
-    // Payment Routes
-    $routes->group('payment', static function ($routes) {
-        $routes->get('/', 'PaymentsController::index', ['as' => 'payment.index']);
-        //$routes->get('initiate', 'Payments::initiate', ['as' => 'payment.initiate']); // Added GET route
-        $routes->post('initiate', 'PaymentsController::initiate', ['as' => 'payment.initiate']);
-        $routes->get('verify', 'PaymentsController::verify', ['as' => 'payment.verify']);
-    });
-
-    // Crypto Routes
-    $routes->group('crypto', static function ($routes) {
-        $routes->get('/', 'CryptoController::index', ['as' => 'crypto.index']);
-        $routes->post('query', 'CryptoController::query', ['as' => 'crypto.query', 'filter' => 'balance']);
-    });
-
-    // Gemini API Routes
-    $routes->group('gemini', static function ($routes) {
-        $routes->get('/', 'GeminiController::index', ['as' => 'gemini.index']);
-        $routes->post('generate', 'GeminiController::generate', ['as' => 'gemini.generate', 'filter' => 'balance']);
-        $routes->post('prompts/add', 'GeminiController::addPrompt', ['as' => 'gemini.prompts.add']);
-        $routes->post('prompts/delete/(:num)', 'GeminiController::deletePrompt/$1', ['as' => 'gemini.prompts.delete']);
-        // Route for clearing conversational memory
-        $routes->post('memory/clear', 'GeminiController::clearMemory', ['as' => 'gemini.memory.clear']);
-        $routes->post('upload-media', 'GeminiController::uploadMedia', ['as' => 'gemini.upload_media']);
-        $routes->post('delete-media', 'GeminiController::deleteMedia', ['as' => 'gemini.delete_media']);
-        // [NEW] Route for updating assistant mode setting
-        $routes->post('settings/update-assistant-mode', 'GeminiController::updateAssistantMode', ['as' => 'gemini.settings.updateAssistantMode']);
-        // [NEW] Route for updating voice output setting
-        $routes->post('settings/update-voice-output', 'GeminiController::updateVoiceOutputMode', ['as' => 'gemini.settings.updateVoiceOutputMode']);
-        // [NEW] Route for serving TTS audio files
-        $routes->get('gemini/serve-audio/(:segment)', 'GeminiController::serveAudio/$1', ['as' => 'gemini.serve_audio']);
-        // [REVISED] Route for downloading generated content as PDF or Word.
-        $routes->post('download-document', 'GeminiController::downloadDocument', ['as' => 'gemini.download_document']);
     });
 
 });

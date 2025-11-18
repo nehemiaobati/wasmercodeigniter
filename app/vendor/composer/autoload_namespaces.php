@@ -9,4 +9,5 @@ return array(
     'org\\bovigo\\vfs\\' => array($vendorDir . '/mikey179/vfsstream/src/main/php'),
     'Parsedown' => array($vendorDir . '/erusev/parsedown'),
     'NlpTools\\' => array($vendorDir . '/nlp-tools/nlp-tools/src'),
+    'HTMLPurifier' => array($vendorDir . '/ezyang/htmlpurifier/library'),
 );

@@ -11,16 +11,16 @@
     },
     "require": {
         "php": "^8.1",
+        "ext-bcmath": "*",
         "ext-intl": "*",
         "ext-mbstring": "*",
-        "ext-bcmath": "*",
-        "erusev/parsedown": "^1.7",
-         "ezyang/htmlpurifier": "^4.19",
-        "laminas/laminas-escaper": "^2.17",
-        "psr/log": "^3.0",
         "dompdf/dompdf": "^2.0",
+        "erusev/parsedown": "^1.7",
+        "ezyang/htmlpurifier": "^4.19",
+        "laminas/laminas-escaper": "^2.17",
         "nlp-tools/nlp-tools": "^0.1.3",
-        "php-ffmpeg/php-ffmpeg": "^1.2"
+        "php-ffmpeg/php-ffmpeg": "^1.2",
+        "psr/log": "^3.0"
     },
     "require-dev": {
         "codeigniter/coding-standard": "^1.7",

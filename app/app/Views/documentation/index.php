@@ -6,12 +6,12 @@
 
     <p>Below are links to the official documentation:</p>
 
-    <a href="<?= base_url('public/assets/Web Platform.pdf') ?>" class="btn btn-primary doc-link mt-4" target="_blank">
-        Web Platform Documentation
+    <a href="<?= url_to('web') ?>"  class="btn btn-primary doc-link mt-4" >
+        Web Documentation
     </a>
 
-    <a href="<?= base_url('public/assets/Documentation AGI V5.2.pdf') ?>" class="btn btn-primary doc-link mt-4" target="_blank">
-        AGI V5.2 Documentation
+    <a href="<?= url_to('agi') ?>" class="btn btn-primary doc-link mt-4" >
+        AGI Documentation
     </a>
 </div>
 

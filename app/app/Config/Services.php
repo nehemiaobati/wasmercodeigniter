@@ -3,17 +3,17 @@
 namespace Config;
 
 use CodeIgniter\Config\BaseService;
-use App\Libraries\EmbeddingService;
-use App\Libraries\MemoryService;
-use App\Libraries\TokenService;
-use App\Libraries\TrainingService;
-use App\Libraries\PaystackService;
-use App\Libraries\CryptoService;
-use App\Libraries\GeminiService;
+use App\Modules\Gemini\Libraries\EmbeddingService;
+use App\Modules\Gemini\Libraries\MemoryService;
+use App\Modules\Gemini\Libraries\TokenService;
+use App\Modules\Gemini\Libraries\TrainingService;
+use App\Modules\Payments\Libraries\PaystackService;
+use App\Modules\Crypto\Libraries\CryptoService;
+use App\Modules\Gemini\Libraries\GeminiService;
 use App\Libraries\RecaptchaService;
-use App\Libraries\FfmpegService;
-use App\Libraries\PandocService;
-use App\Libraries\DocumentService;
+use App\Modules\Gemini\Libraries\FfmpegService;
+use App\Modules\Gemini\Libraries\PandocService;
+use App\Modules\Gemini\Libraries\DocumentService;
 
 /**
  * Services Configuration file.

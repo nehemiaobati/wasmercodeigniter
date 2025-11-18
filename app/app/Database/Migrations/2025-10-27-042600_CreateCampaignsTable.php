@@ -8,7 +8,7 @@ use CodeIgniter\Database\Forge;
 /**
  * Create Campaigns Table Migration
  */
-class Migration_2025_10_27_042600_CreateCampaignsTable extends Migration
+class CreateCampaignsTable extends Migration
 {
     /**
      * @var Forge

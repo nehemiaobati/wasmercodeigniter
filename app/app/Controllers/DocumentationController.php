@@ -19,4 +19,17 @@ class DocumentationController extends BaseController
         return view('documentation/index', $data);
     }
 
+    public function web(): string
+    {
+        // Set robotsTag to 'noindex, follow' for documentation pages.
+        $data['robotsTag'] = 'noindex, follow';
+        return view('documentation/web_documentation', $data);
+    }
+
+    public function agi(): string
+    {
+        // Set robotsTag to 'noindex, follow' for documentation pages.
+        $data['robotsTag'] = 'noindex, follow';
+        return view('documentation/agi_documentation', $data);
+    }
 }
