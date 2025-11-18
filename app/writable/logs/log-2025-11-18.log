@@ -1,0 +1,112 @@
+ERROR - 2025-11-18 07:48:09 --> mysqli_sql_exception: Table 'payments' already exists in /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MySQLi/Connection.php:327
+Stack trace:
+#0 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MySQLi/Connection.php(327): mysqli->query('CREATE TABLE `p...', 0)
+#1 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/BaseConnection.php(729): CodeIgniter\Database\MySQLi\Connection->execute('CREATE TABLE `p...')
+#2 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/BaseConnection.php(646): CodeIgniter\Database\BaseConnection->simpleQuery('CREATE TABLE `p...')
+#3 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/Forge.php(570): CodeIgniter\Database\BaseConnection->query('CREATE TABLE `p...')
+#4 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/app/Modules/Payments/Database/Migrations/2025-09-05-164356_CreatePaymentsTable.php(58): CodeIgniter\Database\Forge->createTable('payments')
+#5 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MigrationRunner.php(876): App\Modules\Payments\Database\Migrations\CreatePaymentsTable->up()
+#6 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MigrationRunner.php(182): CodeIgniter\Database\MigrationRunner->migrate('up', Object(stdClass))
+#7 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Database/Migrate.php(85): CodeIgniter\Database\MigrationRunner->latest(NULL)
+#8 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/CLI/Commands.php(74): CodeIgniter\Commands\Database\Migrate->run(Array)
+#9 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/CLI/Console.php(47): CodeIgniter\CLI\Commands->run('migrate', Array)
+#10 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Boot.php(388): CodeIgniter\CLI\Console->run()
+#11 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Boot.php(133): CodeIgniter\Boot::runCommand(Object(CodeIgniter\CLI\Console))
+#12 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/spark(87): CodeIgniter\Boot::bootSpark(Object(Config\Paths))
+#13 {main}
+ERROR - 2025-11-18 07:48:09 --> mysqli_sql_exception: Table 'prompts' already exists in /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MySQLi/Connection.php:327
+Stack trace:
+#0 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MySQLi/Connection.php(327): mysqli->query('CREATE TABLE `p...', 0)
+#1 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/BaseConnection.php(729): CodeIgniter\Database\MySQLi\Connection->execute('CREATE TABLE `p...')
+#2 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/BaseConnection.php(646): CodeIgniter\Database\BaseConnection->simpleQuery('CREATE TABLE `p...')
+#3 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/Forge.php(570): CodeIgniter\Database\BaseConnection->query('CREATE TABLE `p...')
+#4 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/app/Modules/Gemini/Database/Migrations/2025-10-14-013757_CreatePromptsTable.php(43): CodeIgniter\Database\Forge->createTable('prompts')
+#5 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MigrationRunner.php(876): App\Modules\Gemini\Database\Migrations\CreatePromptsTable->up()
+#6 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MigrationRunner.php(182): CodeIgniter\Database\MigrationRunner->migrate('up', Object(stdClass))
+#7 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Database/Migrate.php(85): CodeIgniter\Database\MigrationRunner->latest(NULL)
+#8 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/CLI/Commands.php(74): CodeIgniter\Commands\Database\Migrate->run(Array)
+#9 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/CLI/Console.php(47): CodeIgniter\CLI\Commands->run('migrate', Array)
+#10 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Boot.php(388): CodeIgniter\CLI\Console->run()
+#11 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Boot.php(133): CodeIgniter\Boot::runCommand(Object(CodeIgniter\CLI\Console))
+#12 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/spark(87): CodeIgniter\Boot::bootSpark(Object(Config\Paths))
+#13 {main}
+ERROR - 2025-11-18 07:48:10 --> mysqli_sql_exception: Table 'interactions' already exists in /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MySQLi/Connection.php:327
+Stack trace:
+#0 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MySQLi/Connection.php(327): mysqli->query('CREATE TABLE `i...', 0)
+#1 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/BaseConnection.php(729): CodeIgniter\Database\MySQLi\Connection->execute('CREATE TABLE `i...')
+#2 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/BaseConnection.php(646): CodeIgniter\Database\BaseConnection->simpleQuery('CREATE TABLE `i...')
+#3 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/Forge.php(570): CodeIgniter\Database\BaseConnection->query('CREATE TABLE `i...')
+#4 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/app/Modules/Gemini/Database/Migrations/2025-10-18-014534_CreateMemoryTables.php(31): CodeIgniter\Database\Forge->createTable('interactions')
+#5 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MigrationRunner.php(876): App\Modules\Gemini\Database\Migrations\CreateMemoryTables->up()
+#6 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MigrationRunner.php(182): CodeIgniter\Database\MigrationRunner->migrate('up', Object(stdClass))
+#7 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Database/Migrate.php(85): CodeIgniter\Database\MigrationRunner->latest(NULL)
+#8 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/CLI/Commands.php(74): CodeIgniter\Commands\Database\Migrate->run(Array)
+#9 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/CLI/Console.php(47): CodeIgniter\CLI\Commands->run('migrate', Array)
+#10 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Boot.php(388): CodeIgniter\CLI\Console->run()
+#11 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Boot.php(133): CodeIgniter\Boot::runCommand(Object(CodeIgniter\CLI\Console))
+#12 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/spark(87): CodeIgniter\Boot::bootSpark(Object(Config\Paths))
+#13 {main}
+ERROR - 2025-11-18 07:48:10 --> mysqli_sql_exception: Table 'entities' already exists in /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MySQLi/Connection.php:327
+Stack trace:
+#0 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MySQLi/Connection.php(327): mysqli->query('CREATE TABLE `e...', 0)
+#1 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/BaseConnection.php(729): CodeIgniter\Database\MySQLi\Connection->execute('CREATE TABLE `e...')
+#2 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/BaseConnection.php(646): CodeIgniter\Database\BaseConnection->simpleQuery('CREATE TABLE `e...')
+#3 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/Forge.php(570): CodeIgniter\Database\BaseConnection->query('CREATE TABLE `e...')
+#4 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/app/Modules/Gemini/Database/Migrations/2025-10-18-014534_CreateMemoryTables.php(51): CodeIgniter\Database\Forge->createTable('entities')
+#5 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MigrationRunner.php(876): App\Modules\Gemini\Database\Migrations\CreateMemoryTables->up()
+#6 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MigrationRunner.php(182): CodeIgniter\Database\MigrationRunner->migrate('up', Object(stdClass))
+#7 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Database/Migrate.php(85): CodeIgniter\Database\MigrationRunner->latest(NULL)
+#8 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/CLI/Commands.php(74): CodeIgniter\Commands\Database\Migrate->run(Array)
+#9 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/CLI/Console.php(47): CodeIgniter\CLI\Commands->run('migrate', Array)
+#10 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Boot.php(388): CodeIgniter\CLI\Console->run()
+#11 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Boot.php(133): CodeIgniter\Boot::runCommand(Object(CodeIgniter\CLI\Console))
+#12 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/spark(87): CodeIgniter\Boot::bootSpark(Object(Config\Paths))
+#13 {main}
+ERROR - 2025-11-18 07:48:10 --> mysqli_sql_exception: Table 'user_settings' already exists in /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MySQLi/Connection.php:327
+Stack trace:
+#0 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MySQLi/Connection.php(327): mysqli->query('CREATE TABLE `u...', 0)
+#1 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/BaseConnection.php(729): CodeIgniter\Database\MySQLi\Connection->execute('CREATE TABLE `u...')
+#2 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/BaseConnection.php(646): CodeIgniter\Database\BaseConnection->simpleQuery('CREATE TABLE `u...')
+#3 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/Forge.php(570): CodeIgniter\Database\BaseConnection->query('CREATE TABLE `u...')
+#4 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/app/Modules/Gemini/Database/Migrations/2025-10-19-221000_CreateUserSettingsTable.php(53): CodeIgniter\Database\Forge->createTable('user_settings')
+#5 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MigrationRunner.php(876): App\Modules\Gemini\Database\Migrations\CreateUserSettingsTable->up()
+#6 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MigrationRunner.php(182): CodeIgniter\Database\MigrationRunner->migrate('up', Object(stdClass))
+#7 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Database/Migrate.php(85): CodeIgniter\Database\MigrationRunner->latest(NULL)
+#8 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/CLI/Commands.php(74): CodeIgniter\Commands\Database\Migrate->run(Array)
+#9 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/CLI/Console.php(47): CodeIgniter\CLI\Commands->run('migrate', Array)
+#10 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Boot.php(388): CodeIgniter\CLI\Console->run()
+#11 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Boot.php(133): CodeIgniter\Boot::runCommand(Object(CodeIgniter\CLI\Console))
+#12 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/spark(87): CodeIgniter\Boot::bootSpark(Object(Config\Paths))
+#13 {main}
+ERROR - 2025-11-18 07:48:10 --> mysqli_sql_exception: Table 'campaigns' already exists in /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MySQLi/Connection.php:327
+Stack trace:
+#0 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MySQLi/Connection.php(327): mysqli->query('CREATE TABLE `c...', 0)
+#1 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/BaseConnection.php(729): CodeIgniter\Database\MySQLi\Connection->execute('CREATE TABLE `c...')
+#2 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/BaseConnection.php(646): CodeIgniter\Database\BaseConnection->simpleQuery('CREATE TABLE `c...')
+#3 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/Forge.php(570): CodeIgniter\Database\BaseConnection->query('CREATE TABLE `c...')
+#4 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/app/Database/Migrations/2025-10-27-042600_CreateCampaignsTable.php(56): CodeIgniter\Database\Forge->createTable('campaigns')
+#5 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MigrationRunner.php(876): App\Database\Migrations\CreateCampaignsTable->up()
+#6 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MigrationRunner.php(182): CodeIgniter\Database\MigrationRunner->migrate('up', Object(stdClass))
+#7 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Database/Migrate.php(85): CodeIgniter\Database\MigrationRunner->latest(NULL)
+#8 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/CLI/Commands.php(74): CodeIgniter\Commands\Database\Migrate->run(Array)
+#9 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/CLI/Console.php(47): CodeIgniter\CLI\Commands->run('migrate', Array)
+#10 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Boot.php(388): CodeIgniter\CLI\Console->run()
+#11 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Boot.php(133): CodeIgniter\Boot::runCommand(Object(CodeIgniter\CLI\Console))
+#12 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/spark(87): CodeIgniter\Boot::bootSpark(Object(Config\Paths))
+#13 {main}
+ERROR - 2025-11-18 07:48:11 --> mysqli_sql_exception: Duplicate column name 'voice_output_enabled' in /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MySQLi/Connection.php:327
+Stack trace:
+#0 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MySQLi/Connection.php(327): mysqli->query('ALTER TABLE `us...', 0)
+#1 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/BaseConnection.php(729): CodeIgniter\Database\MySQLi\Connection->execute('ALTER TABLE `us...')
+#2 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/BaseConnection.php(646): CodeIgniter\Database\BaseConnection->simpleQuery('ALTER TABLE `us...')
+#3 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/Forge.php(772): CodeIgniter\Database\BaseConnection->query('ALTER TABLE `us...')
+#4 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/app/Modules/Gemini/Database/Migrations/2025-11-07-103701_AddVoiceOutputToUserSettings.php(11): CodeIgniter\Database\Forge->addColumn('user_settings', Array)
+#5 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MigrationRunner.php(876): App\Modules\Gemini\Database\Migrations\AddVoiceOutputToUserSettings->up()
+#6 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Database/MigrationRunner.php(182): CodeIgniter\Database\MigrationRunner->migrate('up', Object(stdClass))
+#7 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Commands/Database/Migrate.php(85): CodeIgniter\Database\MigrationRunner->latest(NULL)
+#8 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/CLI/Commands.php(74): CodeIgniter\Commands\Database\Migrate->run(Array)
+#9 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/CLI/Console.php(47): CodeIgniter\CLI\Commands->run('migrate', Array)
+#10 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Boot.php(388): CodeIgniter\CLI\Console->run()
+#11 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/system/Boot.php(133): CodeIgniter\Boot::runCommand(Object(CodeIgniter\CLI\Console))
+#12 /Users/nehemia/Documents/DEV/wasmer/wasmercodeigniter/app/spark(87): CodeIgniter\Boot::bootSpark(Object(Config\Paths))
+#13 {main}
