@@ -463,8 +463,8 @@ private function _prepareContext(int $userId, string $inputText, bool $isAssista
 
         // Pricing for Gemini 2.5 Pro (160%)
         $isTierOne = $inputTokens <= 128000;
-        $inputPricePerMillion  = $isTierOne ? 3.25 : 4.00;
-        $outputPricePerMillion = $isTierOne ? 16.00 : 24.00;
+        $inputPricePerMillion  = ($isTierOne ? 2.00 : 4.00) * 1.60;
+        $outputPricePerMillion = ($isTierOne ? 12.00 : 18.00) * 1.60;
 
         $inputCostUSD  = ($inputTokens / 1000000) * $inputPricePerMillion;
         $outputCostUSD = ($outputTokens / 1000000) * $outputPricePerMillion;
