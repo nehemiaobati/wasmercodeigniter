@@ -99,7 +99,7 @@
                             <label for="published_at">Publish Date</label>
                         </div>
                          <div class="form-floating mb-3">
-                            <input type="text" class="form-control" id="featured_image_url" name="featured_image_url" placeholder="Image URL" value="<?= old('featured_image_url', $post->featured_image_url ?? '') ?>">
+                            <input type="text" class="form-control" id="featured_image_url" name="featured_image_url" placeholder="Image URL" value="<?= old('featured_image_url', ($post ? $post->featured_image_url : '')) ?>">
                             <label for="featured_image_url">Featured Image URL</label>
                         </div>
                         <div class="form-floating mb-3">

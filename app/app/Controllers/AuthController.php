@@ -107,9 +107,12 @@ class AuthController extends BaseController
      *
      * @return string The rendered login view.
      */
-    public function login(): string
+    public function login(): string|ResponseInterface
     {
         helper(['form']);
+        if ($this->session->has('isLoggedIn')) {
+            return redirect()->to(url_to('home'));
+        }
         $data = [
             'pageTitle'       => 'Login | Afrikenkid',
             'metaDescription' => 'Access your dashboard. Log in to use the AI Studio, run crypto queries, and manage your account balance.',

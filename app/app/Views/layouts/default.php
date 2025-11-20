@@ -62,6 +62,11 @@
             --text-heading: var(--bs-heading-color);
             --border-color: var(--bs-border-color);
             --header-bg: var(--bs-body-bg);
+
+            /* Landing Page specific */
+            --hero-gradient: linear-gradient(135deg, var(--bs-primary), var(--bs-dark));
+            --cta-bg: var(--bs-dark); /* Using Bootstrap dark for CTA background */
+            --feature-icon-color: var(--bs-white); /* White for feature icons */
         }
 
         body {

@@ -9,8 +9,8 @@
 
     /* Hero Section Styling (Remains Unchanged - Uses its own theme) */
     .hero-section {
-        background: linear-gradient(135deg, rgba(13, 110, 253, 0.9), rgba(26, 26, 46, 0.95));
-        color: #f8f9fa;
+        background: var(--hero-gradient);
+        color: var(--bs-white); /* Using Bootstrap white for text */
         padding: 100px 0;
         text-align: center;
         overflow: hidden;
@@ -49,7 +49,7 @@
         height: 4rem;
         font-size: 2rem;
         border-radius: 50%;
-        color: #ffffff;
+        color: var(--feature-icon-color);
         background-color: var(--primary-color);
         margin-bottom: 1.5rem;
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
@@ -87,8 +87,8 @@
 
     /* Call-to-Action Section Styling (Remains Unchanged - Intentionally Dark) */
     .cta-section {
-        background-color: #1a1a2e;
-        color: #f8f9fa;
+        background-color: var(--cta-bg);
+        color: var(--bs-white); /* Using Bootstrap white for text */
         border-radius: 0.75rem;
     }
 

@@ -155,13 +155,13 @@ class BlogController extends BaseController
         
         // IMPROVEMENT: Use request->getPost() for safer data retrieval.
         $payload = [
-            'title'              => $this->request->getPost('title', FILTER_SANITIZE_STRING),
-            'excerpt'            => $this->request->getPost('excerpt', FILTER_SANITIZE_STRING),
+            'title'              => $this->request->getPost('title' ),
+            'excerpt'            => $this->request->getPost('excerpt' ),
             'status'             => $this->request->getPost('status'),
             'published_at'       => $this->request->getPost('published_at'),
-            'featured_image_url' => $this->request->getPost('featured_image_url', FILTER_SANITIZE_URL),
-            'category_name'      => $this->request->getPost('category_name', FILTER_SANITIZE_STRING),
-            'meta_description'   => $this->request->getPost('meta_description', FILTER_SANITIZE_STRING),
+            'featured_image_url' => $this->request->getPost('featured_image_url'),
+            'category_name'      => $this->request->getPost('category_name' ),
+            'meta_description'   => $this->request->getPost('meta_description'),
             'body_content'       => json_encode($contentBlocks)
         ];
 

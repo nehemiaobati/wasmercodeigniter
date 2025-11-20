@@ -129,6 +129,11 @@ class CampaignController extends BaseController
         $subject = $this->request->getPost('subject');
         $messageBody = $this->request->getPost('message');
 
+        // Define allowed tags for sanitization, mirroring what's in the email view.
+        $allowed_tags = '<p><a><strong><em><ul><ol><li><br><h1><h2><h3><h4><h5><h6>';
+        // Sanitize the message body before use.
+        $sanitizedMessageBody = strip_tags($messageBody, $allowed_tags);
+
         // 2. Fetch all users with their emails and usernames.
         $userModel = new UserModel();
         $users = $userModel->select('email, username')->findAll();
@@ -146,7 +151,7 @@ class CampaignController extends BaseController
             // Prepare the dynamic content for the email template, including username.
             $emailData = [
                 'subject' => $subject,
-                'body_content' => $messageBody, // Pass the raw HTML/text from the form.
+                'body_content' => $sanitizedMessageBody, // Pass the sanitized content.
                 'username' => $user->username, // Pass the username for personalization.
             ];
 

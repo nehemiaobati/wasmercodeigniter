@@ -2,6 +2,8 @@
 
 namespace App\Modules\Gemini\Libraries;
 
+use App\Modules\Gemini\Libraries\ModelPayloadService;
+
 /**
  * Service layer for interacting with the Google Gemini API.
  */
@@ -14,16 +16,25 @@ class GeminiService
     protected $apiKey;
 
     /**
+     * Reference to the payload configuration service
+     * @var ModelPayloadService
+     */
+    protected $payloadService;
+
+    /**
      * An ordered list of Gemini model IDs to try, from most preferred to least preferred.
+     * Updated to reflect new complexity requirements.
      * @var array<string>
      */
     protected array $modelPriorities = [
+        //"gemini-3-pro-preview", // Multimodal, Thinking Level High
+        //"gemini-2.5-pro",       // Multimodal, Thinking Budget
         "gemini-flash-latest",
-        "gemini-flash-lite-latest",
-        "gemini-2.5-flash",
-        "gemini-2.5-flash-lite",
-        "gemini-2.0-flash",
-        "gemini-2.0-flash-lite",
+        "gemini-flash-lite-latest", // Standard Fast
+        "gemini-2.5-flash",     
+        "gemini-2.5-flash-lite", // Standard Fast
+        "gemini-2.0-flash",      // Fallbacks
+        "gemini-2.0-flash-lite", // Fallbacks
     ];
 
     /**
@@ -32,6 +43,9 @@ class GeminiService
     public function __construct()
     {
         $this->apiKey = env('GEMINI_API_KEY') ?? getenv('GEMINI_API_KEY');
+        // Initialize the specific configuration service
+        $this->payloadService = new ModelPayloadService(); 
+        // Alternatively use service('modelPayloadService') if registered in Services.php
     }
 
     /**
@@ -47,7 +61,6 @@ class GeminiService
         }
 
         $apiKey = trim($this->apiKey);
-        $generateContentApi = "generateContent";
         $lastError = ['error' => 'An unexpected error occurred after multiple retries.'];
 
         if (empty($this->modelPriorities)) {
@@ -56,16 +69,21 @@ class GeminiService
 
         foreach ($this->modelPriorities as $model) {
             $currentModel = $model;
-            $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$currentModel}:{$generateContentApi}?key=" . urlencode($apiKey);
 
-            $requestPayload = [
-                "contents" => [["role" => "user", "parts" => $parts]],
-                "generationConfig" => [
-                    "maxOutputTokens" => 64192,
-                    "thinkingConfig" => ["thinkingBudget" => -1]
-                ],
-                "tools" => [["googleSearch" => new \stdClass()]],
-            ];
+            // --- CHANGED: logic delegates to PayloadService ---
+            // We get the decoupled full request configuration here
+            // 1. Get the config
+            $config = $this->payloadService->getPayloadConfig($currentModel, $apiKey, $parts);
+
+            // 2. SAFETY CHECK: If no payload exists for this model, SKIP it.
+            if (empty($config)) {
+                log_message('warning', "GeminiService: Skipping model '$currentModel' because no payload configuration was found.");
+                continue; // Move to the next model in the priority list
+            }
+
+            $apiUrl = $config['url'];
+            $requestBody = $config['body'];
+            // --------------------------------------------------
 
             $maxRetries = 3;
             $initialDelay = 1;
@@ -74,7 +92,7 @@ class GeminiService
                 try {
                     $client = \Config\Services::curlrequest();
                     $response = $client->request('POST', $apiUrl, [
-                        'body' => json_encode($requestPayload),
+                        'body' => $requestBody, // Use the decoupled body
                         'headers' => ['Content-Type' => 'application/json'],
                         'timeout' => 90,
                         'connect_timeout' => 15,
@@ -142,10 +160,7 @@ class GeminiService
 
     /**
      * [UPDATED] Generates raw PCM audio data from a text string using the Gemini TTS API.
-     *
-     * @param string $textToSpeak The text to be converted to speech.
-     * @return array An associative array with 'status' (bool) and 'audioData' (string|null) or 'error' (string).
-     *               The 'audioData' is base64-encoded raw PCM audio.
+     * ... (Remaining methods generateSpeech and countTokens stay as is) ...
      */
     public function generateSpeech(string $textToSpeak): array
     {
@@ -225,11 +240,6 @@ class GeminiService
         }
     }
 
-    /**
-     * Counts the number of tokens in a given set of content parts.
-     * @param array $parts An array of content parts.
-     * @return array An associative array with 'status' and 'totalTokens' or 'error'.
-     */
     public function countTokens(array $parts): array
     {
         // This method remains unchanged and is fully functional.
@@ -238,7 +248,7 @@ class GeminiService
             return ['status' => false, 'error' => 'GEMINI_API_KEY not set in .env file.'];
         }
 
-        $currentModel = $this->modelPriorities[0] ?? "gemini-1.5-flash-latest";
+        $currentModel = "gemini-2.0-flash"; // Updated default for token counting
         $countTokensApi = "countTokens";
         $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$currentModel}:{$countTokensApi}?key=" . urlencode($apiKey);
 
