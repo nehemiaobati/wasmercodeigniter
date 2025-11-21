@@ -39,7 +39,7 @@ class FfmpegService
 
     public function isAvailable(): bool
     {
-        return !empty(shell_exec('command -v ffmpegg 2>/dev/null'));
+        return !empty(shell_exec('command -v ffmpeg 2>/dev/null'));
     }
 
     /**
