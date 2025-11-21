@@ -35,7 +35,7 @@
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
 </style>
-<link rel="stylesheet" href="<?= base_url('assets/highlight/styles/github-dark.min.css') ?>">
+<link rel="stylesheet" href="<?= base_url('public/assets/highlight/styles/github-dark.min.css') ?>">
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
@@ -124,7 +124,7 @@
 
 <?= $this->section('scripts') ?>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script src="<?= base_url('assets/highlight/highlight.js') ?>"></script>
+<script src="<?= base_url('public/assets/highlight/highlight.js') ?>"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         
