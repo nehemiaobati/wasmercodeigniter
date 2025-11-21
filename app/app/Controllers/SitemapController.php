@@ -16,7 +16,7 @@ class SitemapController extends BaseController
         $pages = [
             'landing', 'register', 'login', 'contact.form',
             'portfolio.index', 'terms', 'privacy',
-            'gemini.public', 'crypto.public',
+            'gemini.public', 'crypto.public', 'blog.index',
         ];
 
         $urls = [];

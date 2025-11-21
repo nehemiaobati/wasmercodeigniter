@@ -26,6 +26,10 @@ class AuthFilter implements FilterInterface
     public function before(RequestInterface $request, $arguments = null)
     {
         if (! session()->get('isLoggedIn')) {
+            
+            // 1. Save the URL the user is currently trying to access
+            session()->set('redirect_url', current_url());            
+
             return redirect()->to(url_to('login'));
         }
     }
