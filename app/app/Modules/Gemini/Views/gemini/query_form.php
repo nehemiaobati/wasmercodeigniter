@@ -1,7 +1,7 @@
 <?= $this->extend('layouts/default') ?>
 
 <?= $this->section('styles') ?>
-<link rel="stylesheet" href="<?= base_url('public/assets/highlight/styles/atom-one-dark.min.css') ?>">
+<link rel="stylesheet" href="<?= base_url('assets/highlight/styles/atom-one-dark.min.css') ?>">
 <style>
     :root {
         --code-bg: #282c34;
@@ -229,8 +229,8 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
-<script src="<?= base_url('public/assets/highlight/highlight.js') ?>"></script>
-<script src="<?= base_url('public/assets/tinymce/tinymce.min.js') ?>"></script>
+<script src="<?= base_url('assets/highlight/highlight.js') ?>"></script>
+<script src="<?= base_url('assets/tinymce/tinymce.min.js') ?>"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         // --- 1. Config & State ---
@@ -244,6 +244,10 @@
                 settings: '<?= url_to('gemini.settings.update') ?>'
             }
         };
+
+        // Queue State
+        const uploadQueue = [];
+        let isUploading = false;
 
         // --- 2. Utils ---
         const refreshCsrf = (hash) => {
@@ -342,7 +346,7 @@
             <div class="flex-grow-1" style="min-width: 0;">
                 <div class="d-flex justify-content-between small mb-1">
                     <span class="fw-bold text-truncate">${file.name}</span>
-                    <span class="status-text text-muted">Preparing...</span>
+                    <span class="status-text text-muted">Waiting...</span>
                 </div>
                 <div class="progress">
                     <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
@@ -356,13 +360,82 @@
             return div;
         };
 
+        const processQueue = () => {
+            // If uploading or empty, stop
+            if (isUploading || uploadQueue.length === 0) return;
+
+            isUploading = true;
+            const job = uploadQueue.shift(); // Get first item
+            performUpload(job);
+        };
+
+        const performUpload = (job) => {
+            const { file, uiElement, uniqueId } = job;
+            
+            // Update UI to "Uploading"
+            uiElement.querySelector('.status-text').textContent = "Uploading...";
+
+            const xhr = new XMLHttpRequest();
+            const formData = new FormData();
+            formData.append(appState.csrfName, appState.csrfHash);
+            formData.append('file', file);
+
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    uiElement.querySelector('.progress-bar').style.width = percent + '%';
+                    uiElement.querySelector('.status-text').innerText = percent + '%';
+                }
+            });
+
+            xhr.onreadystatechange = () => {
+                if (xhr.readyState === 4) {
+                    let response = {};
+                    try {
+                        response = JSON.parse(xhr.responseText);
+                        // Always try to refresh CSRF if provided, even on error
+                        if (response.csrf_token) refreshCsrf(response.csrf_token);
+                    } catch (e) {
+                        console.error('Invalid JSON response');
+                    }
+
+                    if (xhr.status === 200 && response.status === 'success') {
+                        updateUIState(uiElement, 'success');
+
+                        // Attach Server File ID
+                        const rmBtn = uiElement.querySelector('.remove-btn');
+                        rmBtn.dataset.serverFileId = response.file_id;
+
+                        // Add Hidden Input
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'uploaded_media[]';
+                        input.value = response.file_id;
+                        input.id = `input-${uniqueId}`;
+                        document.getElementById('uploaded-files-container').appendChild(input);
+
+                    } else {
+                        const errorMsg = response.message || 'Upload failed';
+                        updateUIState(uiElement, 'error', errorMsg);
+                    }
+
+                    // Trigger Next
+                    isUploading = false;
+                    processQueue();
+                }
+            };
+
+            xhr.open('POST', appState.endpoints.upload, true);
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.send(formData);
+        };
+
         const handleFiles = (files) => {
             Array.from(files).forEach(file => {
                 const uniqueId = Math.random().toString(36).substr(2, 9);
                 const uiElement = createProgressBar(file, uniqueId);
 
                 // 1. Client-Side Validation
-                // Supported Mimes (should match PHP constant)
                 const supportedTypes = [
                     'image/png', 'image/jpeg', 'image/webp', 'audio/mpeg', 'audio/mp3',
                     'audio/wav', 'video/mov', 'video/mpeg', 'video/mp4', 'video/mpg',
@@ -372,69 +445,23 @@
 
                 if (file.size > appState.maxFileSize) {
                     updateUIState(uiElement, 'error', 'File too large (Max 10MB)');
-                    return; // Stop here
+                    return; // Don't queue
                 }
 
                 if (!supportedTypes.includes(file.type)) {
                     updateUIState(uiElement, 'error', 'Unsupported file type');
-                    return; // Stop here
+                    return; // Don't queue
                 }
 
-                // 2. Upload Process
-                const xhr = new XMLHttpRequest();
-                const formData = new FormData();
-                formData.append(appState.csrfName, appState.csrfHash);
-                formData.append('file', file);
-
-                xhr.upload.addEventListener('progress', (e) => {
-                    if (e.lengthComputable) {
-                        const percent = Math.round((e.loaded / e.total) * 100);
-                        uiElement.querySelector('.progress-bar').style.width = percent + '%';
-                        uiElement.querySelector('.status-text').innerText = percent + '%';
-                    }
-                });
-
-                xhr.onreadystatechange = () => {
-                    if (xhr.readyState === 4) {
-                        let response = {};
-                        try {
-                            response = JSON.parse(xhr.responseText);
-                            // Always try to refresh CSRF if provided, even on error
-                            if (response.csrf_token) refreshCsrf(response.csrf_token);
-                        } catch (e) {
-                            console.error('Invalid JSON response');
-                        }
-
-                        if (xhr.status === 200 && response.status === 'success') {
-                            updateUIState(uiElement, 'success');
-
-                            // Attach Server File ID to the remove button for later deletion
-                            const rmBtn = uiElement.querySelector('.remove-btn');
-                            rmBtn.dataset.serverFileId = response.file_id;
-
-                            // Add Hidden Input for Form Submission
-                            const input = document.createElement('input');
-                            input.type = 'hidden';
-                            input.name = 'uploaded_media[]';
-                            input.value = response.file_id;
-                            input.id = `input-${uniqueId}`;
-                            document.getElementById('uploaded-files-container').appendChild(input);
-
-                        } else {
-                            // Handle Error
-                            const errorMsg = response.message || 'Upload failed';
-                            updateUIState(uiElement, 'error', errorMsg);
-                        }
-                    }
-                };
-
-                xhr.open('POST', appState.endpoints.upload, true);
-                xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-                xhr.send(formData);
+                // 2. Add to Queue
+                uploadQueue.push({ file, uiElement, uniqueId });
             });
 
-            // Reset input to allow re-selecting the same file if it failed
+            // Reset input
             fileInput.value = '';
+            
+            // Start processing if idle
+            processQueue();
         };
 
         fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
