@@ -6,11 +6,6 @@ use Dompdf\Dompdf;
 use Dompdf\Options;
 use Parsedown;
 
-/**
- * A resilient document generation service.
- * It attempts to use Pandoc first for high-fidelity PDF and Word documents.
- * If Pandoc fails and the request is for a PDF, it falls back to Dompdf.
- */
 class DocumentService
 {
     protected PandocService $pandocService;
@@ -21,121 +16,94 @@ class DocumentService
     }
 
     /**
-     * Generate a document (PDF or Word) from HTML content.
-     *
-     * @param string $markdownContent The input content in Markdown format.
-     * @param string $format The desired output format ('pdf' or 'docx').
-     * @return array An array with status, message, and either filePath or fileData.
+     * Unified generation method. 
+     * Always returns 'fileData' (binary string) and handles intermediate file cleanup.
      */
     public function generate(string $markdownContent, string $format): array
     {
-        // 1. Convert Markdown to HTML
+        // 1. Prepare HTML
         $parsedown = new Parsedown();
         $parsedown->setBreaksEnabled(true);
         $htmlContent = $parsedown->text($markdownContent);
-
-        // Add basic styling for better output
         $fullHtml = $this->getStyledHtml($htmlContent);
-       // $fullHtml = nl2br($fullHtml); //Depricated for preserving paragraphs
 
-        // 2. Try to generate with Pandoc within a try...catch block
-        try {
-            if ($this->pandocService->isAvailable()) {
-                $pandocResult = $this->pandocService->generate($fullHtml, $format, 'AI-Studio-Output-' . uniqid());
-                if ($pandocResult['status'] === 'success') {
-                    return $pandocResult;
-                }
-                // If status is 'error', log it and fall through to the fallback.
-                log_message('warning', '[DocumentService] Pandoc failed: ' . ($pandocResult['message'] ?? 'Unknown error') . '. Checking for fallback options.');
+        // 2. Strategy A: Pandoc (Preferred)
+        // Checks availability inside the service to keep controller clean
+        if ($this->pandocService->isAvailable()) {
+            $pandocResult = $this->pandocService->generate($fullHtml, $format, 'temp_' . uniqid());
+            
+            if ($pandocResult['status'] === 'success' && file_exists($pandocResult['filePath'])) {
+                // READ -> DELETE -> RETURN
+                // This ensures no files are left in the path, making it behave like Dompdf (memory only)
+                $fileData = file_get_contents($pandocResult['filePath']);
+                @unlink($pandocResult['filePath']); 
+                
+                return [
+                    'status' => 'success', 
+                    'fileData' => $fileData
+                ];
             }
-        } catch (\Throwable $e) {
-            // This will catch any error, including the ErrorException from a disabled shell_exec.
-            log_message('error', '[DocumentService] A critical error occurred while trying to use Pandoc: ' . $e->getMessage() . '. Falling back.');
+            
+            // Log warning if Pandoc failed, but continue to fallback
+            log_message('warning', '[DocumentService] Pandoc failed: ' . ($pandocResult['message'] ?? 'Unknown') . '. Attempting fallback.');
         }
 
-
-        // 3. Fallback to Dompdf ONLY for PDF format
+        // 3. Strategy B: Dompdf (Fallback for PDF only)
         if ($format === 'pdf') {
-            log_message('info', '[DocumentService] Falling back to Dompdf for PDF generation.');
             return $this->generateWithDompdf($fullHtml);
         }
 
-        // 4. No fallback available for other formats (like docx)
+        // 4. Failure
         return [
             'status' => 'error',
-            'message' => 'Could not generate the Word document. The primary converter failed and no fallback is available for this format.'
+            'message' => 'Could not generate document. Primary converter failed and no fallback available.'
         ];
     }
 
-    /**
-     * Generates a PDF using the Dompdf library as a fallback.
-     *
-     * @param string $htmlContent The fully-styled HTML to convert.
-     * @return array An array containing the status and raw PDF data.
-     */
     private function generateWithDompdf(string $htmlContent): array
     {
         try {
-            set_time_limit(300); // Increase time limit for Dompdf
-
             $options = new Options();
             $options->set('defaultFont', 'DejaVu Sans');
-            $options->set('isHtml5ParserEnabled', true);
             $options->set('isRemoteEnabled', true);
+            //For wasmer production environments always include this
             $options->set('isFontSubsettingEnabled', false);
 
-            $userId = (int) session()->get('userId');
+
+            // User-specific temp dir for Dompdf internal processing
+            $userId = session()->get('userId') ?? 0;
             $tempDir = WRITEPATH . 'uploads/dompdf_temp/' . $userId;
-            if (!is_dir($tempDir)) {
-                mkdir($tempDir, 0775, true);
-            }
+            if (!is_dir($tempDir)) mkdir($tempDir, 0775, true);
             $options->set('tempDir', $tempDir);
 
             $dompdf = new Dompdf($options);
             $dompdf->loadHtml($htmlContent, 'UTF-8');
             $dompdf->setPaper('A4', 'portrait');
             $dompdf->render();
-            $output = $dompdf->output();
 
             return [
-                'status' => 'success_fallback',
-                'fileData' => $output,
-                'message' => 'Document generated using fallback PDF converter.'
+                'status' => 'success',
+                'fileData' => $dompdf->output() // Returns string directly
             ];
-
         } catch (\Throwable $e) {
-            log_message('error', '[Dompdf Fallback Failed] ' . $e->getMessage() . "\n" . $e->getTraceAsString());
-            return [
-                'status' => 'error',
-                'message' => 'The fallback PDF generator also failed. The error has been logged.'
-            ];
+            log_message('error', '[DocumentService] Dompdf error: ' . $e->getMessage());
+            return ['status' => 'error', 'message' => 'Fallback generation failed.'];
         }
     }
 
-    /**
-     * Wraps HTML content in a standard document structure with CSS.
-     *
-     * @param string $htmlContent The core HTML content.
-     * @return string The full HTML document.
-     */
     private function getStyledHtml(string $htmlContent): string
     {
         return '<!DOCTYPE html>
             <html lang="en">
             <head>
-                <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-                <title>AI-Studio-Output</title>
+                <meta charset="utf-8"/>
                 <style>
-                    body { font-family: "DejaVu Sans", sans-serif; line-height: 1.6; color: #333; font-size: 12px; }
-                    h1, h2, h3, h4, h5, h6 { font-family: "DejaVu Sans", sans-serif; margin-bottom: 0.5em; font-weight: bold; }
-                    p { margin-bottom: 1em; }
-                    ul, ol { margin-bottom: 1em; }
-                    strong, b { font-weight: bold; }
-                    pre { background-color: #f4f4f4; padding: 10px; border: 1px solid #ddd; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; font-family: "DejaVu Sans Mono", monospace; }
-                    code { font-family: "DejaVu Sans Mono", monospace; }
-                    table { width: 100%; border-collapse: collapse; margin-bottom: 1em; }
-                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                    th { background-color: #f2f2f2; }
+                    body { font-family: "DejaVu Sans", sans-serif; line-height: 1.5; font-size: 12px; color: #111; }
+                    h1, h2, h3 { color: #000; margin-top: 1.5em; margin-bottom: 0.5em; }
+                    pre { background: #f0f0f0; padding: 10px; border-radius: 4px; font-family: monospace; white-space: pre-wrap; }
+                    table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+                    th, td { border: 1px solid #ddd; padding: 6px; }
+                    blockquote { border-left: 3px solid #ccc; margin: 0; padding-left: 10px; color: #555; }
                 </style>
             </head>
             <body>' . $htmlContent . '</body>

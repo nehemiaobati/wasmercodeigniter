@@ -301,34 +301,30 @@ class GeminiController extends BaseController
         $content = $this->request->getPost('raw_response');
         $format = $this->request->getPost('format');
         
+        // Basic Validation
         if (!$content || !in_array($format, ['pdf', 'docx'])) {
-            return redirect()->back()->with('error', 'Invalid request.');
+            return redirect()->back()->with('error', 'Invalid request parameters.');
         }
 
+        // Execution: Service now guarantees a 'fileData' string on success
         $result = service('documentService')->generate($content, $format);
         
-        if (str_starts_with($result['status'], 'success')) {
+        if ($result['status'] === 'success') {
             $mime = $format === 'docx' 
                 ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
                 : 'application/pdf';
             
-            $filename = 'AI-Output-' . date('Ymd-His') . '.' . $format;
-
-            // Handle file path (Pandoc) or raw data (Dompdf fallback)
-            $body = isset($result['filePath']) ? file_get_contents($result['filePath']) : $result['fileData'];
-
-            // Cleanup temp file if it exists on disk
-            if (isset($result['filePath']) && file_exists($result['filePath'])) {
-                @unlink($result['filePath']);
-            }
+            $filename = 'Studio-Output-' . date('Ymd-His') . '.' . $format;
 
             return $this->response
                 ->setHeader('Content-Type', $mime)
                 ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
-                ->setBody($body);
+                ->setBody($result['fileData']); // Unified response body
         }
         
-        return redirect()->back()->with('error', 'Document generation failed.');
+        // Error handling
+        $errorMsg = $result['message'] ?? 'Document generation failed.';
+        return redirect()->back()->with('error', $errorMsg);
     }
 
     // --- Private Helpers ---
