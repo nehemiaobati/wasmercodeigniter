@@ -2,87 +2,93 @@
 
 namespace App\Modules\Gemini\Libraries;
 
-use FFMpeg\FFMpeg;
-use FFMpeg\Format\Audio\Mp3;
-use FFMpeg\Format\Audio\DefaultAudio;
-
-/**
- * A service wrapper for the FFmpeg utility to handle audio conversions.
- * This service specifically handles the conversion of raw PCM audio data
- * from the Google Gemini TTS API into a web-playable MP3 format.
- */
 class FfmpegService
 {
     /**
-     * @var FFMpeg|null
+     * Main Entry Point: Orchestrates the conversion.
+     * 
+     * @param string $base64Data Raw PCM data from Gemini
+     * @param string $outputDir The directory to save the file
+     * @param string $filenameBase The filename WITHOUT extension (e.g., 'speech_123')
+     * @return array{success: bool, fileName: string|null}
      */
-    private ?FFMpeg $ffmpeg = null;
-
-    /**
-     * Constructor.
-     * Initializes the FFmpeg library. It automatically locates the `ffmpeg` and
-     * `ffprobe` binaries. Throws an exception if they cannot be found.
-     */
-    public function __construct()
+    public function processAudio(string $base64Data, string $outputDir, string $filenameBase): array
     {
-        try {
-            // The create() method will automatically attempt to locate FFmpeg.
-            // On a properly configured server (e.g., with FFmpeg in the system's PATH),
-            // no configuration array is needed.
-            $this->ffmpeg = FFMpeg::create();
-        } catch (\Throwable $e) {
-            // This will catch any error, including the "Unable to fork" ErrorException.
-            log_message('error', '[FfmpegService] Failed to initialize FFmpeg. The exec() function may be disabled or FFmpeg not installed. Error: ' . $e->getMessage());
-            $this->ffmpeg = null; // Ensure ffmpeg property is null on failure.
+        // 1. Try FFmpeg (MP3) - Preferred for size
+        if ($this->isAvailable()) {
+            $fileName = $filenameBase . '.mp3';
+            $fullPath = $outputDir . $fileName;
+            
+            if ($this->convertPcmToMp3($base64Data, $fullPath)) {
+                return ['success' => true, 'fileName' => $fileName];
+            }
+            // If FFmpeg fails mid-process, log it and fall through to WAV
+            log_message('error', '[FfmpegService] MP3 conversion failed. Falling back to WAV.');
         }
+
+        // 2. Fallback (WAV) - Native PHP, larger file size but guaranteed to work
+        $fileName = $filenameBase . '.wav';
+        $fullPath = $outputDir . $fileName;
+        
+        if ($this->createWavFile($base64Data, $fullPath)) {
+             return ['success' => true, 'fileName' => $fileName];
+        }
+
+        return ['success' => false, 'fileName' => null];
+    }
+
+    public function isAvailable(): bool
+    {
+        return !empty(shell_exec('command -v ffmpegg 2>/dev/null'));
     }
 
     /**
-     * Converts a raw PCM audio file to an MP3 file.
-     *
-     * This method is specifically tuned for the output format of the Gemini TTS API,
-     * which is raw PCM data (s16le codec, 24000Hz sample rate, 1 audio channel).
-     *
-     * @param string $rawFilePath The absolute path to the input temporary .raw file.
-     * @param string $mp3FilePath The absolute path where the output .mp3 file will be saved.
-     * @return bool True on successful conversion, false on failure.
+     * Strategy A: FFmpeg Pipe (Memory Efficient)
      */
-    public function convertPcmToMp3(string $rawFilePath, string $mp3FilePath): bool
+    private function convertPcmToMp3(string $base64Data, string $outputFile): bool
     {
-        // Check if FFmpeg was successfully initialized in the constructor.
-        if ($this->ffmpeg === null) {
-            log_message('error', '[FfmpegService] Cannot convert audio because FFmpeg is not available.');
-            return false;
+        $cmd = sprintf(
+            'ffmpeg -f s16le -ar 24000 -ac 1 -i pipe:0 -y -vn -acodec libmp3lame -b:a 128k %s 2>/dev/null',
+            escapeshellarg($outputFile)
+        );
+
+        $process = proc_open($cmd, [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w']
+        ], $pipes);
+
+        if (is_resource($process)) {
+            fwrite($pipes[0], base64_decode($base64Data));
+            fclose($pipes[0]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+
+            return (proc_close($process) === 0 && file_exists($outputFile));
         }
 
-        try {
-            // Use the ffmpeg binary directly to convert raw PCM to MP3, avoiding incompatible library method signatures.
-            $input  = escapeshellarg($rawFilePath);
-            $output = escapeshellarg($mp3FilePath);
+        return false;
+    }
 
-            // -f s16le : signed 16-bit little-endian PCM
-            // -ar 24000 : sample rate 24000 Hz
-            // -ac 1 : mono
-            // -y : overwrite output if exists
-            // -vn : no video
-            // -acodec libmp3lame -b:a 128k : encode to MP3 at 128 kbps
-            $cmd = sprintf(
-                'ffmpeg -f s16le -ar 24000 -ac 1 -i %s -y -vn -acodec libmp3lame -b:a 128k %s 2>&1',
-                $input,
-                $output
-            );
+    /**
+     * Strategy B: Native PHP WAV Header (Reliable Fallback)
+     */
+    private function createWavFile(string $base64Data, string $outputFile): bool
+    {
+        $pcmData = base64_decode($base64Data);
+        $len = strlen($pcmData);
+        
+        // Build standard RIFF WAVE header for Gemini specs (24kHz, 16-bit, Mono)
+        $header = 'RIFF' . pack('V', 36 + $len) . 'WAVE';
+        $header .= 'fmt ' . pack('V', 16); // Subchunk1Size
+        $header .= pack('v', 1);           // AudioFormat (1 = PCM)
+        $header .= pack('v', 1);           // NumChannels (1 = Mono)
+        $header .= pack('V', 24000);       // SampleRate
+        $header .= pack('V', 48000);       // ByteRate (SampleRate * NumChannels * BitsPerSample/8)
+        $header .= pack('v', 2);           // BlockAlign
+        $header .= pack('v', 16);          // BitsPerSample
+        $header .= 'data' . pack('V', $len);
 
-            exec($cmd, $outputLines, $returnVar);
-
-            if ($returnVar !== 0) {
-                log_message('error', '[FfmpegService] ffmpeg failed: ' . implode("\n", $outputLines));
-                return false;
-            }
-
-            return file_exists($mp3FilePath);
-        } catch (\Throwable $e) { // Broaden catch to Throwable
-            log_message('error', '[FfmpegService] Conversion failed: ' . $e->getMessage());
-            return false;
-        }
+        return file_put_contents($outputFile, $header . $pcmData) !== false;
     }
 }

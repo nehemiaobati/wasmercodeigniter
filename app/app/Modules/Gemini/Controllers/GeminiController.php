@@ -283,17 +283,30 @@ class GeminiController extends BaseController
         return redirect()->back()->with('success', 'Memory cleared.');
     }
 
+    /**
+     * Serves the file with correct headers for inline playback.
+     */
     public function serveAudio(string $fileName)
     {
         $userId = (int) session()->get('userId');
-        // Security: Basename ensures no directory traversal
+        
+        // Security: Basename prevents directory traversal attacks
         $path = WRITEPATH . 'uploads/ttsaudio_secure/' . $userId . '/' . basename($fileName);
         
-        if (file_exists($path)) {
-            return $this->response->download($path, null);
+        if (!file_exists($path)) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
-        
-        throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+
+        // Detect MIME type dynamically based on the actual file extension
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        $mime = ($ext === 'wav') ? 'audio/wav' : 'audio/mpeg';
+
+        // 'inline' disposition allows the <audio> tag to play it immediately
+        return $this->response
+            ->setHeader('Content-Type', $mime)
+            ->setHeader('Content-Length', (string)filesize($path))
+            ->setHeader('Content-Disposition', 'inline; filename="' . $fileName . '"')
+            ->setBody(file_get_contents($path));
     }
     
     public function downloadDocument()
@@ -445,19 +458,26 @@ class GeminiController extends BaseController
         ];
     }
 
+    /**
+     * Handles the storage and conversion of the raw audio.
+     */
     private function _processAudioData(string $base64Data): ?string
     {
         $userId = (int) session()->get('userId');
         $securePath = WRITEPATH . 'uploads/ttsaudio_secure/' . $userId . '/';
+        
         if (!is_dir($securePath)) mkdir($securePath, 0775, true);
 
-        $tempPath = WRITEPATH . 'uploads/temp_audio_' . uniqid() . '.raw';
-        file_put_contents($tempPath, base64_decode($base64Data));
-
-        $mp3Name = uniqid('speech_') . '.mp3';
-        $success = service('ffmpegService')->convertPcmToMp3($tempPath, $securePath . $mp3Name);
+        // Generate base name (e.g., "speech_651a...")
+        $filenameBase = uniqid('speech_');
         
-        @unlink($tempPath);
-        return $success ? $mp3Name : null;
+        // Delegate to Service (Returns .mp3 OR .wav)
+        $result = service('ffmpegService')->processAudio(
+            $base64Data, 
+            $securePath, 
+            $filenameBase
+        );
+        
+        return $result['success'] ? $result['fileName'] : null;
     }
 }

@@ -81,7 +81,7 @@
         <div class="alert alert-info d-flex align-items-center">
             <i class="bi bi-volume-up-fill fs-4 me-3"></i>
             <audio controls autoplay class="w-100">
-                <source src="<?= url_to('gemini.serve_audio', session()->getFlashdata('audio_url')) ?>" type="audio/mpeg">
+                <source src="<?= url_to('gemini.serve_audio', session()->getFlashdata('audio_url')) ?>">
             </audio>
         </div>
     <?php endif; ?>
