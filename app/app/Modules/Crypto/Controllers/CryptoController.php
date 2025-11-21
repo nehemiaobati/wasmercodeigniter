@@ -38,8 +38,8 @@ class CryptoController extends BaseController
     public function publicPage(): string
     {
         $data = [
-            'pageTitle'       => 'Real-Time Crypto Wallet Query (BTC & LTC) | Afrikenkid',
-            'metaDescription' => 'Instantly check the balance and transaction history of any Bitcoin (BTC) or Litecoin (LTC) wallet. Simple, fast, and accurate on-chain data.',
+            'pageTitle'       => 'Crypto Wallet Insights & Analytics | BTC & LTC Tracker',
+            'metaDescription' => 'Track Bitcoin (BTC) and Litecoin (LTC) wallet activities instantly. Audit balances and visualize transaction histories with our professional blockchain analytics solution.',
             'canonicalUrl'    => url_to('crypto.public'),
         ];
 
@@ -65,8 +65,8 @@ class CryptoController extends BaseController
     public function index(): string
     {
         $data = [
-            'pageTitle'       => 'CryptoQuery Tool | Afrikenkid',
-            'metaDescription' => 'Query real-time balance and transaction history for any Bitcoin (BTC) or Litecoin (LTC) address. Your tool for instant on-chain data analysis.',
+            'pageTitle'       => 'Crypto Analytics Dashboard | Afrikenkid',
+            'metaDescription' => 'Access deep on-chain data for Bitcoin and Litecoin. Monitor transaction flows and audit wallet balances in real-time.',
             'canonicalUrl'    => url_to('crypto.index'),
             'result'          => session()->getFlashdata('result'),
             'errors'          => session()->getFlashdata('errors')

@@ -45,11 +45,11 @@ class GeminiController extends BaseController
     public function publicPage(): string
     {
         $data = [
-            'pageTitle'       => 'AI Studio: Powered by Google Gemini | Afrikenkid',
-            'metaDescription' => 'Generate text, analyze PDFs, and chat with a context-aware AI.',
+            'pageTitle'       => 'Intelligent Content & Document Analysis Platform | Powered by Gemini',
+            'metaDescription' => 'Transform how you work with AI. Generate professional content, extract insights from PDFs, and convert text to speech using our advanced, context-aware platform.',
             'canonicalUrl'    => url_to('gemini.public'),
-            'heroTitle'       => 'Go Beyond Basic Chat',
-            'heroSubtitle'    => 'Leverage the power of Google Gemini for code, document analysis, and creative content.'
+            'heroTitle'       => 'Enterprise-Grade AI Solutions',
+            'heroSubtitle'    => 'A complete suite for content generation, intelligent document processing, and audio synthesis - tailored for your workflow.'
         ];
         return view('App\Modules\Gemini\Views\gemini\public_page.php', $data);
     }
@@ -61,8 +61,8 @@ class GeminiController extends BaseController
         $userSetting = $this->userSettingsModel->where('user_id', $userId)->first();
         
         $data = [
-            'pageTitle'              => 'AI Studio | Afrikenkid',
-            'metaDescription'        => 'AI Studio workspace.',
+            'pageTitle'              => 'AI Workspace | Afrikenkid',
+            'metaDescription'        => 'Your personal AI workspace for content creation and data analysis.',
             'canonicalUrl'           => url_to('gemini.index'),
             'result'                 => session()->getFlashdata('result'),
             'error'                  => session()->getFlashdata('error'),

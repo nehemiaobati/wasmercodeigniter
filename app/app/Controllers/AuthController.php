@@ -25,7 +25,7 @@ class AuthController extends BaseController
         }
         $data = [
             'pageTitle'       => 'Create Your Account | Afrikenkid',
-            'metaDescription' => 'Sign up for a free account and get KSH 30 in starter credits. Access powerful AI tools and real-time crypto data queries instantly.',
+            'metaDescription' => 'Sign up for a free account and get KSH 30 in starter credits. Generate content, convert text-to-speech, and view crypto market data instantly.',
             'canonicalUrl'    => url_to('register'),
         ];
         return view('auth/register', $data);

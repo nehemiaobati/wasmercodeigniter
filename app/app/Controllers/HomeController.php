@@ -44,9 +44,9 @@ class HomeController extends BaseController
     {
         $data = [
             'pageTitle'       => 'Afrikenkid | AI Tools & Crypto Data for Kenya & Africa',
-            'metaDescription' => 'Unlock the power of Generative AI and access real-time Bitcoin & Litecoin data. offers pay-as-you-go tools for developers and creators in Kenya, with easy M-Pesa payments.',
-            'heroTitle'       => 'The Developer\'s Toolkit for AI & Crypto',
-            'heroSubtitle'    => 'Instantly query blockchain data and leverage Google\'s Gemini AI with simple, pay-as-you-go pricing. Built for creators and developers in Africa.',
+            'metaDescription' => 'Access powerful Generative AI tools for content creation and real-time Bitcoin & Litecoin market insights. A pay-as-you-go solution for creators and businesses.',
+            'heroTitle'       => 'The All-in-One Platform for AI & Crypto Insights',
+            'heroSubtitle'    => 'Analyze blockchain trends and leverage Google\'s Gemini AI for content generation with simple, pay-as-you-go pricing. No API integration required.',
             'canonicalUrl'    => url_to('landing'),
         ];
         return view('home/landing_page', $data);
