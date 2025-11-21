@@ -174,7 +174,7 @@
                     <ul class="list-unstyled fs-5">
                         <li class="mb-3"><i class="bi bi-check2-circle"></i> Custom Web Applications</li>
                         <li class="mb-3"><i class="bi bi-check2-circle"></i> CodeIgniter & PHP Development</li>
-                        <li class="mb-3"><i class="bi bi-check2-circle"></i> Third-Party API Integrations</li>
+                        <li class="mb-3"><i class="bi bi-check2-circle"></i> Third-Party Expert Service Integrations</li>
                         <li class="mb-3"><i class="bi bi-check2-circle"></i> Website Performance Optimization</li>
                     </ul>
                 </div>
