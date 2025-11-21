@@ -1,0 +1,632 @@
+<?= $this->extend('layouts/default') ?>
+
+<?= $this->section('styles') ?>
+
+<?= $this->endSection() ?>
+
+<?= $this->section('content') ?>
+
+<div class="container">
+
+
+<p>PROJECT DOCUMENTATION: GENAI WEB PLATFORM</p><br />
+<hr /><br />
+<p><strong>Part I: Getting Started</strong></p><br />
+<p><strong>1. Introduction</strong><br />
+1.1. What is GenAI Web Platform?<br />
+1.2. Core Features &amp; Capabilities<br />
+1.3. Who Is This For?<br />
+1.4. Technology Stack</p><br />
+<p><strong>2. Quick Start Guide</strong><br />
+2.1. Your First 5 Minutes<br />
+2.2. Running the Application Locally<br />
+2.3. Key Concepts at a Glance</p><br />
+<p><strong>3. Installation</strong><br />
+3.1. Server Requirements &amp; Prerequisites<br />
+3.2. Automated Installation (Recommended)<br />
+3.3. Manual Installation (Advanced)<br />
+3.4. Environment Configuration (<code>.env</code>)<br />
+3.5. Post-Installation Steps &amp; Security</p><br />
+<hr /><br />
+<p><strong>Part II: Guides &amp; Tutorials</strong></p><br />
+<p><strong>4. Core Concepts</strong><br />
+4.1. Architectural Overview (Modular MVC-S)<br />
+4.2. The Request Lifecycle<br />
+4.3. Service Container &amp; Dependency Injection<br />
+4.4. Directory Structure Explained<br />
+4.5. Security Principles<br />
+4.6. Frontend Design (The 'Blueprint' Method)</p><br />
+<p><strong>5. Tutorial: Building Your First Feature</strong><br />
+5.1. Creating a New Route<br />
+5.2. Building the Controller &amp; Service<br />
+5.3. Interacting with the Database (Model &amp; Entity)<br />
+5.4. Displaying Data in a View</p><br />
+<p><strong>6. Feature Guides (Deep Dives)</strong><br />
+6.1. User Authentication<br />
+6.1.1. Registration &amp; Login Flow<br />
+6.1.2. Email Verification &amp; Password Resets<br />
+6.1.3. Access Control with Filters<br />
+6.2. Payment Gateway Integration<br />
+6.2.1. Configuration<br />
+6.2.2. Initiating a Transaction<br />
+6.2.3. Verifying a Payment<br />
+6.3. AI Service Integration<br />
+6.3.1. Generating Content<br />
+6.3.2. Conversational Memory System<br />
+6.3.3. Handling Multimedia Inputs<br />
+6.3.4. Document Generation (PDF/Word) with Fallback<br />
+6.4. Cryptocurrency Data Service<br />
+6.4.1. Querying Balances<br />
+6.4.2. Fetching Transaction Histories<br />
+6.5. Administrative Dashboard<br />
+6.5.1. User Management<br />
+6.5.2. Sending Email Campaigns<br />
+6.5.3. Viewing Application Logs<br />
+6.6. Blog &amp; Content Management<br />
+6.6.1. Public-Facing Blog<br />
+6.6.2. Admin Management Interface<br />
+6.7. Self-Hosted Documentation<br />
+6.7.1. Serving Documentation Pages</p><br />
+<hr /><br />
+<p><strong>Part III: Technical Reference</strong></p><br />
+<p><strong>7. Command-Line Interface (CLI)</strong><br />
+7.1. Overview of Custom Commands<br />
+7.2. <code>php spark train</code></p><br />
+<p><strong>8. Configuration Reference</strong><br />
+8.1. Application (<code>App.php</code>)<br />
+8.2. Database (<code>Database.php</code>)<br />
+8.3. Custom Configurations (<code>AGI.php</code>, <code>Recaptcha.php</code>)</p><br />
+<p><strong>9. Testing</strong><br />
+9.1. Running the Test Suite<br />
+9.2. Writing Unit Tests<br />
+9.3. Writing Feature Tests</p><br />
+<hr /><br />
+<p><strong>Part IV: Operations &amp; Community</strong></p><br />
+<p><strong>10. Deployment</strong><br />
+10.1. Production Server Setup<br />
+10.2. Deployment Checklist<br />
+10.3. Performance Optimization</p><br />
+<p><strong>11. Troubleshooting</strong><br />
+11.1. Frequently Asked Questions (FAQ)<br />
+11.2. Common Error Resolutions<br />
+11.3. Logging &amp; Debugging</p><br />
+<p><strong>12. Contributing</strong><br />
+12.1. Contribution Guidelines<br />
+12.2. Code Style (PSR-12)<br />
+12.3. Submitting a Pull Request</p><br />
+<p><strong>13. Appendices</strong><br />
+13.1. Glossary of Terms<br />
+13.2. Changelog &amp; Release History</p><br />
+<hr /><br />
+<p><strong>Part V: Documentation Maintenance Guide</strong></p><br />
+<p><strong>15. A Guide for the Project Owner</strong><br />
+15.1. The Philosophy of Living Documentation<br />
+15.2. Your Role vs. the AI's Role<br />
+15.3. The Documentation Update Workflow<br />
+15.4. Procedure: How to Review the Codebase for Changes<br />
+15.5. Procedure: Updating the Changelog and Managing Releases</p><br />
+<hr /><br />
+<p><strong>Part I: Getting Started</strong></p><br />
+<p><strong>1. Introduction</strong></p><br />
+<p><strong>1.1. What is GenAI Web Platform?</strong></p><br />
+<p>The GenAI Web Platform is a comprehensive, multi-functional application built on the CodeIgniter 4 framework. It is architected using a <strong>Modular MVC-S pattern</strong>, where each distinct business feature (like AI, Payments, or the Blog) is encapsulated in its own self-contained module for maximum maintainability. The platform serves as a portal for registered users to access a suite of powerful digital services, including AI-driven content generation, real-time cryptocurrency data queries, and robust user and content management capabilities. Designed with a modular architecture, it features a secure user authentication system, an account dashboard with an integrated balance and payment system (supporting M-Pesa, Airtel, and Card), a complete administrative panel for user oversight, and a fully integrated blog.</p><br />
+<p><strong>1.2. Core Features &amp; Capabilities</strong></p><br />
+<ul><br />
+<li><strong>Modular Architecture:</strong> Core features like AI, Payments, Crypto, and Blog are isolated into self-contained modules for better organization and scalability.</li><br />
+<li><strong>User Authentication:</strong> Secure registration, login, email verification, and password reset functionality.</li><br />
+<li><strong>Payment Gateway Integration:</strong> Seamless payments via Paystack, a popular African payment gateway.</li><br />
+<li><strong>AI Service Integration:</strong> Advanced text and multimedia interaction with Google's Gemini API, featuring a sophisticated conversational memory system and on-demand document generation (PDF/Word).</li><br />
+<li><strong>Cryptocurrency Data Service:</strong> Real-time balance and transaction history queries for Bitcoin (BTC) and Litecoin (LTC) addresses.</li><br />
+<li><strong>Blog &amp; Content Management:</strong> A public-facing blog with a full administrative backend for creating, editing, and managing posts.</li><br />
+<li><strong>Administrative Dashboard:</strong> Robust tools for user management, balance adjustments, financial oversight, log viewing, and sending email campaigns to all users.</li><br />
+<li><strong>Self-Hosted Documentation:</strong> The application serves its own documentation, which can be easily updated.</li><br />
+<li><strong>Secure &amp; Performant:</strong> Built with modern security best practices and optimized for production environments.</li><br />
+</ul><br />
+<p><strong>1.3. Who Is This For?</strong></p><br />
+<p>This platform is designed for developers, creators, and businesses, particularly in Kenya and the broader African market, who require a flexible, pay-as-you-go solution for accessing advanced AI and blockchain data services. It serves as both a functional application and a robust foundation for building more complex systems.</p><br />
+<p><strong>1.4. Technology Stack</strong></p><br />
+<ul><br />
+<li><strong>Backend:</strong> PHP 8.1+, CodeIgniter 4</li><br />
+<li><strong>Frontend:</strong> Bootstrap 5, JavaScript, HTML5, CSS3</li><br />
+<li><strong>Database:</strong> MySQL</li><br />
+<li><strong>Web Server:</strong> Apache2</li><br />
+<li><strong>Key Libraries:</strong><br />
+<ul><br />
+<li><code>google/gemini-php</code>: For interacting with the Gemini API.</li><br />
+<li><code>dompdf/dompdf</code>: For PDF generation fallback.</li><br />
+<li><code>nlp-tools/nlp-tools</code>: For Natural Language Processing tasks.</li><br />
+<li><code>php-ffmpeg/php-ffmpeg</code>: For audio and video processing.</li><br />
+</ul></li><br />
+<li><strong>System Dependencies:</strong> Pandoc, ffmpeg</li><br />
+<li><strong>Development &amp; Deployment:</strong> Composer, PHPUnit, Spark CLI, Git, Bash</li><br />
+</ul><br />
+<p><strong>2. Quick Start Guide</strong></p><br />
+<p><strong>2.1. Your First 5 Minutes</strong></p><br />
+<p>For a fresh Ubuntu server, the fastest way to get started is with the automated setup script.</p><br />
+<ol><br />
+<li>Clone the repository: <code>git clone https://github.com/nehemiaobati/genaiwebapplication.git</code></li><br />
+<li>Navigate into the directory: <code>cd genaiwebapplication</code></li><br />
+<li>Make the script executable: <code>chmod +x setup.sh</code></li><br />
+<li>Run with sudo: <code>sudo ./setup.sh</code></li><br />
+<li>After completion, edit the newly created <code>.env</code> file to add your API keys.</li><br />
+</ol><br />
+<p><strong>2.2. Running the Application Locally</strong></p><br />
+<ol><br />
+<li><strong>Clone the Repository:</strong> <code>git clone https://github.com/nehemiaobati/genaiwebapplication.git</code></li><br />
+<li><strong>Install Dependencies:</strong> <code>composer install</code></li><br />
+<li><strong>Create Environment File:</strong> Copy <code>env</code> to <code>.env</code> and configure your local database and <code>app.baseURL</code>.</li><br />
+<li><strong>Run Migrations:</strong> <code>php spark migrate</code></li><br />
+<li><strong>Start the Server:</strong> <code>php spark serve</code></li><br />
+<li>Access the application at <code>http://localhost:8080</code>.</li><br />
+</ol><br />
+<p><strong>2.3. Key Concepts at a Glance</strong></p><br />
+<ul><br />
+<li><strong>Modular MVC-S Architecture:</strong> The application is built around self-contained Modules (e.g., <code>Blog</code>, <code>Payments</code>). Within each module, concerns are separated into Models (database), Views (presentation), Controllers (request handling), and Services (business logic).</li><br />
+<li><strong>Services:</strong> Core functionality like payment processing (<code>PaystackService</code>), AI interaction (<code>GeminiService</code>), and crypto queries (<code>CryptoService</code>) are encapsulated in their own service classes for reusability.</li><br />
+<li><strong>Pay-As-You-Go:</strong> Users top up an account balance, and this balance is debited for each AI or Crypto query they perform.</li><br />
+</ul><br />
+<p><strong>3. Installation</strong></p><br />
+<p><strong>3.1. Server Requirements &amp; Prerequisites</strong></p><br />
+<ul><br />
+<li><strong>OS:</strong> Ubuntu (Recommended)</li><br />
+<li><strong>Web Server:</strong> Apache2 or Nginx</li><br />
+<li><strong>PHP:</strong> Version 8.1 or higher with <code>intl</code>, <code>mbstring</code>, <code>bcmath</code>, <code>curl</code>, <code>xml</code>, <code>zip</code>, <code>gd</code> extensions.</li><br />
+<li><strong>Database:</strong> MySQL Server</li><br />
+<li><strong>Tools:</strong> Composer, Git, Pandoc, ffmpeg</li><br />
+</ul><br />
+<p><strong>3.2. Automated Installation (Recommended)</strong></p><br />
+<p>The <code>setup.sh</code> script is designed for a clean Ubuntu server and automates the entire installation process. It will:</p><br />
+<ul><br />
+<li>Install Apache2, PHP 8.2, and MySQL.</li><br />
+<li>Create a dedicated database and user.</li><br />
+<li>Install Composer and Node.js.</li><br />
+<li>Clone the project repository.</li><br />
+<li>Install all project dependencies.</li><br />
+<li>Create the <code>.env</code> file with generated database credentials.</li><br />
+<li>Run database migrations.</li><br />
+<li>Configure an Apache virtual host.</li><br />
+</ul><br />
+<p><strong>Usage:</strong></p><br />
+<pre><code>chmod +x setup.sh<br />
+sudo ./setup.sh</code></pre><br />
+<p><strong>3.3. Manual Installation (Advanced)</strong></p><br />
+<ol><br />
+<li><strong>Clone Repository:</strong> <code>git clone https://github.com/nehemiaobati/genaiwebapplication.git .</code></li><br />
+<li><strong>Install Dependencies:</strong> Run <code>composer install</code>.</li><br />
+<li><strong>Configure Environment:</strong> Copy <code>env</code> to <code>.env</code>.</li><br />
+<li><strong>Database Setup:</strong> Create a MySQL database and user.</li><br />
+<li><strong>Edit <code>.env</code> file:</strong> Fill in your <code>app.baseURL</code>, database credentials, API keys, and email settings.</li><br />
+<li><strong>Run Migrations:</strong> Run <code>php spark migrate</code> to create all necessary tables.</li><br />
+<li><strong>Set Permissions:</strong> Ensure the <code>writable/</code> directory is writable by the web server: <code>chmod -R 775 writable/</code>.</li><br />
+<li><strong>Configure Web Server:</strong> Point your web server's document root to the project's <code>public/</code> directory.</li><br />
+</ol><br />
+<p><strong>3.4. Environment Configuration (<code>.env</code>)</strong></p><br />
+<p>The <code>.env</code> file is critical for configuring the application. You must fill in the following values:</p><br />
+<ul><br />
+<li><code>CI_ENVIRONMENT</code>: <code>development</code> for local, <code>production</code> for live.</li><br />
+<li><code>app.baseURL</code>: The full URL of your application (e.g., <code>http://yourdomain.com/</code>).</li><br />
+<li><code>database.default.*</code>: Your database connection details.</li><br />
+<li><code>encryption.key</code>: A unique, 32-character random string for encryption.</li><br />
+<li><code>PAYSTACK_SECRET_KEY</code>: Your secret key from your Paystack dashboard.</li><br />
+<li><code>GEMINI_API_KEY</code>: Your API key for the Google Gemini service.</li><br />
+<li><code>recaptcha_siteKey</code> &amp; <code>recaptcha_secretKey</code>: Your keys for Google reCAPTCHA v2.</li><br />
+<li><code>email.*</code>: Configuration details for your SMTP email sending service.</li><br />
+</ul><br />
+<p><strong>3.5. Post-Installation Steps &amp; Security</strong></p><br />
+<ol><br />
+<li><strong>Secure <code>.env</code>:</strong> Ensure the <code>.env</code> file is never committed to version control.</li><br />
+<li><strong>Set DNS:</strong> Point your domain's A record to the server's IP address.</li><br />
+<li><br />
+<p><strong>Enable HTTPS:</strong> For production, install an SSL certificate. Using Certbot is recommended:</p><br />
+<pre><code>sudo apt install certbot python3-certbot-apache<br />
+sudo certbot --apache</code></pre><br />
+</li><br />
+</ol><br />
+<hr /><br />
+<p><strong>Part II: Guides &amp; Tutorials</strong></p><br />
+<p><strong>4. Core Concepts</strong></p><br />
+<p><strong>4.1. Architectural Overview (Modular MVC-S)</strong></p><br />
+<p>The project's primary architecture is <strong>Modular</strong>. Each distinct business feature (e.g., Blog, Payments, Gemini) is isolated into a self-contained module within the <code>app/Modules/</code> directory. This promotes code organization, reusability, and makes features easy to add or remove.</p><br />
+<p>Within each module (and for core shared components in the <code>app/</code> directory), the project follows a <strong>Model-View-Controller-Service (MVC-S)</strong> pattern.</p><br />
+<ul><br />
+<li><strong>Models (<code>app/Modules/[ModuleName]/Models</code>)</strong>: Handle all direct database interactions for that module.</li><br />
+<li><strong>Views (<code>app/Modules/[ModuleName]/Views</code>)</strong>: Contain the presentation logic (HTML) for the module.</li><br />
+<li><strong>Controllers (<code>app/Modules/[ModuleName]/Controllers</code>)</strong>: Act as the bridge, handling HTTP requests for the module, calling services, and passing data to views.</li><br />
+<li><strong>Services (<code>app/Modules/[ModuleName]/Libraries</code>)</strong>: Contain the core business logic specific to that module. Shared, application-wide services are located in <code>app/Libraries/</code>.</li><br />
+</ul><br />
+<p><strong>4.2. The Request Lifecycle</strong></p><br />
+<ol><br />
+<li>The request first hits <code>public/index.php</code>.</li><br />
+<li>CodeIgniter automatically discovers routes from <code>app/Config/Routes.php</code> and from the <code>Config/Routes.php</code> file inside each Module.</li><br />
+<li>The routing system matches the URL to a specific controller method (either in <code>app/Controllers</code> or <code>app/Modules/[ModuleName]/Controllers</code>).</li><br />
+<li>Any defined Filters (<code>app/Config/Filters.php</code>) are executed before the controller is called.</li><br />
+<li>The Controller method is executed. It may validate input, call one or more Services, and retrieve data from Models.</li><br />
+<li>The Controller passes the prepared data to a View.</li><br />
+<li>The View is rendered into HTML and sent back to the browser as the final response.</li><br />
+</ol><br />
+<p><strong>4.3. Service Container &amp; Dependency Injection</strong></p><br />
+<p>The application uses CodeIgniter's service container to manage class instances. Core services are defined in <code>app/Config/Services.php</code>. This allows for easy instantiation and sharing of service objects throughout the application.</p><br />
+<ul><br />
+<li><strong>Registration:</strong> Custom services like <code>PaystackService</code> and <code>GeminiService</code> are registered as static methods in <code>app/Config/Services.php</code>.</li><br />
+<li><strong>Usage:</strong> Services are accessed anywhere in the application using the <code>service()</code> helper function (e.g., <code>$geminiService = service('geminiService');</code>).</li><br />
+</ul><br />
+<p><strong>4.4. Directory Structure Explained</strong></p><br />
+<ul><br />
+<li><code>app/Commands</code>: Houses custom <code>spark</code> CLI commands.</li><br />
+<li><code>app/Config</code>: Contains all core application configuration files.</li><br />
+<li><code>app/Controllers</code>: Handles core web requests like authentication and home pages.</li><br />
+<li><code>app/Database</code>: Contains migrations and seeders for core tables like <code>users</code>.</li><br />
+<li><code>app/Libraries</code>: Contains shared, application-wide <strong>Service classes</strong>.</li><br />
+<li><code>app/Models</code>: Contains core Models like <code>UserModel</code>.</li><br />
+<li><code>app/Modules/</code>: <strong>This is the primary location for application features.</strong><br />
+<ul><br />
+<li><code>Blog/</code>: Manages the public blog and admin CRUD interface.</li><br />
+<li><code>Crypto/</code>: Handles cryptocurrency address queries.</li><br />
+<li><code>Gemini/</code>: Manages all interactions with the Gemini AI API.</li><br />
+<li><code>Payments/</code>: Manages the Paystack payment gateway integration.</li><br />
+</ul></li><br />
+<li><code>app/Views</code>: Contains core HTML templates, including the main <code>layouts/</code> and <code>partials/</code>.</li><br />
+<li><code>public/</code>: The web server's document root.</li><br />
+<li><code>writable/</code>: Directory for logs, cache, and file uploads.</li><br />
+</ul><br />
+<p><strong>4.5. Security Principles</strong></p><br />
+<ul><br />
+<li><strong>Public Webroot:</strong> The server's document root is set to the <code>public/</code> directory, preventing direct web access to application source code.</li><br />
+<li><strong>CSRF Protection:</strong> Cross-Site Request Forgery tokens are used on all POST forms.</li><br />
+<li><strong>XSS Filtering:</strong> All data rendered in views is escaped using <code>esc()</code> to prevent Cross-Site Scripting attacks.</li><br />
+<li><strong>Environment Variables:</strong> Sensitive information is stored in the <code>.env</code> file and is never committed to version control.</li><br />
+<li><strong>Query Builder &amp; Entities:</strong> All database queries use CodeIgniter's built-in methods, which automatically escape parameters to prevent SQL injection.</li><br />
+</ul><br />
+<p><strong>4.6. Frontend Design (The 'Blueprint' Method)</strong></p><br />
+<p>The project follows a strict frontend workflow called the "Blueprint Method" to ensure UI consistency.</p><br />
+<ul><br />
+<li><strong>Bootstrap 5 Utilities First:</strong> All styling should prioritize using Bootstrap 5's built-in utility classes (<code>fw-bold</code>, <code>p-4</code>, <code>mb-3</code>, <code>text-center</code>, <code>bg-body-tertiary</code>) over writing custom CSS.</li><br />
+<li><strong>Blueprint Card:</strong> All primary content blocks, forms, and data displays MUST be placed within a <code>&lt;div class="card blueprint-card"&gt;</code>. This provides a consistent, theme-aware container.</li><br />
+<li><strong>Blueprint Header:</strong> Pages should use a standard header structure (<code>&lt;div class="blueprint-header"&gt;</code>) for titles and subtitles.</li><br />
+<li><strong>Theme-Aware Colors:</strong> Hardcoding colors is forbidden. Use Bootstrap's theme-aware utilities (<code>text-body-secondary</code>, <code>bg-primary-subtle</code>) or the project's CSS variables (<code>var(--primary-color)</code>) to ensure compatibility with both light and dark modes.</li><br />
+</ul><br />
+<p><strong>5. Tutorial: Building Your First Feature</strong></p><br />
+<p>This tutorial demonstrates how to build a simple "Notes" feature. <strong>Note:</strong> According to the project's modular architecture, this feature should ideally be built inside its own module at <code>app/Modules/Notes/</code>.</p><br />
+<p><strong>5.1. Creating a New Route</strong></p><br />
+<p>Open <code>app/Modules/Notes/Config/Routes.php</code> and add routes.</p><br />
+<pre><code>$routes-&gt;group('notes', ['filter' =&gt; 'auth', 'namespace' =&gt; 'App\Modules\Notes\Controllers'], static function ($routes) {<br />
+    $routes-&gt;get('/', 'NoteController::index', ['as' =&gt; 'notes.index']);<br />
+    $routes-&gt;post('create', 'NoteController::create', ['as' =&gt; 'notes.create']);<br />
+});</code></pre><br />
+<p><strong>5.2. Building the Controller &amp; Service</strong></p><br />
+<ol><br />
+<li><strong>Create the Controller:</strong> <code>php spark make:controller Modules/Notes/NoteController</code></li><br />
+<li><br />
+<p>Edit <code>app/Modules/Notes/Controllers/NoteController.php</code>:</p><br />
+<pre><code>&lt;?php<br />
+namespace App\Modules\Notes\Controllers;<br />
+<br />
+use App\Controllers\BaseController;<br />
+<br />
+class NoteController extends BaseController<br />
+{<br />
+    public function index()<br />
+    {<br />
+        $noteModel = new \App\Modules\Notes\Models\NoteModel();<br />
+        $data['notes'] = $noteModel-&gt;where('user_id', session()-&gt;get('userId'))-&gt;findAll();<br />
+        return view('App\Modules\Notes\Views\index', $data);<br />
+    }<br />
+<br />
+    public function create()<br />
+    {<br />
+        // ... (logic to save note) ...<br />
+        return redirect()-&gt;to(url_to('notes.index'))-&gt;with('success', 'Note saved!');<br />
+    }<br />
+}</code></pre><br />
+</li><br />
+</ol><br />
+<p><strong>5.3. Interacting with the Database (Model &amp; Entity)</strong></p><br />
+<ol><br />
+<li><strong>Create a Migration:</strong> <code>php spark make:migration Modules/Notes/create_notes_table</code></li><br />
+<li><strong>Create the Model:</strong> <code>php spark make:model Modules/Notes/NoteModel</code></li><br />
+<li><strong>Create the Entity:</strong> <code>php spark make:entity Modules/Notes/Note</code></li><br />
+</ol><br />
+<p><strong>5.4. Displaying Data in a View</strong></p><br />
+<p>Create <code>app/Modules/Notes/Views/index.php</code>.</p><br />
+<pre><code>&lt;?= $this-&gt;extend('layouts/default') ?&gt;<br />
+&lt;?= $this-&gt;section('content') ?&gt;<br />
+&lt;div class="container my-5"&gt;<br />
+    &lt;h1&gt;My Notes&lt;/h1&gt;<br />
+    &lt;!-- Form and list of notes --&gt;<br />
+&lt;/div&gt;<br />
+&lt;?= $this-&gt;endSection() ?&gt;</code></pre><br />
+<p><strong>6. Feature Guides (Deep Dives)</strong></p><br />
+<p><strong>6.1. User Authentication</strong></p><br />
+<ul><br />
+<li><strong>6.1.1. Registration &amp; Login Flow</strong>: Managed by <code>AuthController.php</code>, this feature handles user registration with validation and reCAPTCHA, credential verification for login, and session management.</li><br />
+<li><strong>6.1.2. Email Verification &amp; Password Resets</strong>: A unique token is generated and emailed to the user for verification. The password reset flow uses a secure, expiring token sent via email.</li><br />
+<li><strong>6.1.3. Access Control with Filters</strong>: The <code>AuthFilter</code> (<code>app/Filters/AuthFilter.php</code>) is applied to routes to protect pages that require a user to be logged in.</li><br />
+</ul><br />
+<p><strong>6.2. Payment Gateway Integration</strong></p><br />
+<ul><br />
+<li><strong>6.2.1. Configuration</strong>: The Paystack secret key is configured in the <code>.env</code> file (<code>PAYSTACK_SECRET_KEY</code>).</li><br />
+<li><strong>6.2.2. Initiating a Transaction</strong>: <code>PaymentsController::initiate()</code> calls <code>PaystackService::initializeTransaction()</code>. The service sends a request to Paystack, which returns a unique authorization URL. The user is then redirected to this URL.</li><br />
+<li><strong>6.2.3. Verifying a Payment</strong>: After payment, Paystack redirects the user back to the application. <code>PaymentsController::verify()</code> uses <code>PaystackService::verifyTransaction()</code> to confirm the payment status. If successful, the user's balance is updated within a database transaction.</li><br />
+</ul><br />
+<p><strong>6.3. AI Service Integration</strong></p><br />
+<ul><br />
+<li><strong>6.3.1. Generating Content</strong>: <code>GeminiController::generate()</code> prepares the user's prompt, adds contextual data from the memory system, and sends it to <code>GeminiService::generateContent()</code>.</li><br />
+<li><strong>6.3.2. Conversational Memory System</strong>: This feature is managed by <code>MemoryService.php</code>. It uses a hybrid search (semantic vector search + keyword search) on past interactions to construct a relevant context block, which is prepended to the user's new prompt.</li><br />
+<li><strong>6.3.3. Handling Multimedia Inputs</strong>: Users can upload files via the AI Studio. <code>GeminiController</code> handles the file, converting it to base64 and including it in the API request to the multimodal Gemini model.</li><br />
+<li><strong>6.3.4. Document Generation (PDF/Word) with Fallback</strong>: Users can download the generated response. <code>GeminiController::downloadDocument()</code> uses the <code>DocumentService</code>, which first attempts to use <code>Pandoc</code> for high-quality conversion. If Pandoc is unavailable or fails for PDF, it automatically falls back to using <code>Dompdf</code> for reliable PDF creation.</li><br />
+</ul><br />
+<p><strong>6.4. Cryptocurrency Data Service</strong></p><br />
+<ul><br />
+<li><strong>6.4.1. Querying Balances</strong>: <code>CryptoController::query()</code> calls <code>CryptoService</code> methods, which make API calls to a third-party blockchain explorer.</li><br />
+<li><strong>6.4.2. Fetching Transaction Histories</strong>: The controller calls <code>CryptoService</code> to fetch transaction data, which is then formatted for the view.</li><br />
+</ul><br />
+<p><strong>6.5. Administrative Dashboard</strong></p><br />
+<ul><br />
+<li><strong>6.5.1. User Management</strong>: <code>AdminController.php</code> provides methods to list, search, view details, update balances, and delete users.</li><br />
+<li><strong>6.5.2. Sending Email Campaigns</strong>: <code>CampaignController.php</code> allows an administrator to compose an email that is sent to every registered user. It also provides functionality to save, load, and delete campaign templates.</li><br />
+<li><strong>6.5.3. Viewing Application Logs</strong>: <code>AdminController::logs()</code> provides a secure interface for administrators to view and select daily log files from the <code>writable/logs/</code> directory for debugging purposes.</li><br />
+</ul><br />
+<p><strong>6.6. Blog &amp; Content Management</strong></p><br />
+<ul><br />
+<li><strong>6.6.1. Public-Facing Blog</strong>: <code>BlogController.php</code> (in the <code>Blog</code> module) handles the public-facing side, including a paginated index of all published posts and individual post views.</li><br />
+<li><strong>6.6.2. Admin Management Interface</strong>: The <code>BlogController</code> also contains admin-only methods for managing content, providing a full CRUD (Create, Read, Update, Delete) interface for posts.</li><br />
+</ul><br />
+<p><strong>6.7. Self-Hosted Documentation</strong></p><br />
+<ul><br />
+<li><strong>6.7.1. Serving Documentation Pages</strong>: <code>DocumentationController.php</code> serves documentation pages. It includes methods to display the main documentation index and separate pages for different aspects of the project, such as web architecture and the AI system.</li><br />
+</ul><br />
+<hr /><br />
+<p><strong>Part III: Technical Reference</strong></p><br />
+<p><strong>7. Command-Line Interface (CLI)</strong></p><br />
+<p><strong>7.1. Overview of Custom Commands</strong></p><br />
+<p>Custom application commands are located in <code>app/Commands/</code> or <code>app/Modules/[ModuleName]/Commands/</code>.</p><br />
+<p><strong>7.2. <code>php spark train</code></strong></p><br />
+<ul><br />
+<li><strong>Purpose:</strong> To run the AI text classification training service offline.</li><br />
+<li><strong>Action:</strong> It invokes <code>TrainingService::train()</code>, which trains a Naive Bayes classifier and saves the serialized model files to the <code>writable/nlp/</code> directory.</li><br />
+</ul><br />
+<p><strong>8. Configuration Reference</strong></p><br />
+<p><strong>8.1. Application (<code>App.php</code>)</strong></p><br />
+<p>Located at <code>app/Config/App.php</code>, this file contains the base configuration for the application.</p><br />
+<p><strong>8.2. Database (<code>Database.php</code>)</strong></p><br />
+<p>Located at <code>app/Config/Database.php</code>, this file defines the database connection parameters.</p><br />
+<p><strong>8.3. Custom Configurations (<code>AGI.php</code>, <code>Recaptcha.php</code>)</strong></p><br />
+<p>Custom configuration files are placed in <code>app/Config/Custom/</code>.</p><br />
+<ul><br />
+<li><code>AGI.php</code>: Contains settings for the AI service, including embedding models, memory logic, and hybrid search parameters.</li><br />
+<li><code>Recaptcha.php</code>: Stores the site and secret keys for the Google reCAPTCHA service.</li><br />
+</ul><br />
+<p><strong>9. Testing</strong></p><br />
+<p><strong>9.1. Running the Test Suite</strong></p><br />
+<p>The project uses PHPUnit. Run the test suite using <code>composer test</code>.</p><br />
+<p><strong>9.2. Writing Unit Tests</strong></p><br />
+<p>Unit tests focus on testing individual classes in isolation and are placed in the <code>tests/</code> directory.</p><br />
+<p><strong>9.3. Writing Feature Tests</strong></p><br />
+<p>Feature tests test a full request-response cycle, simulating user interaction.</p><br />
+<hr /><br />
+<p><strong>Part IV: Operations &amp; Community</strong></p><br />
+<p><strong>10. Deployment</strong></p><br />
+<p><strong>10.1. Production Server Setup</strong></p><br />
+<p>The <code>setup.sh</code> script provides a complete, automated setup for a production-ready Ubuntu server.</p><br />
+<p><strong>10.2. Deployment Checklist</strong></p><br />
+<ol><br />
+<li>Set <code>CI_ENVIRONMENT</code> to <code>production</code> in your <code>.env</code> file.</li><br />
+<li>Install production-only dependencies: <code>composer install --no-dev --optimize-autoloader</code>.</li><br />
+<li>Run database migrations: <code>php spark migrate</code>.</li><br />
+<li>Optimize the application: <code>php spark optimize</code>.</li><br />
+<li>Ensure the web server's document root points to the <code>/public/</code> directory.</li><br />
+<li>Verify that <code>writable/</code> directory has the correct server permissions.</li><br />
+</ol><br />
+<p><strong>10.3. Performance Optimization</strong></p><br />
+<ul><br />
+<li><strong>Caching:</strong> The application is configured to use Redis with a file-based fallback.</li><br />
+<li><strong>Autoloader Optimization:</strong> The <code>--optimize-autoloader</code> flag creates an optimized class map.</li><br />
+<li><strong>Spark Optimize Command:</strong> <code>php spark optimize</code> caches configuration for improved performance.</li><br />
+</ul><br />
+<p><strong>11. Troubleshooting</strong></p><br />
+<p><strong>11.1. Frequently Asked Questions (FAQ)</strong></p><br />
+<ul><br />
+<li><strong>Why can't I log in after registering?</strong> You must click the verification link sent to your email address.</li><br />
+<li><strong>Why is my AI query failing?</strong> Check your account balance or try again after a few moments.</li><br />
+</ul><br />
+<p><strong>11.2. Common Error Resolutions</strong></p><br />
+<ul><br />
+<li><strong>"Whoops! We hit a snag."</strong>: Check the server logs at <code>writable/logs/</code> for specific error details.</li><br />
+<li><strong>"File upload failed."</strong>: This usually indicates a permissions issue on the <code>writable/uploads/</code> directory.</li><br />
+<li><strong>"Could not send email."</strong>: Verify your SMTP credentials in the <code>.env</code> file.</li><br />
+</ul><br />
+<p><strong>11.3. Logging &amp; Debugging</strong></p><br />
+<ul><br />
+<li><strong>Log Location:</strong> All application logs are stored in <code>writable/logs/</code>, with a new file created daily.</li><br />
+<li><strong>Log Levels:</strong> Adjust logging sensitivity in <code>app/Config/Logger.php</code>.</li><br />
+</ul><br />
+<p><strong>12. Contributing</strong></p><br />
+<p><strong>12.1. Contribution Guidelines</strong></p><br />
+<ol><br />
+<li>Fork the repository.</li><br />
+<li>Create a new feature branch.</li><br />
+<li>Commit your changes.</li><br />
+<li>Push to the branch.</li><br />
+<li>Open a Pull Request.</li><br />
+</ol><br />
+<p><strong>12.2. Code Style (PSR-12)</strong></p><br />
+<p>The project enforces the PSR-12 coding standard.</p><br />
+<p><strong>12.3. Submitting a Pull Request</strong></p><br />
+<p>Ensure your code is well-documented, follows the project's architectural patterns, and that all tests pass.</p><br />
+<p><strong>13. Appendices</strong></p><br />
+<p><strong>13.1. Glossary of Terms</strong></p><br />
+<ul><br />
+<li><strong>Module:</strong> A self-contained directory in <code>app/Modules/</code> that encapsulates a single business feature.</li><br />
+<li><strong>MVC-S:</strong> Model-View-Controller-Service, an architectural pattern that separates database logic (Model), presentation (View), request handling (Controller), and business logic (Service).</li><br />
+<li><strong>Service:</strong> A class containing reusable business logic.</li><br />
+<li><strong>Entity:</strong> A class that represents a single row from a database table.</li><br />
+</ul><br />
+<p><strong>13.2. Changelog &amp; Release History</strong></p><br />
+<p><strong>v1.2.0 - 2025-11-14</strong></p><br />
+<h3>Added</h3><br />
+<ul><br />
+<li><strong>Modular Architecture:</strong> Refactored the entire application into a modular structure. Features like Blog, Payments, Crypto, and Gemini are now self-contained in <code>app/Modules/</code>.</li><br />
+<li><strong>Campaign Templates:</strong> Administrators can now save, load, and delete email campaign templates.</li><br />
+<li><strong>Admin Log Viewer:</strong> Added a new page in the admin dashboard to securely view application log files.</li><br />
+<li><strong>Self-Hosted Documentation Pages:</strong> The application now serves dedicated pages for Web and AGI documentation.</li><br />
+</ul><br />
+<h3>Changed</h3><br />
+<ul><br />
+<li><strong>Document Generation:</strong> The AI document download feature now uses Pandoc for higher quality output and falls back to Dompdf for PDFs if Pandoc is not available.</li><br />
+<li><strong>Directory Structure:</strong> Major changes to the directory structure to support the new modular architecture.</li><br />
+<li><strong>Frontend Workflow:</strong> Standardized all views to use the "Blueprint" method for UI consistency.</li><br />
+</ul><br />
+<p><strong>v1.1.0 - 2025-11-13</strong></p><br />
+<h3>Added</h3><br />
+<ul><br />
+<li><strong>Blog &amp; Content Management System:</strong> Added a complete public-facing blog and an administrative backend for full CRUD functionality.</li><br />
+<li><strong>AI Document Generation:</strong> Users can download generated AI content as a PDF or Microsoft Word (<code>.docx</code>) file.</li><br />
+</ul><br />
+<h3>Changed</h3><br />
+<ul><br />
+<li>Updated routing to include endpoints for the new blog and documentation features.</li><br />
+</ul><br />
+<p><strong>v1.0.0 (Initial Release)</strong></p><br />
+<ul><br />
+<li>Core features implemented: User Authentication, Paystack Payments, Gemini AI Integration, Crypto Data Service, Admin Dashboard.</li><br />
+</ul><br />
+<hr /><br />
+<p><strong>Part V: Documentation Maintenance Guide</strong></p><br />
+<p><strong>15. A Guide for the Project Owner</strong></p><br />
+<p>This section serves as the standard operating procedure (SOP) for maintaining this project's documentation. Its purpose is to ensure accuracy, consistency, and longevity, whether updates are performed by you or an AI assistant.</p><br />
+<p><strong>15.1. The Philosophy of Living Documentation</strong></p><br />
+<p>Treat this documentation as a core part of the codebase. It should evolve in lockstep with every feature change, bug fix, or architectural adjustment. An undocumented change is an incomplete change. The goal is to ensure that a new developer, or you in six months, can understand the <em>what</em>, <em>how</em>, and <em>why</em> of the system just by reading this document.</p><br />
+<p><strong>15.2. Your Role vs. the AI's Role</strong></p><br />
+<ul><br />
+<li><strong>The AI's Role (Efficiency &amp; Accuracy):</strong> The AI is the primary documentation writer. It excels at systematically analyzing code changes (<code>git diff</code>), identifying affected components, and generating accurate, detailed descriptions based on the established structure. It is responsible for the heavy lifting of drafting content.</li><br />
+<li><strong>Your Role (Clarity &amp; Context):</strong> Your role is that of an editor and strategist. You review the AI-generated content for clarity, human readability, and high-level context that the code alone cannot provide. You ensure the "why" behind a change is captured, not just the "what."</li><br />
+</ul><br />
+<p><strong>15.3. The Documentation Update Workflow</strong></p><br />
+<p>This workflow applies to any code changes committed to the main branch.</p><br />
+<p><strong>A. For Simple Changes (e.g., typos, clarifications, minor updates):</strong></p><br />
+<ol><br />
+<li><strong>Identify:</strong> Locate the relevant section in the documentation file.</li><br />
+<li><strong>Edit:</strong> Make the necessary correction or addition directly.</li><br />
+<li><strong>Commit:</strong> Commit the change with a clear message, prefixed with <code>docs:</code>.<br />
+<ul><br />
+<li><em>Example:</em> <code>docs: Correct typo in Installation section 3.4</code></li><br />
+</ul></li><br />
+</ol><br />
+<p><strong>B. For Complex Changes (e.g., new features, architectural modifications):</strong></p><br />
+<ol><br />
+<li><strong>Identify the Scope:</strong> Use the procedure in section <strong>15.4</strong> to identify all changed files and map them to the corresponding sections of this documentation.</li><br />
+<li><strong>Draft Updates (or Prompt the AI):</strong> For each affected section, draft the new content. If using the AI, provide it with the list of changed files and instruct it to update the documentation accordingly.<br />
+<ul><br />
+<li><em>Example Prompt for AI:</em> "A new email campaign feature has been added. The following files were created or modified: <code>CampaignController.php</code>, <code>CampaignModel.php</code>, <code>create.php</code> view, and the routes were updated. Please update the documentation, including a new sub-section in the Feature Guides (6.5.2) and updating the directory structure."</li><br />
+</ul></li><br />
+<li><strong>Update Table of Contents:</strong> If new sections or sub-sections were added, update the table of contents at the beginning of the document.</li><br />
+<li><strong>Update Changelog:</strong> Follow the procedure in section <strong>15.5</strong> to add an entry to the Changelog and determine if the version number needs to be updated.</li><br />
+<li><strong>Review and Commit:</strong> Read through all changes from the perspective of someone unfamiliar with the update. Is it clear? Is anything missing? Once satisfied, commit the changes.</li><br />
+</ol><br />
+<p><strong>15.4. Procedure: How to Review the Codebase for Changes</strong></p><br />
+<p>The most efficient way to find what needs documenting is by analyzing the difference between your feature branch and the main branch using Git.</p><br />
+<ol><br />
+<li><br />
+<p><strong>Generate a File List:</strong> From your feature branch, run the following command to get a list of all files that have been added (<code>A</code>), modified (<code>M</code>), or renamed (<code>R</code>):</p><br />
+<pre><code>git diff main --name-status  &gt; changed_files.txt<br />
+git diff main &gt; code_changes.diff</code></pre><br />
+</li><br />
+<li><br />
+<p><strong>Map Files to Documentation Sections:</strong> Use the output from the command above and this checklist to determine which parts of the documentation to review and update.</p><br />
+</li><br />
+</ol><br />
+<table><br />
+<thead><br />
+<tr><br />
+<th style="text-align:left;">If This File/Directory Changed...</th><br />
+<th style="text-align:left;">...Then Review and Update These Documentation Sections</th><br />
+</tr><br />
+</thead><br />
+<tbody><br />
+<tr><br />
+<td style="text-align:left;"><code>setup.sh</code> or <code>.env</code> (new variables)</td><br />
+<td style="text-align:left;"><strong>3. Installation</strong> (Prerequisites, Automated/Manual Setup, Environment Config)</td><br />
+</tr><br />
+<tr><br />
+<td style="text-align:left;"><code>app/Modules/[ModuleName]/Config/Routes.php</code></td><br />
+<td style="text-align:left;"><strong>5. Tutorial</strong>, <strong>6. Feature Guides</strong> (for new endpoints/URLs)</td><br />
+</tr><br />
+<tr><br />
+<td style="text-align:left;"><code>app/Modules/[ModuleName]/Controllers/*</code></td><br />
+<td style="text-align:left;"><strong>6. Feature Guides</strong> (logic for a specific feature)</td><br />
+</tr><br />
+<tr><br />
+<td style="text-align:left;"><code>app/Modules/[ModuleName]/Libraries/*</code> (Services)</td><br />
+<td style="text-align:left;"><strong>4. Core Concepts</strong>, <strong>6. Feature Guides</strong> (detailed business logic)</td><br />
+</tr><br />
+<tr><br />
+<td style="text-align:left;"><code>app/Modules/[ModuleName]/Models/*</code> or <code>Entities/*</code></td><br />
+<td style="text-align:left;"><strong>5. Tutorial</strong>, <strong>6. Feature Guides</strong> (how data is handled for a feature)</td><br />
+</tr><br />
+<tr><br />
+<td style="text-align:left;"><code>app/Modules/[ModuleName]/Database/Migrations/*</code></td><br />
+<td style="text-align:left;"><strong>5. Tutorial</strong>, <strong>6. Feature Guides</strong> (mention new database tables/columns)</td><br />
+</tr><br />
+<tr><br />
+<td style="text-align:left;"><code>app/Commands/*</code> or <code>app/Modules/[ModuleName]/Commands/*</code></td><br />
+<td style="text-align:left;"><strong>7. Command-Line Interface (CLI)</strong></td><br />
+</tr><br />
+<tr><br />
+<td style="text-align:left;"><code>app/Config/Custom/*</code></td><br />
+<td style="text-align:left;"><strong>8. Configuration Reference</strong> (document new custom settings)</td><br />
+</tr><br />
+<tr><br />
+<td style="text-align:left;"><code>app/Modules/[ModuleName]/Views/*</code></td><br />
+<td style="text-align:left;">Usually doesn't require a doc change unless a major new UI feature is introduced.</td><br />
+</tr><br />
+<tr><br />
+<td style="text-align:left;"><code>composer.json</code> (new dependencies)</td><br />
+<td style="text-align:left;"><strong>1.4. Technology Stack</strong>, <strong>3.1. Server Requirements</strong></td><br />
+</tr><br />
+</tbody><br />
+</table><br />
+<p><strong>15.5. Procedure: Updating the Changelog and Managing Releases</strong></p><br />
+<p>This project follows <strong>Semantic Versioning (SemVer)</strong>: <code>MAJOR.MINOR.PATCH</code>.</p><br />
+<ul><br />
+<li><strong><code>PATCH</code> (e.g., 1.0.0 -&gt; 1.0.1):</strong> For backward-compatible bug fixes or documentation corrections. No new features.</li><br />
+<li><strong><code>MINOR</code> (e.g., 1.0.1 -&gt; 1.1.0):</strong> For new features or functionality added in a backward-compatible manner. This will be your most common version bump.</li><br />
+<li><strong><code>MAJOR</code> (e.g., 1.1.0 -&gt; 2.0.0):</strong> For incompatible API changes or significant architectural shifts that break backward compatibility.</li><br />
+</ul><br />
+<p><strong>Changelog Update Criteria:</strong></p><br />
+<ol><br />
+<li><br />
+<p><strong>Locate the Changelog:</strong> Find section <strong>13.2. Changelog &amp; Release History</strong>.</p><br />
+</li><br />
+<li><br />
+<p><strong>Create a New Entry:</strong> For every set of changes merged to <code>main</code>, add a new version heading. If it's the first change for a new version, create the heading; otherwise, add to the existing one.</p><br />
+</li><br />
+<li><br />
+<p><strong>Format the Entry:</strong> Use the following structure, inspired by Keep a Changelog (<a href="https://keepachangelog.com/en/1.0.0/">https://keepachangelog.com/en/1.0.0/</a>). Only include the categories you need for that release.</p><br />
+<pre><code>**v[MAJOR.MINOR.PATCH] - YYYY-MM-DD**<br />
+<br />
+### Added<br />
+- New feature A.<br />
+- New feature B.<br />
+<br />
+### Changed<br />
+- Updated user dashboard for better UX.<br />
+- Switched payment provider logic.<br />
+<br />
+### Fixed<br />
+- Resolved login bug affecting Safari users.<br />
+<br />
+### Removed<br />
+- Deprecated the old reporting feature.</code></pre><br />
+</li><br />
+<li><br />
+<p><strong>Be Concise and User-Focused:</strong> Describe the <em>impact</em> of the change, not just the code that was altered.</p><br />
+<ul><br />
+<li><strong>Good:</strong> "Added email notifications for successful payments."</li><br />
+<li><strong>Bad:</strong> "Modified the <code>PaymentsController</code> and created a <code>PaymentNotification</code> class."</li><br />
+</ul><br />
+</li><br />
+</ol>
+
+</div>
+
+<?= $this->endSection() ?>
