@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Gemini\Libraries;
 
@@ -13,7 +15,7 @@ class PandocService
     {
         $userId = session()->get('userId') ?? 0;
         $tempDir = WRITEPATH . 'uploads/pandoc_temp/' . $userId . '/';
-        
+
         if (!is_dir($tempDir)) mkdir($tempDir, 0775, true);
 
         // Define Paths
@@ -44,7 +46,7 @@ class PandocService
             log_message('error', '[PandocService] Failed: ' . implode("\n", $output));
             // Try to cleanup output if it was partially created (0 bytes)
             if (file_exists($outputFilePath)) @unlink($outputFilePath);
-            
+
             return ['status' => 'error', 'message' => 'Conversion process failed.'];
         }
 
