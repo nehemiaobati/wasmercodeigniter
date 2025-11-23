@@ -35,6 +35,7 @@ class Filters extends BaseFilters
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
         'auth'          => \App\Filters\AuthFilter::class,
+        'admin'         => \App\Filters\AdminFilter::class,
         'balance'       => \App\Filters\BalanceFilter::class, // Added for balance check
     ];
 
@@ -75,7 +76,7 @@ class Filters extends BaseFilters
     public array $globals = [
         'before' => [
             // 'honeypot',
-             'csrf' => ['except' => ['gemini/download-document']],
+            'csrf' => ['except' => ['gemini/download-document']],
             // 'invalidchars',
         ],
         'after' => [

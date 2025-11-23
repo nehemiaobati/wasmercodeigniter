@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Gemini\Controllers;
 
@@ -24,10 +26,22 @@ class GeminiController extends BaseController
     protected UserSettingsModel $userSettingsModel;
 
     private const SUPPORTED_MIME_TYPES = [
-        'image/png', 'image/jpeg', 'image/webp', 'audio/mpeg', 'audio/mp3',
-        'audio/wav', 'video/mov', 'video/mpeg', 'video/mp4', 'video/mpg',
-        'video/avi', 'video/wmv', 'video/mpegps', 'video/flv',
-        'application/pdf', 'text/plain'
+        'image/png',
+        'image/jpeg',
+        'image/webp',
+        'audio/mpeg',
+        'audio/mp3',
+        'audio/wav',
+        'video/mov',
+        'video/mpeg',
+        'video/mp4',
+        'video/mpg',
+        'video/avi',
+        'video/wmv',
+        'video/mpegps',
+        'video/flv',
+        'application/pdf',
+        'text/plain'
     ];
     private const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     private const USD_TO_KSH_RATE = 129;
@@ -59,7 +73,7 @@ class GeminiController extends BaseController
         $userId = (int) session()->get('userId');
         $prompts = $this->promptModel->where('user_id', $userId)->findAll();
         $userSetting = $this->userSettingsModel->where('user_id', $userId)->first();
-        
+
         $data = [
             'pageTitle'              => 'AI Workspace | Afrikenkid',
             'metaDescription'        => 'Your personal AI workspace for content creation and data analysis.',
@@ -74,7 +88,7 @@ class GeminiController extends BaseController
             'supportedMimeTypes'     => json_encode(self::SUPPORTED_MIME_TYPES),
         ];
         $data['robotsTag'] = 'noindex, follow';
-        
+
         return view('App\Modules\Gemini\Views\gemini\query_form', $data);
     }
 
@@ -96,7 +110,7 @@ class GeminiController extends BaseController
 
         $file = $this->request->getFile('file');
         $userTempPath = WRITEPATH . 'uploads/gemini_temp/' . $userId . '/';
-        
+
         if (!is_dir($userTempPath)) {
             mkdir($userTempPath, 0777, true);
         }
@@ -122,7 +136,7 @@ class GeminiController extends BaseController
 
         $fileId = $this->request->getPost('file_id');
         if (!$fileId) return $this->response->setStatusCode(400);
-        
+
         $filePath = WRITEPATH . 'uploads/gemini_temp/' . $userId . '/' . basename($fileId);
 
         if (file_exists($filePath) && unlink($filePath)) {
@@ -139,6 +153,13 @@ class GeminiController extends BaseController
 
         if (!$user) return redirect()->back()->with('error', 'User not found.');
 
+        // Input Validation
+        if (!$this->validate([
+            'prompt' => 'max_length[200000]'
+        ])) {
+            return redirect()->back()->withInput()->with('error', 'Prompt is too long. Maximum 200,000 characters allowed.');
+        }
+
         $userSetting = $this->userSettingsModel->where('user_id', $userId)->first();
         $isAssistantMode = $userSetting ? $userSetting->assistant_mode_enabled : true;
         $isVoiceMode = $userSetting ? $userSetting->voice_output_enabled : false;
@@ -149,7 +170,7 @@ class GeminiController extends BaseController
         // 1. Prepare Context & Files
         $contextData = $this->_prepareContext($userId, $inputText, $isAssistantMode);
         $uploadResult = $this->_handlePreUploadedFiles($uploadedFileIds, $userId);
-        
+
         if (isset($uploadResult['error'])) {
             $this->_cleanupTempFiles($uploadedFileIds, $userId);
             return redirect()->back()->withInput()->with('error', $uploadResult['error']);
@@ -200,7 +221,7 @@ class GeminiController extends BaseController
         $redirect = redirect()->back()->withInput()
             ->with('result', $parsedown->text($apiResponse['result']))
             ->with('raw_result', $apiResponse['result']);
-            
+
         if ($audioUrl) {
             $redirect->with('audio_url', $audioUrl);
         }
@@ -241,9 +262,9 @@ class GeminiController extends BaseController
     {
         $userId = (int) session()->get('userId');
         if (!$this->validate(['title' => 'required|max_length[255]', 'prompt_text' => 'required'])) {
-             return redirect()->back()->withInput()->with('error', 'Invalid input.');
+            return redirect()->back()->withInput()->with('error', 'Invalid input.');
         }
-        
+
         $this->promptModel->save([
             'user_id' => $userId,
             'title' => $this->request->getPost('title'),
@@ -266,14 +287,14 @@ class GeminiController extends BaseController
     public function clearMemory(): RedirectResponse
     {
         $userId = (int) session()->get('userId');
-        
+
         // Ensure transaction handling is robust
         $db = \Config\Database::connect();
         $db->transStart();
-        
+
         (new InteractionModel())->where('user_id', $userId)->delete();
         (new EntityModel())->where('user_id', $userId)->delete();
-        
+
         $db->transComplete();
 
         if ($db->transStatus() === false) {
@@ -289,10 +310,10 @@ class GeminiController extends BaseController
     public function serveAudio(string $fileName)
     {
         $userId = (int) session()->get('userId');
-        
+
         // Security: Basename prevents directory traversal attacks
         $path = WRITEPATH . 'uploads/ttsaudio_secure/' . $userId . '/' . basename($fileName);
-        
+
         if (!file_exists($path)) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
@@ -302,18 +323,21 @@ class GeminiController extends BaseController
         $mime = ($ext === 'wav') ? 'audio/wav' : 'audio/mpeg';
 
         // 'inline' disposition allows the <audio> tag to play it immediately
-        return $this->response
+        $this->response
             ->setHeader('Content-Type', $mime)
             ->setHeader('Content-Length', (string)filesize($path))
-            ->setHeader('Content-Disposition', 'inline; filename="' . $fileName . '"')
-            ->setBody(file_get_contents($path));
+            ->setHeader('Content-Disposition', 'inline; filename="' . $fileName . '"');
+
+        // Efficiently output file content without loading into memory
+        readfile($path);
+        return $this->response;
     }
-    
+
     public function downloadDocument()
     {
         $content = $this->request->getPost('raw_response');
         $format = $this->request->getPost('format');
-        
+
         // Basic Validation
         if (!$content || !in_array($format, ['pdf', 'docx'])) {
             return redirect()->back()->with('error', 'Invalid request parameters.');
@@ -321,12 +345,12 @@ class GeminiController extends BaseController
 
         // Execution: Service now guarantees a 'fileData' string on success
         $result = service('documentService')->generate($content, $format);
-        
+
         if ($result['status'] === 'success') {
-            $mime = $format === 'docx' 
-                ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+            $mime = $format === 'docx'
+                ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
                 : 'application/pdf';
-            
+
             $filename = 'Studio-Output-' . date('Ymd-His') . '.' . $format;
 
             return $this->response
@@ -334,7 +358,7 @@ class GeminiController extends BaseController
                 ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
                 ->setBody($result['fileData']); // Unified response body
         }
-        
+
         // Error handling
         $errorMsg = $result['message'] ?? 'Document generation failed.';
         return redirect()->back()->with('error', $errorMsg);
@@ -349,7 +373,7 @@ class GeminiController extends BaseController
         if ($isAssistantMode && !empty(trim($inputText))) {
             $memoryService = service('memory', $userId);
             $recalled = $memoryService->getRelevantContext($inputText);
-            
+
             $template = $memoryService->getTimeAwareSystemPrompt();
             $template = str_replace('{{CURRENT_TIME}}', date('Y-m-d H:i:s T'), $template);
             $template = str_replace('{{CONTEXT_FROM_MEMORY_SERVICE}}', $recalled['context'], $template);
@@ -362,7 +386,7 @@ class GeminiController extends BaseController
         }
         return $data;
     }
-    
+
     private function _handlePreUploadedFiles(array $fileIds, int $userId): array
     {
         $parts = [];
@@ -379,15 +403,15 @@ class GeminiController extends BaseController
             if (!in_array($mimeType, self::SUPPORTED_MIME_TYPES, true)) {
                 return ['error' => "Unsupported file type."];
             }
-            
+
             $parts[] = ['inlineData' => [
-                'mimeType' => $mimeType, 
+                'mimeType' => $mimeType,
                 'data' => base64_encode(file_get_contents($filePath))
             ]];
         }
         return ['parts' => $parts];
     }
-    
+
     private function _cleanupTempFiles(array $fileIds, int $userId): void
     {
         foreach ($fileIds as $fileId) {
@@ -401,7 +425,7 @@ class GeminiController extends BaseController
         if (!$response['status']) return ['error' => $response['error']];
 
         $costData = $this->_calculateCost($response['totalTokens'], 0);
-        
+
         if ($user->balance < $costData['costInKSH']) {
             return ['error' => "Insufficient balance. Cost: KSH " . number_format($costData['costInKSH'], 2)];
         }
@@ -465,19 +489,19 @@ class GeminiController extends BaseController
     {
         $userId = (int) session()->get('userId');
         $securePath = WRITEPATH . 'uploads/ttsaudio_secure/' . $userId . '/';
-        
+
         if (!is_dir($securePath)) mkdir($securePath, 0775, true);
 
         // Generate base name (e.g., "speech_651a...")
         $filenameBase = uniqid('speech_');
-        
+
         // Delegate to Service (Returns .mp3 OR .wav)
         $result = service('ffmpegService')->processAudio(
-            $base64Data, 
-            $securePath, 
+            $base64Data,
+            $securePath,
             $filenameBase
         );
-        
+
         return $result['success'] ? $result['fileName'] : null;
     }
 }

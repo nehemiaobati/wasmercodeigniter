@@ -8,6 +8,7 @@
         position: relative;
         background-color: var(--bs-tertiary-bg);
     }
+
     .block-controls {
         position: absolute;
         top: 0.5rem;
@@ -35,7 +36,7 @@
                             <input type="text" class="form-control" id="title" name="title" placeholder="Post Title" value="<?= old('title', $post->title ?? '') ?>" required>
                             <label for="title">Post Title</label>
                         </div>
-                        
+
                         <h5 class="fw-bold">Content Builder</h5>
                         <div id="content-builder-area" class="d-flex flex-column gap-3 mb-3">
                             <?php
@@ -95,16 +96,20 @@
                             <label for="status">Status</label>
                         </div>
                         <div class="form-floating mb-3">
-                             <input type="datetime-local" class="form-control" id="published_at" name="published_at" value="<?= old('published_at', ($post->published_at ?? null) ? \CodeIgniter\I18n\Time::parse($post->published_at)->format('Y-m-d\TH:i') : date('Y-m-d\TH:i')) ?>">
+                            <input type="datetime-local" class="form-control" id="published_at" name="published_at" value="<?= old('published_at', ($post->published_at ?? null) ? \CodeIgniter\I18n\Time::parse($post->published_at)->format('Y-m-d\TH:i') : date('Y-m-d\TH:i')) ?>">
                             <label for="published_at">Publish Date</label>
                         </div>
-                         <div class="form-floating mb-3">
+                        <div class="form-floating mb-3">
                             <input type="text" class="form-control" id="featured_image_url" name="featured_image_url" placeholder="Image URL" value="<?= old('featured_image_url', ($post ? $post->featured_image_url : '')) ?>">
                             <label for="featured_image_url">Featured Image URL</label>
                         </div>
                         <div class="form-floating mb-3">
                             <input type="text" class="form-control" id="category_name" name="category_name" placeholder="Category" value="<?= old('category_name', $post->category_name ?? '') ?>">
                             <label for="category_name">Category</label>
+                        </div>
+                        <div class="form-floating mb-3">
+                            <input type="text" class="form-control" id="author_name" name="author_name" placeholder="Author Name" value="<?= old('author_name', $post->author_name ?? '') ?>">
+                            <label for="author_name">Author Name</label>
                         </div>
                         <div class="form-floating mb-3">
                             <textarea class="form-control" id="excerpt" name="excerpt" placeholder="Short summary..." style="height: 100px"><?= old('excerpt', $post->excerpt ?? '') ?></textarea>
@@ -127,33 +132,33 @@
 
 <?= $this->section('scripts') ?>
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    const builderArea = document.getElementById('content-builder-area');
+    document.addEventListener('DOMContentLoaded', () => {
+        const builderArea = document.getElementById('content-builder-area');
 
-    const createBlock = (type) => {
-        const block = document.createElement('div');
-        block.className = 'content-block p-3 pt-5';
-        let innerHTML = `<input type="hidden" name="content_type[]" value="${type}"><div class="block-controls"><button type="button" class="btn btn-sm btn-outline-danger remove-block"><i class="bi bi-trash"></i></button></div>`;
-        if (type === 'text') {
-            innerHTML += `<textarea name="content_text[]" class="form-control" rows="8" placeholder="Enter your text content (Markdown supported)"></textarea><input type="hidden" name="content_language[]" value="">`;
-        } else if (type === 'image') {
-            innerHTML += `<input type="text" name="content_text[]" class="form-control" placeholder="Enter Image URL"><input type="hidden" name="content_language[]" value="">`;
-        } else if (type === 'code') {
-            innerHTML += `<textarea name="content_text[]" class="form-control" rows="8" placeholder="Enter code snippet"></textarea><input type="text" name="content_language[]" class="form-control mt-2" placeholder="Language (e.g., php, javascript)">`;
-        }
-        block.innerHTML = innerHTML;
-        builderArea.appendChild(block);
-    };
+        const createBlock = (type) => {
+            const block = document.createElement('div');
+            block.className = 'content-block p-3 pt-5';
+            let innerHTML = `<input type="hidden" name="content_type[]" value="${type}"><div class="block-controls"><button type="button" class="btn btn-sm btn-outline-danger remove-block"><i class="bi bi-trash"></i></button></div>`;
+            if (type === 'text') {
+                innerHTML += `<textarea name="content_text[]" class="form-control" rows="8" placeholder="Enter your text content (Markdown supported)"></textarea><input type="hidden" name="content_language[]" value="">`;
+            } else if (type === 'image') {
+                innerHTML += `<input type="text" name="content_text[]" class="form-control" placeholder="Enter Image URL"><input type="hidden" name="content_language[]" value="">`;
+            } else if (type === 'code') {
+                innerHTML += `<textarea name="content_text[]" class="form-control" rows="8" placeholder="Enter code snippet"></textarea><input type="text" name="content_language[]" class="form-control mt-2" placeholder="Language (e.g., php, javascript)">`;
+            }
+            block.innerHTML = innerHTML;
+            builderArea.appendChild(block);
+        };
 
-    document.getElementById('add-text-block').addEventListener('click', () => createBlock('text'));
-    document.getElementById('add-image-block').addEventListener('click', () => createBlock('image'));
-    document.getElementById('add-code-block').addEventListener('click', () => createBlock('code'));
+        document.getElementById('add-text-block').addEventListener('click', () => createBlock('text'));
+        document.getElementById('add-image-block').addEventListener('click', () => createBlock('image'));
+        document.getElementById('add-code-block').addEventListener('click', () => createBlock('code'));
 
-    builderArea.addEventListener('click', (e) => {
-        if (e.target.closest('.remove-block')) {
-            e.target.closest('.content-block').remove();
-        }
+        builderArea.addEventListener('click', (e) => {
+            if (e.target.closest('.remove-block')) {
+                e.target.closest('.content-block').remove();
+            }
+        });
     });
-});
 </script>
 <?= $this->endSection() ?>

@@ -10,7 +10,8 @@
     /* Hero Section Styling (Remains Unchanged - Uses its own theme) */
     .hero-section {
         background: var(--hero-gradient);
-        color: var(--bs-white); /* Using Bootstrap white for text */
+        color: var(--bs-white);
+        /* Using Bootstrap white for text */
         padding: 100px 0;
         text-align: center;
         overflow: hidden;
@@ -67,7 +68,8 @@
     }
 
     /* MODIFICATION: Uses Bootstrap theme-aware classes instead of hardcoded colors */
-    .process-number, .step-number {
+    .process-number,
+    .step-number {
         font-size: 1.5rem;
         font-weight: 700;
         border-radius: 50%;
@@ -79,6 +81,7 @@
         justify-content: center;
         margin-right: 15px;
     }
+
     .step-number {
         width: 60px;
         height: 60px;
@@ -88,13 +91,35 @@
     /* Call-to-Action Section Styling (Remains Unchanged - Intentionally Dark) */
     .cta-section {
         background-color: var(--cta-bg);
-        color: var(--bs-white); /* Using Bootstrap white for text */
+        color: var(--bs-white);
+        /* Using Bootstrap white for text */
         border-radius: 0.75rem;
     }
 
     /* Animations */
-    @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 
     .fade-in-section {
         opacity: 0;
@@ -114,7 +139,7 @@
 <!-- Hero Section -->
 <section class="hero-section">
     <div class="container hero-content">
-        <h1 class="display-3 mb-3">Generate with Gemini AI & Query Live On-Chain Data. The Developer's Productivity Suite.</h1>
+        <h1 class="display-3 mb-3">The Ultimate Productivity Suite for Creators & Businesses.</h1>
         <p class="lead">Chat with a powerful AI assistant and Unlock on-chain insights for any BTC or LTC address. Top up your account easily with <span style="color: green;">M-Pesa</span>, <span style="color: red;"> Airtel Money</span>, and or Card. Simple, pay-as-you-go pricing.</p>
         <div class="d-grid gap-2 d-sm-flex justify-content-sm-center hero-buttons">
             <a href="<?= url_to('register') ?>" class="btn btn-primary btn-lg px-4 gap-3 fw-bold">Create Your Free Account</a>
@@ -134,7 +159,7 @@
                     <div class="card h-100 blueprint-card">
                         <div class="card-body p-4">
                             <div class="feature-icon"><i class="bi bi-robot"></i></div>
-                            <h3 class="fs-4 fw-bold">Your Creative AI Co-Pilot</h3>
+                            <h3 class="fs-4 fw-bold">Your Creative AI Co-Pilot <br><small class="text-muted fs-6">Powered by Gemini</small></h3>
                             <p class="text-muted">From writing marketing copy to analyzing documents, our AI assistant, powered by Google's Gemini, helps you work smarter.</p>
                         </div>
                     </div>
@@ -205,7 +230,46 @@
                 </div>
             </div>
             <div class="text-center mt-5">
-                <a href="<?= url_to('contact.form') ?>" class="btn btn-primary btn-lg fw-bold">Book a Free Consultation</a>
+                <a href="<?= url_to('contact.form') ?>" class="btn btn-primary btn-lg fw-bold" aria-label="Book a free consultation">Book a Free Consultation</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Case Studies Section -->
+    <section id="case-studies" class="py-5 my-5">
+        <div class="container fade-in-section">
+            <div class="text-center mb-5">
+                <h2 class="display-5 fw-bold">What You Can Build</h2>
+                <p class="lead text-body-secondary">See how our platform leverages AI to solve real-world problems.</p>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="mb-3 text-primary"><i class="bi bi-file-earmark-text fs-1"></i></div>
+                            <h4 class="card-title fw-bold">Legal Drafting</h4>
+                            <p class="card-text text-muted">Generate professional legal letters and contracts in seconds using our advanced AI assistant. Perfect for small businesses.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="mb-3 text-primary"><i class="bi bi-journal-richtext fs-1"></i></div>
+                            <h4 class="card-title fw-bold">Document Summarization</h4>
+                            <p class="card-text text-muted">Upload lengthy PDF reports and get concise, actionable summaries. Save hours of reading time.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="mb-3 text-primary"><i class="bi bi-translate fs-1"></i></div>
+                            <h4 class="card-title fw-bold">Content Localization</h4>
+                            <p class="card-text text-muted">Translate and adapt marketing copy for different African regions, maintaining cultural relevance and tone.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>

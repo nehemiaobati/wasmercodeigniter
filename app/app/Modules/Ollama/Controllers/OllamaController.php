@@ -37,7 +37,8 @@ class OllamaController extends BaseController
             'pageTitle'    => 'Local AI | Ollama & DeepSeek',
             'isOnline'     => $isOnline,
             'history'      => $history,
-            'canonicalUrl' => url_to('ollama.index')
+            'canonicalUrl' => url_to('ollama.index'),
+            'robotsTag' => 'noindex, nofollow', 
         ]);
     }
 

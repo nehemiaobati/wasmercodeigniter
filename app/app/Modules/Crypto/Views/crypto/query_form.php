@@ -4,7 +4,7 @@
 <style>
     :root {
         /* Define offset for sticky header compatibility */
-        --header-height-offset: 100px; 
+        --header-height-offset: 100px;
     }
 
     /* Theme-aware Accordion Overrides */
@@ -13,24 +13,24 @@
         color: var(--bs-primary-text-emphasis);
         box-shadow: none;
     }
-    
+
     /* Dark mode adjustment for accordion button icon if needed, 
        though BS5.3 usually handles this automatically via the SVG variable */
 
     .balance-display {
         /* Uses Bootstrap's tertiary background for theme switching */
-        background-color: var(--bs-tertiary-bg); 
+        background-color: var(--bs-tertiary-bg);
         border-left: 5px solid var(--bs-primary);
         padding: 2rem;
         border-radius: 0.5rem;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
     }
 
     .balance-display .balance-amount {
         font-size: 2.5rem;
         font-weight: 800;
         color: var(--bs-primary);
-        font-family: 'Courier New', Courier, monospace; 
+        font-family: 'Courier New', Courier, monospace;
     }
 
     /* UX Feature: Sticky Header Awareness */
@@ -39,11 +39,12 @@
     }
 
     /* UX Feature: Monospace for Crypto Data */
-    .crypto-hash, .crypto-address {
+    .crypto-hash,
+    .crypto-address {
         font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
         font-size: 0.9em;
         /* Ensures text color adapts to theme (white in dark mode, dark in light mode) */
-        color: var(--bs-body-color); 
+        color: var(--bs-body-color);
     }
 
     .copy-btn {
@@ -55,6 +56,7 @@
         padding: 0 0.5rem;
         color: var(--bs-secondary);
     }
+
     .copy-btn:hover {
         opacity: 1;
         color: var(--bs-primary);
@@ -97,7 +99,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="form-floating mt-3 mb-3">
                             <input type="text" class="form-control crypto-address" id="address" name="address" placeholder="Wallet Address" value="<?= old('address') ?>" required>
                             <label for="address">Wallet Address</label>
@@ -120,129 +122,131 @@
 
         <!-- RESULTS DISPLAY -->
         <?php if ($result = session()->getFlashdata('result')): ?>
-        <div class="col-lg-8">
-            <!-- Added ID for Auto-Scroll target -->
-            <div class="card blueprint-card mt-2 shadow-sm border-primary" id="results-section">
-                <div class="card-header bg-body-tertiary border-bottom d-flex justify-content-between align-items-center">
-                    <h4 class="fw-bold mb-0"><i class="bi bi-list-check"></i> Results</h4>
-                    <!-- Simplified Badge to avoid redundancy if needed, currently keeps Full Name -->
-                    <span class="badge bg-<?= ($result['asset'] === 'BTC' || $result['asset'] === 'Bitcoin (BTC)' ? 'secondary' : 'secondary') ?> fs-6">
-                        <?= esc(strtoupper($result['asset'] ?? 'Unknown')) ?>
-                    </span>
-                </div>
-                
-                <div class="card-body p-4">
-                    <!-- Wallet Summary -->
-                    <div class="mb-4">
-                        <label class="small text-muted text-uppercase fw-bold">Address Queried</label>
-                        <!-- Theme Aware: bg-body-secondary matches dark mode properly -->
-                        <div class="d-flex align-items-center bg-body-secondary p-2 rounded border">
-                            <span class="text-truncate crypto-address flex-grow-1 me-2" id="res-address"><?= esc($result['address'] ?? 'N/A') ?></span>
-                            <button class="copy-btn" onclick="copyToClipboard('#res-address')" title="Copy Address">
-                                <i class="bi bi-clipboard"></i>
-                            </button>
-                        </div>
+            <div class="col-lg-8">
+                <!-- Added ID for Auto-Scroll target -->
+                <div class="card blueprint-card mt-2 shadow-sm border-primary" id="results-section">
+                    <div class="card-header bg-body-tertiary border-bottom d-flex justify-content-between align-items-center">
+                        <h4 class="fw-bold mb-0"><i class="bi bi-list-check"></i> Results</h4>
+                        <!-- Simplified Badge to avoid redundancy if needed, currently keeps Full Name -->
+                        <span class="badge bg-<?= ($result['asset'] === 'BTC' || $result['asset'] === 'Bitcoin (BTC)' ? 'secondary' : 'secondary') ?> fs-6">
+                            <?= esc(strtoupper($result['asset'] ?? 'Unknown')) ?>
+                        </span>
                     </div>
 
-                    <?php if (isset($result['balance'])): ?>
-                        <!-- Balance View -->
-                        <div class="balance-display text-center">
-                            <p class="text-muted text-uppercase fw-bold mb-2">Confirmed Balance</p>
-                            <!-- 
+                    <div class="card-body p-4">
+                        <!-- Wallet Summary -->
+                        <div class="mb-4">
+                            <label class="small text-muted text-uppercase fw-bold">Address Queried</label>
+                            <!-- Theme Aware: bg-body-secondary matches dark mode properly -->
+                            <div class="d-flex align-items-center bg-body-secondary p-2 rounded border">
+                                <span class="text-truncate crypto-address flex-grow-1 me-2" id="res-address"><?= esc($result['address'] ?? 'N/A') ?></span>
+                                <button class="copy-btn" onclick="copyToClipboard('#res-address')" title="Copy Address">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <?php if (isset($result['balance'])): ?>
+                            <!-- Balance View -->
+                            <div class="balance-display text-center">
+                                <p class="text-muted text-uppercase fw-bold mb-2">Confirmed Balance</p>
+                                <!-- 
                                FIX: Removed the redundant asset span. 
                                The $result['balance'] string usually contains the unit (e.g., "0.5 BTC").
                                This prevents displaying "0.5 BTC BITCOIN (BTC)".
                             -->
-                            <div class="balance-amount">
-                                <?= esc($result['balance']) ?>
+                                <div class="balance-amount">
+                                    <?= esc($result['balance']) ?>
+                                </div>
                             </div>
-                        </div>
 
-                    <?php elseif (isset($result['transactions'])): ?>
-                        <!-- Transactions View -->
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="mb-0">Transaction History</h5>
-                            <span class="badge bg-secondary"><?= count($result['transactions']) ?> Found</span>
-                        </div>
+                        <?php elseif (isset($result['transactions'])): ?>
+                            <!-- Transactions View -->
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="mb-0">Transaction History</h5>
+                                <span class="badge bg-secondary"><?= count($result['transactions']) ?> Found</span>
+                            </div>
 
-                        <?php if (!empty($result['transactions'])): ?>
-                            <div class="accordion" id="transactionsAccordion">
-                                <?php foreach ($result['transactions'] as $index => $tx): ?>
-                                    <div class="accordion-item">
-                                        <h2 class="accordion-header" id="heading<?= $index ?>">
-                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse<?= $index ?>">
-                                                <div class="d-flex flex-column flex-sm-row w-100 pe-3 gap-2">
-                                                    <span class="fw-bold">#<?= $index + 1 ?></span>
-                                                    <span class="text-muted crypto-hash text-truncate d-block" style="max-width: 200px;"><?= esc($tx['hash']) ?></span>
-                                                    <span class="ms-sm-auto small text-muted"><?= esc($tx['time'] ?? '') ?></span>
-                                                </div>
-                                            </button>
-                                        </h2>
-                                        <div id="collapse<?= $index ?>" class="accordion-collapse collapse" data-bs-parent="#transactionsAccordion">
-                                            <!-- Theme Aware: bg-body-tertiary -->
-                                            <div class="accordion-body bg-body-tertiary">
-                                                <div class="row mb-3">
-                                                    <div class="col-12">
-                                                        <label class="small fw-bold text-muted">Transaction Hash</label>
-                                                        <div class="d-flex">
-                                                            <span class="crypto-hash text-break" id="tx-hash-<?= $index ?>"><?= esc($tx['hash']) ?></span>
-                                                            <button class="copy-btn" onclick="copyToClipboard('#tx-hash-<?= $index ?>')"><i class="bi bi-clipboard"></i></button>
+                            <?php if (!empty($result['transactions'])): ?>
+                                <div class="accordion" id="transactionsAccordion">
+                                    <?php foreach ($result['transactions'] as $index => $tx): ?>
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header" id="heading<?= $index ?>">
+                                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse<?= $index ?>">
+                                                    <div class="d-flex flex-column flex-sm-row w-100 pe-3 gap-2">
+                                                        <span class="fw-bold">#<?= $index + 1 ?></span>
+                                                        <span class="text-muted crypto-hash text-truncate d-block" style="max-width: 200px;"><?= esc($tx['hash']) ?></span>
+                                                        <span class="ms-sm-auto small text-muted"><?= esc($tx['time'] ?? '') ?></span>
+                                                    </div>
+                                                </button>
+                                            </h2>
+                                            <div id="collapse<?= $index ?>" class="accordion-collapse collapse" data-bs-parent="#transactionsAccordion">
+                                                <!-- Theme Aware: bg-body-tertiary -->
+                                                <div class="accordion-body bg-body-tertiary">
+                                                    <div class="row mb-3">
+                                                        <div class="col-12">
+                                                            <label class="small fw-bold text-muted">Transaction Hash</label>
+                                                            <div class="d-flex">
+                                                                <span class="crypto-hash text-break" id="tx-hash-<?= $index ?>"><?= esc($tx['hash']) ?></span>
+                                                                <button class="copy-btn" onclick="copyToClipboard('#tx-hash-<?= $index ?>')"><i class="bi bi-clipboard"></i></button>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                                <div class="row g-2 mb-3">
-                                                    <div class="col-6 col-md-4">
-                                                        <!-- Theme Aware: bg-body -->
-                                                        <div class="p-2 bg-body border rounded text-center">
-                                                            <div class="small text-muted">Block</div>
-                                                            <div class="fw-bold"><?= esc($tx['block_height'] ?? $tx['block_id'] ?? 'Pending') ?></div>
+                                                    <div class="row g-2 mb-3">
+                                                        <div class="col-6 col-md-4">
+                                                            <!-- Theme Aware: bg-body -->
+                                                            <div class="p-2 bg-body border rounded text-center">
+                                                                <div class="small text-muted">Block</div>
+                                                                <div class="fw-bold"><?= esc($tx['block_height'] ?? $tx['block_id'] ?? 'Pending') ?></div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-6 col-md-4">
+                                                            <!-- Theme Aware: bg-body -->
+                                                            <div class="p-2 bg-body border rounded text-center">
+                                                                <div class="small text-muted">Fee</div>
+                                                                <div class="fw-bold"><?= esc($tx['fee'] ?? '0') ?></div>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                    <div class="col-6 col-md-4">
-                                                        <!-- Theme Aware: bg-body -->
-                                                        <div class="p-2 bg-body border rounded text-center">
-                                                            <div class="small text-muted">Fee</div>
-                                                            <div class="fw-bold"><?= esc($tx['fee'] ?? '0') ?></div>
-                                                        </div>
-                                                    </div>
-                                                </div>
 
-                                                <h6 class="small text-uppercase text-muted fw-bold mt-3">Flow</h6>
-                                                <div class="card">
-                                                    <ul class="list-group list-group-flush">
-                                                        <!-- Theme Aware: bg-danger-subtle provides correct tint in dark mode -->
-                                                        <li class="list-group-item bg-danger-subtle text-danger-emphasis">
-                                                            <small class="fw-bold">FROM</small>
-                                                            <?php foreach ($tx['sending_addresses'] as $s_addr): ?>
-                                                                <div class="crypto-address small text-truncate"><?= esc($s_addr) ?></div>
-                                                            <?php endforeach; ?>
-                                                        </li>
-                                                        <!-- Theme Aware: bg-success-subtle -->
-                                                        <li class="list-group-item bg-success-subtle text-success-emphasis">
-                                                            <small class="fw-bold">TO</small>
-                                                            <?php foreach ($tx['receiving_addresses'] as $r_addr): ?>
-                                                                <div class="d-flex justify-content-between align-items-center">
-                                                                    <span class="crypto-address small text-truncate" style="max-width: 70%;"><?= esc($r_addr['address']) ?></span>
-                                                                    <span class="fw-bold small"><?= esc($r_addr['amount']) ?></span>
-                                                                </div>
-                                                            <?php endforeach; ?>
-                                                        </li>
-                                                    </ul>
+                                                    <h6 class="small text-uppercase text-muted fw-bold mt-3">Flow</h6>
+                                                    <div class="card">
+                                                        <ul class="list-group list-group-flush">
+                                                            <!-- Theme Aware: bg-danger-subtle provides correct tint in dark mode -->
+                                                            <li class="list-group-item bg-danger-subtle text-danger-emphasis">
+                                                                <small class="fw-bold">FROM</small>
+                                                                <?php foreach ($tx['sending_addresses'] as $s_addr): ?>
+                                                                    <div class="crypto-address small text-truncate"><?= esc($s_addr) ?></div>
+                                                                <?php endforeach; ?>
+                                                            </li>
+                                                            <!-- Theme Aware: bg-success-subtle -->
+                                                            <li class="list-group-item bg-success-subtle text-success-emphasis">
+                                                                <small class="fw-bold">TO</small>
+                                                                <?php foreach ($tx['receiving_addresses'] as $r_addr): ?>
+                                                                    <div class="d-flex justify-content-between align-items-center">
+                                                                        <span class="crypto-address small text-truncate" style="max-width: 70%;"><?= esc($r_addr['address']) ?></span>
+                                                                        <span class="fw-bold small"><?= esc($r_addr['amount']) ?></span>
+                                                                    </div>
+                                                                <?php endforeach; ?>
+                                                            </li>
+                                                        </ul>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php else: ?>
-                            <div class="alert alert-warning text-center">
-                                <i class="bi bi-exclamation-circle"></i> No transactions found within the specified limit.
-                            </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php else: ?>
+                                <div class="alert alert-light border text-center py-4">
+                                    <i class="bi bi-search fs-1 text-muted mb-3 d-block"></i>
+                                    <h5 class="fw-bold text-muted">No Transactions Found</h5>
+                                    <p class="mb-0 text-muted">We couldn't find any transactions for this address within the specified limit.</p>
+                                </div>
+                            <?php endif; ?>
                         <?php endif; ?>
-                    <?php endif; ?>
+                    </div>
                 </div>
             </div>
-        </div>
         <?php endif; ?>
     </div>
 </div>
@@ -257,12 +261,12 @@
 
         // UX: Toggle limit field based on type
         function toggleLimitField() {
-            if(queryTypeSelect && limitField) {
+            if (queryTypeSelect && limitField) {
                 limitField.style.display = (queryTypeSelect.value === 'tx') ? 'block' : 'none';
             }
         }
-        if(queryTypeSelect) queryTypeSelect.addEventListener('change', toggleLimitField);
-        
+        if (queryTypeSelect) queryTypeSelect.addEventListener('change', toggleLimitField);
+
         // UX: Loading state
         function handleFormSubmit(form) {
             const submitButton = form.querySelector('button[type="submit"]');
@@ -281,13 +285,16 @@
         if (cryptoForm) {
             cryptoForm.addEventListener('submit', () => handleFormSubmit(cryptoForm));
         }
-        
+
         // Feature: Auto-scroll to results
         // Uses the ID 'results-section' which has CSS scroll-margin-top for sticky headers
         const resultsSection = document.getElementById('results-section');
         if (resultsSection) {
             setTimeout(() => {
-                resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                resultsSection.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
             }, 300); // Slight delay ensures DOM is painted
         }
 
@@ -297,11 +304,11 @@
     // UX: Copy to clipboard helper
     function copyToClipboard(selector) {
         const element = document.querySelector(selector);
-        if(element) {
+        if (element) {
             navigator.clipboard.writeText(element.innerText).then(() => {
                 // Visual feedback could be added here (e.g. toast)
                 const btn = element.nextElementSibling;
-                if(btn && btn.classList.contains('copy-btn')) {
+                if (btn && btn.classList.contains('copy-btn')) {
                     const original = btn.innerHTML;
                     btn.innerHTML = '<i class="bi bi-check text-success"></i>';
                     setTimeout(() => btn.innerHTML = original, 1500);

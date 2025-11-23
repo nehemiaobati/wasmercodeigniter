@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Blog\Controllers;
 
@@ -29,7 +31,7 @@ class BlogController extends BaseController
             'posts'           => $this->postModel->where('status', 'published')->orderBy('published_at', 'DESC')->paginate(6),
             'pager'           => $this->postModel->pager,
             // SEO: Allow indexing for the blog listing
-            'robotsTag'       => 'index, follow', 
+            'robotsTag'       => 'index, follow',
         ];
         return view('App\Modules\Blog\Views\blog\index', $data);
     }
@@ -49,16 +51,17 @@ class BlogController extends BaseController
             "@context"        => "https://schema.org",
             "@type"           => "BlogPosting",
             "headline"        => $post->title,
-            "image"           => $post->featured_image_url ? [ $post->featured_image_url ] : [], // Handle missing images gracefully
+            "image"           => $post->featured_image_url ? [$post->featured_image_url] : [], // Handle missing images gracefully
             "datePublished"   => $post->published_at ? $post->published_at->toDateTimeString() : null,
             "dateModified"    => $post->updated_at ? $post->updated_at->toDateTimeString() : null,
-            "author"          => [ "@type" => "Person", "name"  => $post->author_name ],
+            "author"          => ["@type" => "Person", "name"  => $post->author_name],
             "publisher"       => [
-                "@type" => "Organization", "name"  => "Afrikenkid",
-                "logo"  => [ "@type" => "ImageObject", "url"   => base_url('assets/images/logo.png') ],
+                "@type" => "Organization",
+                "name"  => "Afrikenkid",
+                "logo"  => ["@type" => "ImageObject", "url"   => base_url('public/assets/images/logo.png')],
             ],
             "description"     => $post->meta_description,
-            "mainEntityOfPage" => [ "@type" => "WebPage", "@id"   => url_to('blog.show', $slug) ],
+            "mainEntityOfPage" => ["@type" => "WebPage", "@id"   => url_to('blog.show', $slug)],
         ];
 
         $data = [
@@ -76,7 +79,9 @@ class BlogController extends BaseController
 
     public function adminIndex()
     {
-        if (!session()->get('is_admin')) { return redirect()->to(url_to('home')); }
+        if (!session()->get('is_admin')) {
+            return redirect()->to(url_to('home'));
+        }
         $data = [
             'pageTitle' => 'Manage Blog Posts | Admin',
             'posts'     => $this->postModel->orderBy('created_at', 'DESC')->paginate(10),
@@ -88,7 +93,9 @@ class BlogController extends BaseController
 
     public function create()
     {
-        if (!session()->get('is_admin')) { return redirect()->to(url_to('home')); }
+        if (!session()->get('is_admin')) {
+            return redirect()->to(url_to('home'));
+        }
         $data = [
             'pageTitle'  => 'Create New Post | Admin',
             'formTitle'  => 'Create New Post',
@@ -101,9 +108,13 @@ class BlogController extends BaseController
 
     public function edit(int $id)
     {
-        if (!session()->get('is_admin')) { return redirect()->to(url_to('home')); }
+        if (!session()->get('is_admin')) {
+            return redirect()->to(url_to('home'));
+        }
         $post = $this->postModel->find($id);
-        if (!$post) { throw PageNotFoundException::forPageNotFound(); }
+        if (!$post) {
+            throw PageNotFoundException::forPageNotFound();
+        }
         $data = [
             'pageTitle'  => 'Edit Post | Admin',
             'formTitle'  => 'Edit Post: ' . esc($post->title),
@@ -116,23 +127,27 @@ class BlogController extends BaseController
 
     public function store()
     {
-        if (!session()->get('is_admin')) { return redirect()->to(url_to('home')); }
+        if (!session()->get('is_admin')) {
+            return redirect()->to(url_to('home'));
+        }
         return $this->processPost();
     }
 
     public function update(int $id)
     {
-        if (!session()->get('is_admin')) { return redirect()->to(url_to('home')); }
+        if (!session()->get('is_admin')) {
+            return redirect()->to(url_to('home'));
+        }
         return $this->processPost($id);
     }
 
     private function processPost(?int $id = null)
     {
         $contentBlocks = [];
-        
+
         // Validation: Ensure we actually have content types to process
         $contentTypes = $this->request->getPost('content_type');
-        
+
         if (is_array($contentTypes)) {
             // Fetch arrays once to avoid repeated calls
             $contentText = $this->request->getPost('content_text');
@@ -163,7 +178,7 @@ class BlogController extends BaseController
                 }
             }
         }
-        
+
         $payload = [
             'title'              => $this->request->getPost('title'),
             'excerpt'            => $this->request->getPost('excerpt'),
@@ -171,6 +186,7 @@ class BlogController extends BaseController
             'published_at'       => $this->request->getPost('published_at'),
             'featured_image_url' => $this->request->getPost('featured_image_url'),
             'category_name'      => $this->request->getPost('category_name'),
+            'author_name'        => $this->request->getPost('author_name'),
             'meta_description'   => $this->request->getPost('meta_description'),
             'body_content'       => json_encode($contentBlocks)
         ];
@@ -182,14 +198,16 @@ class BlogController extends BaseController
         if ($this->postModel->save($payload)) {
             return redirect()->to(url_to('admin.blog.index'))->with('success', 'Post ' . ($id ? 'updated' : 'created') . ' successfully.');
         }
-        
+
         return redirect()->back()->withInput()->with('errors', $this->postModel->errors());
     }
 
     public function delete(int $id)
     {
-        if (!session()->get('is_admin')) { return redirect()->to(url_to('home')); }
-        
+        if (!session()->get('is_admin')) {
+            return redirect()->to(url_to('home'));
+        }
+
         $post = $this->postModel->find($id);
         if (!$post) {
             throw PageNotFoundException::forPageNotFound('Cannot delete a post that does not exist.');
@@ -198,7 +216,7 @@ class BlogController extends BaseController
         if ($this->postModel->delete($id)) {
             return redirect()->to(url_to('admin.blog.index'))->with('success', 'Post deleted successfully.');
         }
-        
+
         return redirect()->to(url_to('admin.blog.index'))->with('error', 'Failed to delete the post due to a server error.');
     }
 }

@@ -11,6 +11,7 @@
         color: #555;
         border-radius: 0.25rem;
     }
+
     .think-label {
         font-weight: bold;
         font-size: 0.8rem;
@@ -18,21 +19,24 @@
         color: #adb5bd;
         margin-bottom: 0.5rem;
     }
+
     .chat-bubble {
         padding: 1.5rem;
         border-radius: 1rem;
         margin-bottom: 1.5rem;
     }
+
     .chat-user {
         background-color: var(--bs-primary-bg-subtle);
         border: 1px solid var(--bs-primary-border-subtle);
         margin-left: 2rem;
     }
+
     .chat-ai {
         background-color: var(--bs-body-bg);
         border: 1px solid var(--bs-border-color);
         margin-right: 2rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     }
 </style>
 <link rel="stylesheet" href="<?= base_url('public/assets/highlight/styles/github-dark.min.css') ?>">
@@ -43,7 +47,7 @@
     <div class="blueprint-header text-center mb-4">
         <div class="d-flex justify-content-center align-items-center gap-3">
             <h1 class="fw-bold mb-0">Local AI Studio</h1>
-            <?php if($isOnline): ?>
+            <?php if ($isOnline): ?>
                 <span class="badge bg-success">Online</span>
             <?php else: ?>
                 <span class="badge bg-danger">Offline</span>
@@ -90,7 +94,7 @@
                             <strong>You:</strong> <?= esc($chat->user_input) ?>
                         </div>
                         <div class="chat-bubble chat-ai markdown-content">
-                            <?= esc($chat->ai_response) ?> 
+                            <?= esc($chat->ai_response) ?>
                             <!-- Note: We escape here, but JS below handles the rendering/un-escaping safely -->
                         </div>
                     </div>
@@ -117,7 +121,7 @@
 
 <!-- Hidden raw data for the latest response -->
 <?php if ($raw = session()->getFlashdata('success_response')): ?>
-<script id="raw-response-data" type="text/plain"><?= $raw ?></script>
+    <script id="raw-response-data" type="text/plain"><?= $raw ?></script>
 <?php endif; ?>
 
 <?= $this->endSection() ?>
@@ -127,14 +131,14 @@
 <script src="<?= base_url('public/assets/highlight/highlight.js') ?>"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        
+
         function formatDeepSeek(text) {
             // 1. Extract <think> blocks
             const thinkRegex = /<think>([\s\S]*?)<\/think>/g;
             let formatted = text.replace(thinkRegex, (match, content) => {
                 return `<div class="think-block"><div class="think-label">Reasoning</div>${marked.parse(content)}</div>`;
             });
-            
+
             // 2. Parse the rest as Markdown
             return marked.parse(formatted);
         }
@@ -142,7 +146,7 @@
         // Render Latest Response
         const rawScript = document.getElementById('raw-response-data');
         const latestContainer = document.getElementById('latest-response');
-        
+
         if (rawScript && latestContainer) {
             latestContainer.innerHTML = formatDeepSeek(rawScript.textContent);
             hljs.highlightAll();
@@ -153,7 +157,7 @@
             const rawText = el.innerText; // Get escaped text
             el.innerHTML = formatDeepSeek(rawText);
         });
-        
+
         hljs.highlightAll();
     });
 </script>

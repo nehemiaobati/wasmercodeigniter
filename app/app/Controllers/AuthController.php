@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Controllers;
 
@@ -64,7 +66,7 @@ class AuthController extends BaseController
         // Verify the reCAPTCHA response.
         if (! $recaptchaService->verify($recaptchaResponse)) {
             // If reCAPTCHA verification fails, add a validation error and redirect back.
-            //return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
         $userModel = new UserModel();
@@ -187,10 +189,10 @@ class AuthController extends BaseController
         // 1. Check if a redirect_url exists in the session
         if ($this->session->has('redirect_url')) {
             $redirectUrl = $this->session->get('redirect_url');
-            
+
             // 2. Remove it from session so it doesn't persist
             $this->session->remove('redirect_url');
-            
+
             // 3. Redirect the user back to where they came from
             return redirect()->to($redirectUrl)->with('success', 'Welcome back!');
         }
@@ -283,9 +285,9 @@ class AuthController extends BaseController
 
             // Prepare and send the password reset email.
             $emailService = service('email');
-        $emailService->setTo($user->email);
-        $emailService->setReplyTo('afrikenkid@gmail.com');
-        $emailService->setSubject('Password Reset Request');
+            $emailService->setTo($user->email);
+            $emailService->setReplyTo('afrikenkid@gmail.com');
+            $emailService->setSubject('Password Reset Request');
             $resetLink = url_to('auth.reset_password', $token);
             $message = view('emails/reset_password_email', [
                 'name' => $user->username,

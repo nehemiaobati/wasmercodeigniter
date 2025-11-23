@@ -37,22 +37,9 @@ class FfmpegService
         return ['success' => false, 'fileName' => null];
     }
 
-    /**
-     * Safely checks if ffmpeg is available.
-     */
     public function isAvailable(): bool
     {
-        if (!function_exists('shell_exec')) {
-            return false;
-        }
-
-        try {
-            $output = @shell_exec('command -v ffmpeg 2>/dev/null');
-            return !empty($output);
-        } catch (\Throwable $e) {
-            log_message('info', '[FfmpegService] Shell execution unavailable: ' . $e->getMessage());
-            return false;
-        }
+        return !empty(shell_exec('command -v ffmpeg 2>/dev/null'));
     }
 
     /**

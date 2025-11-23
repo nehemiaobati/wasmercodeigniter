@@ -133,7 +133,7 @@
         position: absolute;
         width: 4px;
         /* MODIFICATION: Use theme-aware variable */
-        background-color: var(--border-color); 
+        background-color: var(--border-color);
         top: 0;
         bottom: 0;
         left: 50%;
@@ -162,7 +162,7 @@
         height: 20px;
         right: -10px;
         background-color: var(--primary-color);
-         /* MODIFICATION: Use theme-aware variable */
+        /* MODIFICATION: Use theme-aware variable */
         border: 4px solid var(--bs-body-bg);
         top: 25px;
         border-radius: 50%;

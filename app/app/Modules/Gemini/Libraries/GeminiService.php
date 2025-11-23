@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Gemini\Libraries;
 
@@ -31,7 +33,7 @@ class GeminiService
         //"gemini-2.5-pro",       // Multimodal, Thinking Budget
         "gemini-flash-latest",
         "gemini-flash-lite-latest", // Standard Fast
-        "gemini-2.5-flash",     
+        "gemini-2.5-flash",
         "gemini-2.5-flash-lite", // Standard Fast
         "gemini-2.0-flash",      // Fallbacks
         "gemini-2.0-flash-lite", // Fallbacks
@@ -44,7 +46,7 @@ class GeminiService
     {
         $this->apiKey = env('GEMINI_API_KEY') ?? getenv('GEMINI_API_KEY');
         // Initialize the specific configuration service
-        $this->payloadService = new ModelPayloadService(); 
+        $this->payloadService = new ModelPayloadService();
         // Alternatively use service('modelPayloadService') if registered in Services.php
     }
 
@@ -139,7 +141,6 @@ class GeminiService
                     }
 
                     return ['result' => $processedText, 'usage' => $usageMetadata];
-
                 } catch (\Exception $e) {
                     log_message('error', "Gemini API Request Attempt {$attempt} failed for model '{$currentModel}': " . $e->getMessage());
                     $lastError = ['error' => 'The AI service is currently unavailable or the request timed out. Please try again in a few moments.'];
@@ -149,12 +150,12 @@ class GeminiService
                 }
             }
         }
-        
+
         $finalErrorMsg = $lastError['error'] ?? 'An unexpected error occurred after multiple retries across all models.';
         if (str_contains($finalErrorMsg, 'Quota exceeded')) {
             return ['error' => 'All available AI models have exceeded their quota. Please wait and try again later.'];
         }
-        
+
         return $lastError;
     }
 
@@ -211,29 +212,33 @@ class GeminiService
 
             $responseDataArray = json_decode($responseBody, true);
             if (json_last_error() !== JSON_ERROR_NONE) {
-                 log_message('error', 'Gemini TTS Response JSON Decode Error: ' . json_last_error_msg() . ' | Response: ' . $responseBody);
-                 return ['status' => false, 'error' => 'Failed to decode API speech response.'];
+                log_message('error', 'Gemini TTS Response JSON Decode Error: ' . json_last_error_msg() . ' | Response: ' . $responseBody);
+                return ['status' => false, 'error' => 'Failed to decode API speech response.'];
             }
 
             // Resiliently parse the response to find the audio data
-            $audioData = null;
+            $audioData = '';
+            $foundAudio = false;
+
             foreach ($responseDataArray as $chunk) {
-                $parts = $chunk['candidates'][0]['content']['parts'][0] ?? null;
+                $candidates = $chunk['candidates'][0] ?? null;
+                if (!$candidates) continue;
+
+                $parts = $candidates['content']['parts'][0] ?? null;
                 if (!$parts) continue;
-                
+
                 if (isset($parts['inlineData']['data'])) {
-                    $audioData = $parts['inlineData']['data'];
-                    break;
+                    $audioData .= $parts['inlineData']['data'];
+                    $foundAudio = true;
                 }
             }
 
-            if ($audioData === null) {
+            if (!$foundAudio) {
                 log_message('error', 'Gemini TTS Error: Audio data not found in the expected location in the response.');
                 return ['status' => false, 'error' => 'Failed to retrieve audio data from the AI service.'];
             }
 
             return ['status' => true, 'audioData' => $audioData];
-
         } catch (\Exception $e) {
             log_message('error', 'Gemini TTS Exception: ' . $e->getMessage());
             return ['status' => false, 'error' => 'Could not connect to the speech synthesis service.'];
@@ -276,7 +281,6 @@ class GeminiService
             $totalTokens = $responseData['totalTokens'] ?? 0;
 
             return ['status' => true, 'totalTokens' => $totalTokens];
-
         } catch (\Exception $e) {
             log_message('error', 'Gemini API countTokens Exception: ' . $e->getMessage());
             return ['status' => false, 'error' => 'Could not connect to the AI service to estimate cost.'];
