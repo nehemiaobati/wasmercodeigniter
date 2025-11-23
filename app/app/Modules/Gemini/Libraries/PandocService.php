@@ -6,9 +6,28 @@ namespace App\Modules\Gemini\Libraries;
 
 class PandocService
 {
+
+    /**
+     * Safely checks if pandoc is available.
+     * Returns false if shell_exec throws an error.
+     */
     public function isAvailable(): bool
     {
-        return !empty(shell_exec('command -v pandoc 2>/dev/null'));
+        // 1. Check if function is disabled in php.ini
+        if (!function_exists('shell_exec')) {
+            return false;
+        }
+
+        try {
+            // 2. Try to execute, silencing warnings with @
+            // 3. Catch ErrorException if strictly blocked
+            $output = @shell_exec('command -v pandoc 2>/dev/null');
+            return !empty($output);
+        } catch (\Throwable $e) {
+            // Log strictly as info/debug, not critical
+            log_message('info', '[PandocService] Shell execution unavailable: ' . $e->getMessage());
+            return false;
+        }
     }
 
     public function generate(string $htmlContent, string $outputFormat, string $outputFilename): array

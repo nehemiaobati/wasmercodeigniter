@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Gemini\Libraries;
 
@@ -18,7 +20,7 @@ class FfmpegService
         if ($this->isAvailable()) {
             $fileName = $filenameBase . '.mp3';
             $fullPath = $outputDir . $fileName;
-            
+
             if ($this->convertPcmToMp3($base64Data, $fullPath)) {
                 return ['success' => true, 'fileName' => $fileName];
             }
@@ -29,17 +31,30 @@ class FfmpegService
         // 2. Fallback (WAV) - Native PHP, larger file size but guaranteed to work
         $fileName = $filenameBase . '.wav';
         $fullPath = $outputDir . $fileName;
-        
+
         if ($this->createWavFile($base64Data, $fullPath)) {
-             return ['success' => true, 'fileName' => $fileName];
+            return ['success' => true, 'fileName' => $fileName];
         }
 
         return ['success' => false, 'fileName' => null];
     }
 
+    /**
+     * Safely checks if ffmpeg is available.
+     */
     public function isAvailable(): bool
     {
-        return !empty(shell_exec('command -v ffmpeg 2>/dev/null'));
+        if (!function_exists('shell_exec')) {
+            return false;
+        }
+
+        try {
+            $output = @shell_exec('command -v ffmpeg 2>/dev/null');
+            return !empty($output);
+        } catch (\Throwable $e) {
+            log_message('info', '[FfmpegService] Shell execution unavailable: ' . $e->getMessage());
+            return false;
+        }
     }
 
     /**
@@ -77,7 +92,7 @@ class FfmpegService
     {
         $pcmData = base64_decode($base64Data);
         $len = strlen($pcmData);
-        
+
         // Build standard RIFF WAVE header for Gemini specs (24kHz, 16-bit, Mono)
         $header = 'RIFF' . pack('V', 36 + $len) . 'WAVE';
         $header .= 'fmt ' . pack('V', 16); // Subchunk1Size
