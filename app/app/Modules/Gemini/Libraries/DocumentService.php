@@ -71,7 +71,8 @@ class DocumentService
             return $this->generateWithDompdf($fullHtml, $meta);
         } elseif ($format === 'docx') {
             // PHPWord fallback for DOCX
-            return $this->generateWithPHPWord($htmlContent, $meta);
+            // Pass raw markdown because we need to pre-process it specifically for PHPWord
+            return $this->generateWithPHPWord($markdownContent, $meta);
         }
 
         // 5. Failure
@@ -122,9 +123,27 @@ class DocumentService
         }
     }
 
-    private function generateWithPHPWord(string $htmlContent, array $metadata): array
+    private function generateWithPHPWord(string $markdownContent, array $metadata): array
     {
         try {
+            // --------------------------------------------------------------------------
+            // WORKAROUND 3: Fix "Table in ListItemRun" Crash
+            // --------------------------------------------------------------------------
+            // PHPWord crashes if a table is nested inside a list item.
+            // To prevent this, we pre-process the Markdown to "un-indent" all tables, 
+            // effectively moving them out of the list structure and making them top-level elements.
+
+            // A. Remove indentation from all table rows (lines starting with whitespace + pipe)
+            $markdownContent = preg_replace('/^[\t ]+\|/m', '|', $markdownContent);
+
+            // B. Ensure there is a blank line before the table starts to separate it from the previous element
+            $markdownContent = preg_replace('/^(?!\|)(.*)\n\|/m', "$1\n\n|", $markdownContent);
+
+            // Convert Markdown to HTML locally for PHPWord
+            $parsedown = new Parsedown();
+            $parsedown->setBreaksEnabled(true);
+            $htmlContent = $parsedown->text($markdownContent);
+
             $phpWord = new \PhpOffice\PhpWord\PhpWord();
 
             // Set document properties
