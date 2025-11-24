@@ -1,9 +1,14 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Gemini\Models;
 
 use CodeIgniter\Model;
 
+/**
+ * Manages storage and retrieval of user-saved prompts.
+ */
 class PromptModel extends Model
 {
     protected $table            = 'prompts';

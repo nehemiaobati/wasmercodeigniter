@@ -78,7 +78,14 @@
     </div>
 
     <!-- Audio Player -->
-    <?php if (session()->getFlashdata('audio_url')): ?>
+    <?php if (session()->getFlashdata('audio_base64')): ?>
+        <div class="alert alert-info d-flex align-items-center">
+            <i class="bi bi-volume-up-fill fs-4 me-3"></i>
+            <audio controls autoplay class="w-100">
+                <source src="data:audio/mp3;base64,<?= session()->getFlashdata('audio_base64') ?>">
+            </audio>
+        </div>
+    <?php elseif (session()->getFlashdata('audio_url')): ?>
         <div class="alert alert-info d-flex align-items-center">
             <i class="bi bi-volume-up-fill fs-4 me-3"></i>
             <audio controls autoplay class="w-100">

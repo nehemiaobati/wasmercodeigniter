@@ -56,6 +56,11 @@ class GeminiController extends BaseController
         $this->userSettingsModel = new UserSettingsModel();
     }
 
+    /**
+     * Displays the public landing page.
+     *
+     * @return string The rendered view.
+     */
     public function publicPage(): string
     {
         $data = [
@@ -68,6 +73,11 @@ class GeminiController extends BaseController
         return view('App\Modules\Gemini\Views\gemini\public_page.php', $data);
     }
 
+    /**
+     * Displays the main application dashboard.
+     *
+     * @return string The rendered view.
+     */
     public function index(): string
     {
         $userId = (int) session()->get('userId');
@@ -92,6 +102,11 @@ class GeminiController extends BaseController
         return view('App\Modules\Gemini\Views\gemini\query_form', $data);
     }
 
+    /**
+     * Handles file uploads for the Gemini context.
+     *
+     * @return ResponseInterface JSON response with upload status.
+     */
     public function uploadMedia(): ResponseInterface
     {
         $userId = (int) session()->get('userId');
@@ -129,6 +144,11 @@ class GeminiController extends BaseController
         ]);
     }
 
+    /**
+     * Deletes a temporary uploaded file.
+     *
+     * @return ResponseInterface JSON response with deletion status.
+     */
     public function deleteMedia(): ResponseInterface
     {
         $userId = (int) session()->get('userId');
@@ -146,6 +166,11 @@ class GeminiController extends BaseController
         return $this->response->setStatusCode(404)->setJSON(['status' => 'error', 'message' => 'File not found']);
     }
 
+    /**
+     * Generates content using the Gemini API based on user input and context.
+     *
+     * @return RedirectResponse Redirects back with results or errors.
+     */
     public function generate(): RedirectResponse
     {
         $userId = (int) session()->get('userId');
@@ -203,10 +228,14 @@ class GeminiController extends BaseController
 
         // 4. Handle Audio (Voice Mode)
         $audioUrl = null;
+        $audioBase64 = null;
         if ($isVoiceMode && !empty(trim($apiResponse['result']))) {
             $speech = $this->geminiService->generateSpeech($apiResponse['result']);
             if ($speech['status']) {
+                // Keep existing file storage for debugging/fallback
                 $audioUrl = $this->_processAudioData($speech['audioData']);
+                // New: Embed raw audio for immediate playback
+                $audioBase64 = base64_encode($speech['audioData']);
             }
         }
 
@@ -225,12 +254,20 @@ class GeminiController extends BaseController
         if ($audioUrl) {
             $redirect->with('audio_url', $audioUrl);
         }
+        if ($audioBase64) {
+            $redirect->with('audio_base64', $audioBase64);
+        }
 
         return $redirect;
     }
 
     /**
      * Unified Settings Update Method
+     */
+    /**
+     * Updates user settings (Assistant Mode, Voice Output).
+     *
+     * @return ResponseInterface JSON response with update status.
      */
     public function updateSetting(): ResponseInterface
     {
@@ -258,6 +295,11 @@ class GeminiController extends BaseController
         return $this->response->setJSON(['status' => 'success', 'csrf_token' => csrf_hash()]);
     }
 
+    /**
+     * Adds a new saved prompt for the user.
+     *
+     * @return RedirectResponse Redirects back with success or error message.
+     */
     public function addPrompt(): RedirectResponse
     {
         $userId = (int) session()->get('userId');
@@ -273,6 +315,12 @@ class GeminiController extends BaseController
         return redirect()->back()->with('success', 'Prompt saved.');
     }
 
+    /**
+     * Deletes a saved prompt.
+     *
+     * @param int $id The ID of the prompt to delete.
+     * @return RedirectResponse Redirects back with success or error message.
+     */
     public function deletePrompt(int $id): RedirectResponse
     {
         $userId = (int) session()->get('userId');
@@ -284,6 +332,11 @@ class GeminiController extends BaseController
         return redirect()->back()->with('error', 'Unauthorized.');
     }
 
+    /**
+     * Clears the user's interaction memory and entities.
+     *
+     * @return RedirectResponse Redirects back with success or error message.
+     */
     public function clearMemory(): RedirectResponse
     {
         $userId = (int) session()->get('userId');
@@ -306,6 +359,10 @@ class GeminiController extends BaseController
 
     /**
      * Serves the file with correct headers for inline playback.
+     *
+     * @param string $fileName The name of the file to serve.
+     * @return ResponseInterface The file response.
+     * @throws \CodeIgniter\Exceptions\PageNotFoundException If the file does not exist.
      */
     public function serveAudio(string $fileName)
     {
@@ -333,6 +390,11 @@ class GeminiController extends BaseController
         return $this->response;
     }
 
+    /**
+     * Generates and downloads a document (PDF or DOCX) from the content.
+     *
+     * @return ResponseInterface|RedirectResponse The file download or redirect on error.
+     */
     public function downloadDocument()
     {
         $content = $this->request->getPost('raw_response');

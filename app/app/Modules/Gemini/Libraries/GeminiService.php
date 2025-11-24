@@ -52,8 +52,9 @@ class GeminiService
 
     /**
      * Sends a request to the Gemini API for text generation.
+     *
      * @param array $parts An array of content parts.
-     * @return array An associative array with 'result' or 'error'.
+     * @return array An associative array with 'result' (string) and 'usage' (array) or 'error' (string).
      */
     public function generateContent(array $parts): array
     {
@@ -163,6 +164,12 @@ class GeminiService
      * [UPDATED] Generates raw PCM audio data from a text string using the Gemini TTS API.
      * ... (Remaining methods generateSpeech and countTokens stay as is) ...
      */
+    /**
+     * Generates raw PCM audio data from a text string using the Gemini TTS API.
+     *
+     * @param string $textToSpeak The text to convert to speech.
+     * @return array ['status' => bool, 'audioData' => string|null, 'error' => string|null]
+     */
     public function generateSpeech(string $textToSpeak): array
     {
         $apiKey = trim($this->apiKey);
@@ -245,6 +252,12 @@ class GeminiService
         }
     }
 
+    /**
+     * Counts the number of tokens in the provided parts.
+     *
+     * @param array $parts The content parts to count tokens for.
+     * @return array ['status' => bool, 'totalTokens' => int, 'error' => string|null]
+     */
     public function countTokens(array $parts): array
     {
         // This method remains unchanged and is fully functional.

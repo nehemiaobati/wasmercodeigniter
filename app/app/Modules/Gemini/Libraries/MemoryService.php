@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Gemini\Libraries;
 
@@ -61,6 +63,12 @@ class MemoryService
         return ($magA == 0 || $magB == 0) ? 0 : $dotProduct / ($magA * $magB);
     }
 
+    /**
+     * Retrieves relevant context from memory based on user input.
+     *
+     * @param string $userInput The user's query.
+     * @return array An array containing the context string and used interaction IDs.
+     */
     public function getRelevantContext(string $userInput): array
     {
         // Vector Search (Semantic)
@@ -112,7 +120,7 @@ class MemoryService
         $context = '';
         $tokenCount = 0;
         $usedInteractionIds = [];
-        
+
         // --- REFACTOR START: Implement Short-Term Memory (forcedRecentInteractions) ---
         if ($this->config->forcedRecentInteractions > 0) {
             $recentInteractions = $this->interactionModel
@@ -120,7 +128,7 @@ class MemoryService
                 ->orderBy('id', 'DESC')
                 ->limit($this->config->forcedRecentInteractions)
                 ->findAll();
-            
+
             // Reverse to maintain chronological order in the context
             $recentInteractions = array_reverse($recentInteractions);
 
@@ -165,6 +173,14 @@ class MemoryService
         ];
     }
 
+    /**
+     * Updates the memory with the latest interaction.
+     *
+     * @param string $userInput The user's input.
+     * @param string $aiOutput The AI's response.
+     * @param array $usedInteractionIds IDs of interactions used as context.
+     * @return string The unique ID of the new interaction.
+     */
     public function updateMemory(string $userInput, string $aiOutput, array $usedInteractionIds): string
     {
         // 1. Reward used interactions
@@ -247,6 +263,12 @@ class MemoryService
         return $newId;
     }
 
+    /**
+     * Updates entity records based on extracted keywords.
+     *
+     * @param array $keywords Extracted keywords from the interaction.
+     * @param string $interactionId The ID of the current interaction.
+     */
     private function updateEntitiesFromInteraction(array $keywords, string $interactionId): void
     {
         // --- REFACTOR START: Implement noveltyBonus and relationshipStrengthIncrement ---
@@ -304,6 +326,9 @@ class MemoryService
         // --- REFACTOR END ---
     }
 
+    /**
+     * Removes old or irrelevant memories to keep the database size manageable.
+     */
     private function pruneMemory(): void
     {
         $count = $this->interactionModel->where('user_id', $this->userId)->countAllResults();
@@ -321,7 +346,12 @@ class MemoryService
         }
     }
 
-public function getTimeAwareSystemPrompt(): string
+    /**
+     * Generates the system prompt with dynamic time and context.
+     *
+     * @return string The formatted system prompt.
+     */
+    public function getTimeAwareSystemPrompt(): string
     {
         return <<<'XML'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -379,6 +409,12 @@ public function getTimeAwareSystemPrompt(): string
 XML;
     }
 
+    /**
+     * Extracts entities (keywords) from the text using the TokenService.
+     *
+     * @param string $text The text to analyze.
+     * @return array An array of extracted entities.
+     */
     private function extractEntities(string $text): array
     {
         return $this->tokenService->processText($text);

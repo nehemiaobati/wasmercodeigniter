@@ -41,6 +41,8 @@ class FfmpegService
 
     /**
      * Safely checks if ffmpeg is available.
+     *
+     * @return bool True if ffmpeg is available, false otherwise.
      */
     public function isAvailable(): bool
     {
@@ -58,7 +60,12 @@ class FfmpegService
     }
 
     /**
-     * Strategy A: FFmpeg Pipe (Memory Efficient)
+     * Strategy A: FFmpeg Pipe (Memory Efficient).
+     * Converts PCM data to MP3 using ffmpeg.
+     *
+     * @param string $base64Data Base64 encoded PCM data.
+     * @param string $outputFile The path to save the MP3 file.
+     * @return bool True on success, false on failure.
      */
     private function convertPcmToMp3(string $base64Data, string $outputFile): bool
     {
@@ -86,7 +93,12 @@ class FfmpegService
     }
 
     /**
-     * Strategy B: Native PHP WAV Header (Reliable Fallback)
+     * Strategy B: Native PHP WAV Header (Reliable Fallback).
+     * Creates a WAV file from PCM data by adding a RIFF header.
+     *
+     * @param string $base64Data Base64 encoded PCM data.
+     * @param string $outputFile The path to save the WAV file.
+     * @return bool True on success, false on failure.
      */
     private function createWavFile(string $base64Data, string $outputFile): bool
     {

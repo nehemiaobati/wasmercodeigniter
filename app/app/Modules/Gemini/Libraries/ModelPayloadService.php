@@ -16,7 +16,7 @@ class ModelPayloadService
      * @param string $modelId The specific model ID.
      * @param string $apiKey The API Key.
      * @param array $parts The content parts (user input/images).
-     * @return array ['url' => string, 'body' => string]
+     * @return array|null ['url' => string, 'body' => string] or null if model not supported.
      */
     public function getPayloadConfig(string $modelId, string $apiKey, array $parts): ?array
     {
@@ -120,7 +120,7 @@ class ModelPayloadService
                 // This prevents 'generic' payloads from failing on specialized models.
                 return null;
         }
-        
+
         // This return is only reached if a specific model case is matched.
         // If default is hit, the function exits with null.
         return [

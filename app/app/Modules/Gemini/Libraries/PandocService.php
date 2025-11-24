@@ -6,10 +6,11 @@ namespace App\Modules\Gemini\Libraries;
 
 class PandocService
 {
-
     /**
      * Safely checks if pandoc is available.
      * Returns false if shell_exec throws an error.
+     *
+     * @return bool True if pandoc is available, false otherwise.
      */
     public function isAvailable(): bool
     {
@@ -21,7 +22,7 @@ class PandocService
         try {
             // 2. Try to execute, silencing warnings with @
             // 3. Catch ErrorException if strictly blocked
-            $output = @shell_exec('command -v pandoc 2>/dev/null');
+            $output = @shell_exec('command -v pandocc 2>/dev/null');
             return !empty($output);
         } catch (\Throwable $e) {
             // Log strictly as info/debug, not critical
@@ -30,6 +31,14 @@ class PandocService
         }
     }
 
+    /**
+     * Generates a document using Pandoc.
+     *
+     * @param string $htmlContent The HTML content to convert.
+     * @param string $outputFormat The desired output format ('pdf' or 'docx').
+     * @param string $outputFilename The base filename for the output.
+     * @return array Result array with status and filePath or message.
+     */
     public function generate(string $htmlContent, string $outputFormat, string $outputFilename): array
     {
         $userId = session()->get('userId') ?? 0;

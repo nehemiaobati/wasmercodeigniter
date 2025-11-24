@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Gemini\Libraries;
 
@@ -27,7 +29,7 @@ class TrainingService
     /**
      * Executes the full training pipeline.
      *
-     * @return array{success: bool, message: string}
+     * @return array{success: bool, message: string} Result of the training process.
      */
     public function train(): array
     {

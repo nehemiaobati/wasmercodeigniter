@@ -1,10 +1,15 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Gemini\Models;
 
 use CodeIgniter\Model;
 use App\Modules\Gemini\Entities\AGIEntity;
 
+/**
+ * Manages storage and retrieval of AGI entities (keywords/concepts).
+ */
 class EntityModel extends Model
 {
     protected $table            = 'entities';
@@ -12,8 +17,14 @@ class EntityModel extends Model
     protected $returnType       = 'App\Modules\Gemini\Entities\AGIEntity';
     protected $useTimestamps    = true;
     protected $allowedFields    = [
-        'user_id', 'entity_key', 'name', 'type', 'access_count',
-        'relevance_score', 'mentioned_in', 'relationships'
+        'user_id',
+        'entity_key',
+        'name',
+        'type',
+        'access_count',
+        'relevance_score',
+        'mentioned_in',
+        'relationships'
     ];
 
     /**
@@ -25,7 +36,7 @@ class EntityModel extends Model
     public function findByUserAndKey(int $userId, string $entityKey): ?AGIEntity
     {
         return $this->where('user_id', $userId)
-                    ->where('entity_key', $entityKey)
-                    ->first();
+            ->where('entity_key', $entityKey)
+            ->first();
     }
 }

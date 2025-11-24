@@ -82,6 +82,13 @@ class DocumentService
         ];
     }
 
+    /**
+     * Generates a PDF using Dompdf.
+     *
+     * @param string $htmlContent The HTML content to render.
+     * @param array $metadata Document metadata.
+     * @return array Result array with status and fileData or message.
+     */
     private function generateWithDompdf(string $htmlContent, array $metadata): array
     {
         try {
@@ -239,6 +246,13 @@ class DocumentService
         }
     }
 
+    /**
+     * Wraps the HTML content with a styled HTML skeleton.
+     *
+     * @param string $htmlContent The body content.
+     * @param string $title The document title.
+     * @return string The full HTML string.
+     */
     private function getStyledHtml(string $htmlContent, string $title = 'Document'): string
     {
         return '<!DOCTYPE html>
