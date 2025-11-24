@@ -229,10 +229,13 @@ class GeminiController extends BaseController
         // 4. Handle Audio (Voice Mode)
         $audioUrl = null;
         $audioFilePath = null;
+        $audioUsage = null;
+
         if ($isVoiceMode && !empty(trim($apiResponse['result']))) {
             $speech = $this->geminiService->generateSpeech($apiResponse['result']);
             if ($speech['status']) {
                 $audioUrl = $this->_processAudioData($speech['audioData']);
+                $audioUsage = $speech['usage'] ?? null;
                 // Store the absolute file path for the view to read
                 $userId = (int) session()->get('userId');
                 $audioFilePath = WRITEPATH . 'uploads/ttsaudio_secure/' . $userId . '/' . basename($audioUrl);
@@ -240,7 +243,7 @@ class GeminiController extends BaseController
         }
 
         // 5. Process Payment & Memory
-        $this->_processApiResponse($user, $apiResponse, $isAssistantMode, $contextData);
+        $this->_processApiResponse($user, $apiResponse, $isAssistantMode, $contextData, $audioUsage);
 
         // 6. Output
         $parsedown = new Parsedown();
@@ -486,7 +489,7 @@ class GeminiController extends BaseController
         $response = $this->geminiService->countTokens($parts);
         if (!$response['status']) return ['error' => $response['error']];
 
-        $costData = $this->_calculateCost($response['totalTokens'], 0);
+        $costData = $this->_calculateCost(['promptTokenCount' => $response['totalTokens']], null);
 
         if ($user->balance < $costData['costInKSH']) {
             return ['error' => "Insufficient balance. Cost: KSH " . number_format($costData['costInKSH'], 2)];
@@ -494,11 +497,10 @@ class GeminiController extends BaseController
         return [];
     }
 
-    private function _processApiResponse(User $user, array $apiResponse, bool $isAssistantMode, array $contextData): void
+    private function _processApiResponse(User $user, array $apiResponse, bool $isAssistantMode, array $contextData, ?array $audioUsage = null): void
     {
-        $inputTokens  = (int) ($apiResponse['usage']['promptTokenCount'] ?? 0);
-        $outputTokens = (int) ($apiResponse['usage']['candidatesTokenCount'] ?? 0);
-        $costData     = $this->_calculateCost($inputTokens, $outputTokens);
+        // Calculate Total Cost
+        $costData = $this->_calculateCost($apiResponse['usage'] ?? [], $audioUsage);
 
         $db = \Config\Database::connect();
         $db->transStart();
@@ -523,24 +525,48 @@ class GeminiController extends BaseController
         }
     }
 
-    private function _calculateCost(int $input, int $output): array
+    private function _calculateCost(array $textUsage, ?array $audioUsage = null): array
     {
-        if ($input === 0 && $output === 0) {
-            return ['deductionAmount' => self::DEFAULT_DEDUCTION, 'costMessage' => 'Default charge.', 'costInKSH' => self::DEFAULT_DEDUCTION];
-        }
-        // Pricing Logic (Gemini 3 Pro Preview)
-        $tier1 = $input <= 200000;
+        // Audio Pricing (Per 1M tokens)
+        $audioInputPrice = 0.50;
+        $audioOutputPrice = 10.00;
+
+        // 1. Text Pricing (Gemini 3 Pro Preview)
+        $textInput = (int)($textUsage['promptTokenCount'] ?? 0);
+        $textOutput = (int)($textUsage['candidatesTokenCount'] ?? 0);
+
+        $tier1 = $textInput <= 200000;
         $inRate = ($tier1 ? 2.00 : 4.00) * 1.60; // USD per million, +60%
         $outRate = ($tier1 ? 12.00 : 18.00) * 1.60; // USD per million, +60%
 
-        $usd = (($input / 1e6) * $inRate) + (($output / 1e6) * $outRate);
-        $ksh = $usd * self::USD_TO_KSH_RATE;
-        $deduction = max(self::MINIMUM_BALANCE, ceil($ksh * 100) / 100);
+        $textUsd = (($textInput / 1e6) * $inRate) + (($textOutput / 1e6) * $outRate);
+
+        // 2. Audio Pricing
+        $audioInput = (int)($audioUsage['promptTokenCount'] ?? 0);
+        $audioOutput = (int)($audioUsage['candidatesTokenCount'] ?? 0);
+
+        $audioUsd = (($audioInput / 1e6) * $audioInputPrice) + (($audioOutput / 1e6) * $audioOutputPrice);
+
+        // 3. Total
+        $totalUsd = $textUsd + $audioUsd;
+        $totalKsh = $totalUsd * self::USD_TO_KSH_RATE;
+
+        // 4. Minimum Deduction Rule
+        // If there was ANY usage (text or audio), enforce minimum charge.
+        $hasUsage = ($textInput + $textOutput + $audioInput + $audioOutput) > 0;
+        $deduction = ($hasUsage && $totalKsh < self::MINIMUM_BALANCE)
+            ? self::MINIMUM_BALANCE
+            : ceil($totalKsh * 100) / 100;
+
+        // Fallback for zero usage (shouldn't happen in success path but safe to keep)
+        if (!$hasUsage) {
+            $deduction = self::DEFAULT_DEDUCTION;
+        }
 
         return [
             'deductionAmount' => $deduction,
             'costMessage' => "KSH " . number_format($deduction, 2) . " deducted.",
-            'costInKSH' => $ksh
+            'costInKSH' => $totalKsh
         ];
     }
 

@@ -226,8 +226,13 @@ class GeminiService
             // Resiliently parse the response to find the audio data
             $audioData = '';
             $foundAudio = false;
+            $usageMetadata = null;
 
             foreach ($responseDataArray as $chunk) {
+                if (isset($chunk['usageMetadata'])) {
+                    $usageMetadata = $chunk['usageMetadata'];
+                }
+
                 $candidates = $chunk['candidates'][0] ?? null;
                 if (!$candidates) continue;
 
@@ -245,7 +250,7 @@ class GeminiService
                 return ['status' => false, 'error' => 'Failed to retrieve audio data from the AI service.'];
             }
 
-            return ['status' => true, 'audioData' => $audioData];
+            return ['status' => true, 'audioData' => $audioData, 'usage' => $usageMetadata];
         } catch (\Exception $e) {
             log_message('error', 'Gemini TTS Exception: ' . $e->getMessage());
             return ['status' => false, 'error' => 'Could not connect to the speech synthesis service.'];
