@@ -228,14 +228,14 @@ class GeminiController extends BaseController
 
         // 4. Handle Audio (Voice Mode)
         $audioUrl = null;
-        $audioBase64 = null;
+        $audioFilePath = null;
         if ($isVoiceMode && !empty(trim($apiResponse['result']))) {
             $speech = $this->geminiService->generateSpeech($apiResponse['result']);
             if ($speech['status']) {
-                // Keep existing file storage for debugging/fallback
                 $audioUrl = $this->_processAudioData($speech['audioData']);
-                // New: Embed raw audio for immediate playback
-                $audioBase64 = base64_encode($speech['audioData']);
+                // Store the absolute file path for the view to read
+                $userId = (int) session()->get('userId');
+                $audioFilePath = WRITEPATH . 'uploads/ttsaudio_secure/' . $userId . '/' . basename($audioUrl);
             }
         }
 
@@ -254,8 +254,8 @@ class GeminiController extends BaseController
         if ($audioUrl) {
             $redirect->with('audio_url', $audioUrl);
         }
-        if ($audioBase64) {
-            $redirect->with('audio_base64', $audioBase64);
+        if ($audioFilePath && file_exists($audioFilePath)) {
+            $redirect->with('audio_file_path', $audioFilePath);
         }
 
         return $redirect;

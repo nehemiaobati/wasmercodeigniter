@@ -78,11 +78,16 @@
     </div>
 
     <!-- Audio Player -->
-    <?php if (session()->getFlashdata('audio_base64')): ?>
+    <?php
+    $audioFilePath = session()->getFlashdata('audio_file_path');
+    if ($audioFilePath && file_exists($audioFilePath)):
+        $audioBase64 = base64_encode(file_get_contents($audioFilePath));
+        $mimeType = (pathinfo($audioFilePath, PATHINFO_EXTENSION) === 'mp3') ? 'audio/mp3' : 'audio/wav';
+    ?>
         <div class="alert alert-info d-flex align-items-center">
             <i class="bi bi-volume-up-fill fs-4 me-3"></i>
             <audio controls autoplay class="w-100">
-                <source src="data:audio/mp3;base64,<?= session()->getFlashdata('audio_base64') ?>">
+                <source src="data:<?= $mimeType ?>;base64,<?= $audioBase64 ?>">
             </audio>
         </div>
     <?php elseif (session()->getFlashdata('audio_url')): ?>
