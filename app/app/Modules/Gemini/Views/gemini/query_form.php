@@ -271,7 +271,7 @@
         const appState = {
             csrfName: '<?= csrf_token() ?>',
             csrfHash: document.querySelector('input[name="<?= csrf_token() ?>"]').value,
-            maxFileSize: 10 * 1024 * 1024, // 10MB
+            maxFileSize: 150 * 1024 * 1024, // 10MB
             endpoints: {
                 upload: '<?= url_to('gemini.upload_media') ?>',
                 deleteMedia: '<?= url_to('gemini.delete_media') ?>',
