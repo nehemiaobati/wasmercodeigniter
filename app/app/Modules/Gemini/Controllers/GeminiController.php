@@ -43,8 +43,8 @@ class GeminiController extends BaseController
         'application/pdf',
         'text/plain'
     ];
-    private const MAX_FILE_SIZE = 10 * 1024 * 1024; // 150MB
-    private const MAX_FILES = 5;
+    private const MAX_FILE_SIZE = 150 * 1024 * 1024; // 150MB
+    private const MAX_FILES = 10;
     private const USD_TO_KSH_RATE = 129;
     private const DEFAULT_DEDUCTION = 10.00;
     private const MINIMUM_BALANCE = 0.01;
