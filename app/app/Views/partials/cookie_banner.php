@@ -8,10 +8,12 @@
         background-color: rgba(33, 37, 41, 0.95);
         color: #f8f9fa;
         padding: 1.5rem 1rem;
-        z-index: 1055; /* Higher than most elements */
+        z-index: 1055;
+        /* Higher than most elements */
         backdrop-filter: blur(5px);
-        display: none; /* Hidden by default, shown by JS */
-        box-shadow: 0 -5px 15px rgba(0,0,0,0.1);
+        display: none;
+        /* Hidden by default, shown by JS */
+        box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.1);
     }
 </style>
 
@@ -23,7 +25,10 @@
                 <a href="<?= url_to('privacy') ?>" class="text-white fw-bold">Learn more</a>.
             </p>
             <div class="d-flex flex-shrink-0">
-                <button id="acceptCookiesBtn" class="btn btn-primary fw-bold w-100">Accept</button>
+                <form action="<?= url_to('cookie.accept') ?>" method="post">
+                    <?= csrf_field() ?>
+                    <button type="submit" class="btn btn-primary fw-bold w-100">Accept</button>
+                </form>
             </div>
         </div>
     </div>
@@ -32,30 +37,8 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const banner = document.getElementById('cookieConsentBanner');
-        const acceptBtn = document.getElementById('acceptCookiesBtn');
-
-        // Function to check if consent has been given
-        function hasConsent() {
-            return document.cookie.split(';').some((item) => item.trim().startsWith('user_cookie_consent=accepted'));
-        }
-
-        // Show banner if no consent is found
-        if (!hasConsent()) {
+        if (banner) {
             banner.style.display = 'block';
         }
-
-        // Set cookie on accept
-        acceptBtn.addEventListener('click', function() {
-            const expiryDate = new Date();
-            expiryDate.setFullYear(expiryDate.getFullYear() + 1); // Set cookie for 1 year
-            document.cookie = `user_cookie_consent=accepted; expires=${expiryDate.toUTCString()}; path=/; SameSite=Lax; Secure`;
-            
-            // Hide the banner with a fade-out effect
-            banner.style.transition = 'opacity 0.5s ease';
-            banner.style.opacity = '0';
-            setTimeout(() => {
-                banner.style.display = 'none';
-            }, 500);
-        });
     });
 </script>

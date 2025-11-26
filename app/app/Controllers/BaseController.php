@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Controllers;
 
@@ -33,8 +35,16 @@ abstract class BaseController extends Controller
     {
         parent::initController($request, $response, $logger);
         $this->session = service('session');
-        
-        // NEW: Check for cookie consent and pass to all views
-        service('renderer')->setData(['showCookieBanner' => !hasCookieConsent()]);
+    }
+
+    public function acceptCookie()
+    {
+        $cookie = [
+            'name'   => 'user_cookie_consent',
+            'value'  => 'accepted',
+            'expire' => 31536000, // 1 year
+        ];
+
+        return redirect()->back()->setCookie($cookie);
     }
 }

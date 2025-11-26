@@ -40,5 +40,5 @@ class Autoload extends AutoloadConfig
      *
      * @var array<string, string>
      */
-    public $helpers = ['cookie_consent_helper'];
+    public $helpers = [];
 }

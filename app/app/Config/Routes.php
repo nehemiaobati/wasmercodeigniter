@@ -57,6 +57,7 @@ $routes->group('', static function ($routes) {
     $routes->get('privacy', 'HomeController::privacy', ['as' => 'privacy']);
 
     // Public Service Pages
+    $routes->post('cookie/accept', 'HomeController::acceptCookie', ['as' => 'cookie.accept']);
 });
 
 //--------------------------------------------------------------------

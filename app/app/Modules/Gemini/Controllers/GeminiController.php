@@ -43,7 +43,8 @@ class GeminiController extends BaseController
         'application/pdf',
         'text/plain'
     ];
-    private const MAX_FILE_SIZE = 150 * 1024 * 1024; // 10MB
+    private const MAX_FILE_SIZE = 10 * 1024 * 1024; // 150MB
+    private const MAX_FILES = 5;
     private const USD_TO_KSH_RATE = 129;
     private const DEFAULT_DEDUCTION = 10.00;
     private const MINIMUM_BALANCE = 0.01;
@@ -95,6 +96,7 @@ class GeminiController extends BaseController
             'voice_output_enabled'   => $userSetting ? $userSetting->voice_output_enabled : false,
             'audio_url'              => session()->getFlashdata('audio_url'),
             'maxFileSize'            => self::MAX_FILE_SIZE,
+            'maxFiles'               => self::MAX_FILES,
             'supportedMimeTypes'     => json_encode(self::SUPPORTED_MIME_TYPES),
         ];
         $data['robotsTag'] = 'noindex, follow';

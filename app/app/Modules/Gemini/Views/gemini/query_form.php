@@ -271,7 +271,8 @@
         const appState = {
             csrfName: '<?= csrf_token() ?>',
             csrfHash: document.querySelector('input[name="<?= csrf_token() ?>"]').value,
-            maxFileSize: 150 * 1024 * 1024, // 10MB
+            maxFileSize: <?= $maxFileSize ?>,
+            maxFiles: <?= $maxFiles ?>,
             endpoints: {
                 upload: '<?= url_to('gemini.upload_media') ?>',
                 deleteMedia: '<?= url_to('gemini.delete_media') ?>',
@@ -470,6 +471,14 @@
         };
 
         const handleFiles = (files) => {
+            const currentUploadedCount = document.querySelectorAll('input[name="uploaded_media[]"]').length;
+            const currentQueueCount = uploadQueue.length;
+
+            if (currentUploadedCount + currentQueueCount + files.length > appState.maxFiles) {
+                showToast(`You can only upload a maximum of ${appState.maxFiles} files.`);
+                return;
+            }
+
             Array.from(files).forEach(file => {
                 const uniqueId = Math.random().toString(36).substr(2, 9);
                 const uiElement = createProgressBar(file, uniqueId);
@@ -483,7 +492,8 @@
                 ];
 
                 if (file.size > appState.maxFileSize) {
-                    updateUIState(uiElement, 'error', 'File too large (Max 10MB)');
+                    const maxMB = Math.floor(appState.maxFileSize / (1024 * 1024));
+                    updateUIState(uiElement, 'error', `File too large (Max ${maxMB}MB)`);
                     return; // Don't queue
                 }
 

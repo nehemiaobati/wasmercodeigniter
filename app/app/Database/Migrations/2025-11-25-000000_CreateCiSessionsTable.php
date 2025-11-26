@@ -26,7 +26,7 @@ class CreateCiSessionsTable extends Migration
                 'null'       => false,
             ],
             'data' => [
-                'type' => 'BLOB',
+                'type' => 'MEDIUMBLOB',
                 'null' => false,
             ],
         ]);

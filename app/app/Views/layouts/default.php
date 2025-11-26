@@ -305,7 +305,11 @@
         </div>
     </footer>
 
-    <?php if ($showCookieBanner ?? false): ?>
+    <?php
+    // Check for cookie consent directly using the Request service
+    $hasConsent = service('request')->getCookie('user_cookie_consent') === 'accepted';
+    ?>
+    <?php if (! $hasConsent): ?>
         <?= $this->include('partials/cookie_banner') ?>
     <?php endif; ?>
 
