@@ -1,14 +1,24 @@
 <?php
 
-use CodeIgniter\Router\RouteCollection;
-use App\Modules\Ollama\Controllers\OllamaController;
+namespace App\Modules\Ollama\Config;
 
 /**
- * @var RouteCollection $routes
+ * @var \CodeIgniter\Router\RouteCollection $routes
  */
 
 $routes->group('ollama', ['namespace' => 'App\Modules\Ollama\Controllers', 'filter' => 'auth'], static function ($routes) {
-    $routes->get('/', [OllamaController::class, 'index'], ['as' => 'ollama.index']);
-    $routes->post('chat', [OllamaController::class, 'chat'], ['as' => 'ollama.chat']);
-    $routes->post('clear', [OllamaController::class, 'clearHistory'], ['as' => 'ollama.clear']);
+    $routes->get('/', 'OllamaController::index', ['as' => 'ollama.index']);
+
+    // Core Generation
+    $routes->post('generate', 'OllamaController::generate', ['as' => 'ollama.generate']);
+
+    // File Uploads (reuse Gemini's logic or implement similar)
+    $routes->post('upload-media', 'OllamaController::uploadMedia', ['as' => 'ollama.upload_media']);
+    $routes->post('delete-media', 'OllamaController::deleteMedia', ['as' => 'ollama.delete_media']);
+
+    // Settings & Prompts (reuse Gemini's logic or implement similar)
+    $routes->post('settings/update', 'OllamaController::updateSetting', ['as' => 'ollama.settings.update']);
+    $routes->post('prompts/add', 'OllamaController::addPrompt', ['as' => 'ollama.prompts.add']);
+    $routes->post('prompts/delete/(:num)', 'OllamaController::deletePrompt/$1', ['as' => 'ollama.prompts.delete']);
+    $routes->post('memory/clear', 'OllamaController::clearMemory', ['as' => 'ollama.memory.clear']);
 });

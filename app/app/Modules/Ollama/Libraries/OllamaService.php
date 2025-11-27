@@ -1,109 +1,199 @@
-<?php declare(strict_types=1);
+<?php
 
 namespace App\Modules\Ollama\Libraries;
 
-use App\Modules\Ollama\Config\Ollama;
+use App\Modules\Ollama\Config\Ollama as OllamaConfig;
 use CodeIgniter\HTTP\CURLRequest;
 use Config\Services;
 
 class OllamaService
 {
-    private Ollama $config;
-    private CURLRequest $client;
+    protected OllamaConfig $config;
+    protected OllamaPayloadService $payloadService;
+    protected CURLRequest $client;
 
     public function __construct()
     {
-        $this->config = config(Ollama::class);
-
-        // Ensure we have a valid base URL, defaulting if empty
-        if (empty($this->config->baseUrl)) {
-            $this->config->baseUrl = 'http://127.0.0.1:11434';
-        }
-        
-
-        // Initialize Client without 'base_uri' to prevent merging issues
+        $this->config = new OllamaConfig();
+        $this->payloadService = new OllamaPayloadService();
         $this->client = Services::curlrequest([
-            'timeout'  => $this->config->timeout,
-            'headers'  => ['Content-Type' => 'application/json'],
+            'timeout' => $this->config->timeout,
+            'connect_timeout' => 10,
         ]);
     }
 
     /**
-     * Checks if the Ollama server is reachable.
+     * Checks if the Ollama instance is reachable.
+     *
+     * @return bool
      */
-    public function isOnline(): bool
+    public function checkConnection(): bool
     {
         try {
-            // EXPLICIT URL: Guaranteed to have a host part
-            $url = $this->config->baseUrl ; 
-            
+            $url = rtrim($this->config->baseUrl, '/') . '/'; // Root endpoint usually returns status
             $response = $this->client->get($url);
             return $response->getStatusCode() === 200;
         } catch (\Exception $e) {
-            log_message('error', '[Ollama Check Failed] ' . $e->getMessage());
+            log_message('error', 'Ollama Connection Check Failed: ' . $e->getMessage());
             return false;
         }
     }
 
     /**
-     * Generates a chat response.
+     * Fetches available models from the Ollama instance.
+     *
+     * @return array List of model names.
      */
-    public function chat(array $messages): array
+    public function getModels(): array
     {
         try {
-            // EXPLICIT URL
-            $url = $this->config->baseUrl . '/api/chat';
-            
-            $payload = [
-                'model'    => $this->config->chatModel,
-                'messages' => $messages,
-                'stream'   => false,
-               // 'options'  => ['temperature' => 1],
-            ]
-            ;
+            $url = rtrim($this->config->baseUrl, '/') . '/api/tags';
+            $response = $this->client->get($url);
 
-            $response = $this->client->post($url, ['json' => $payload]);
-            
             if ($response->getStatusCode() !== 200) {
-                return ['success' => false, 'error' => 'Ollama API status: ' . $response->getStatusCode()];
+                return [];
             }
 
             $data = json_decode($response->getBody(), true);
-            
-            return [
-                'success' => true,
-                'response' => $data['message']['content'] ?? '',
-                'model'    => $data['model'] ?? 'unknown'
-            ];
+            $models = [];
 
+            if (isset($data['models']) && is_array($data['models'])) {
+                foreach ($data['models'] as $model) {
+                    $models[] = $model['name'];
+                }
+            }
+
+            return $models;
         } catch (\Exception $e) {
-            log_message('error', '[Ollama Chat Error] ' . $e->getMessage());
-            return ['success' => false, 'error' => 'Connection failed: ' . $e->getMessage()];
+            log_message('error', 'Ollama Get Models Failed: ' . $e->getMessage());
+            return []; // Return empty on failure
         }
     }
 
     /**
-     * Generates vector embeddings for a text string.
+     * Generates a chat response from Ollama.
+     *
+     * @param string $model The model to use.
+     * @param array $messages The conversation history.
+     * @return array ['result' => string, 'usage' => array, 'error' => string|null]
      */
-    public function embed(string $text): ?array
+    public function generateChat(string $model, array $messages): array
     {
-        try {
-            // EXPLICIT URL
-            $url = $this->config->baseUrl . '/api/embeddings';
+        // 1. Prepare Payload
+        $config = $this->payloadService->getPayloadConfig($model, $messages, false); // stream=false for now
 
-            $response = $this->client->post($url, [
-                'json' => [
-                    'model'  => $this->config->embeddingModel,
-                    'prompt' => $text
-                ]
+        try {
+            // 2. Send Request
+            $response = $this->client->post($config['url'], [
+                'body' => $config['body'],
+                'headers' => ['Content-Type' => 'application/json']
             ]);
 
-            $data = json_decode($response->getBody(), true);
-            return $data['embedding'] ?? null;
+            $statusCode = $response->getStatusCode();
+            $body = $response->getBody();
 
+            if ($statusCode !== 200) {
+                $error = json_decode($body, true)['error'] ?? 'Unknown API error';
+                log_message('error', "Ollama API Error ({$statusCode}): {$error}");
+                return ['error' => "Ollama Error: {$error}"];
+            }
+
+            // 3. Parse Response
+            $data = json_decode($body, true);
+
+            if (isset($data['message']['content'])) {
+                return [
+                    'result' => $data['message']['content'],
+                    'usage' => [
+                        'total_duration' => $data['total_duration'] ?? 0,
+                        'load_duration' => $data['load_duration'] ?? 0,
+                        'prompt_eval_count' => $data['prompt_eval_count'] ?? 0,
+                        'eval_count' => $data['eval_count'] ?? 0,
+                    ]
+                ];
+            }
+
+            return ['error' => 'Invalid response format from Ollama.'];
         } catch (\Exception $e) {
-            log_message('error', '[Ollama Embed Error] ' . $e->getMessage());
-            return null;
+            log_message('error', 'Ollama Generate Failed: ' . $e->getMessage());
+            return ['error' => 'Failed to connect to Ollama. Is it running?'];
+        }
+    }
+    /**
+     * Wrapper for chat generation to match MemoryService expectation.
+     *
+     * @param array $messages
+     * @param string|null $model
+     * @return array
+     */
+    public function chat(array $messages, ?string $model = null): array
+    {
+        $model = $model ?? $this->config->defaultModel;
+        $response = $this->generateChat($model, $messages);
+
+        if (isset($response['error'])) {
+            return ['success' => false, 'error' => $response['error']];
+        }
+
+        return [
+            'success'  => true,
+            'response' => $response['result'],
+            'model'    => $model,
+            'usage'    => $response['usage'] ?? []
+        ];
+    }
+
+    /**
+     * Generates embeddings for the given text.
+     *
+     * @param string $input
+     * @return array
+     */
+    public function embed(string $input): array
+    {
+        // Use the new /api/embed endpoint (Ollama 0.1.26+)
+        $url = rtrim($this->config->baseUrl, '/') . '/api/embed';
+
+        $payload = [
+            'model'  => $this->config->embeddingModel,
+            'input'  => $input // 'input' instead of 'prompt' for /api/embed
+        ];
+
+        try {
+            log_message('info', 'Ollama Embed Request: ' . json_encode($payload));
+
+            $response = $this->client->post($url, [
+                'body'        => json_encode($payload),
+                'headers'     => ['Content-Type' => 'application/json'],
+                'http_errors' => false // Prevent exception on 4xx/5xx to capture body
+            ]);
+
+            if ($response->getStatusCode() !== 200) {
+                log_message('error', 'Ollama Embed Error: ' . $response->getBody());
+                return [];
+            }
+
+            $data = json_decode($response->getBody(), true);
+
+            // /api/embed returns 'embeddings' (array of arrays)
+            $embedding = [];
+            if (isset($data['embeddings']) && is_array($data['embeddings'])) {
+                $embedding = $data['embeddings'][0] ?? [];
+            } elseif (isset($data['embedding'])) {
+                // Fallback for older versions or different response shapes
+                $embedding = $data['embedding'];
+            }
+
+            if (empty($embedding)) {
+                log_message('error', 'Ollama Embed Empty Response: ' . json_encode($data));
+            } else {
+                log_message('info', 'Ollama Embed Success. Vector Size: ' . count($embedding));
+            }
+
+            return $embedding;
+        } catch (\Exception $e) {
+            log_message('error', 'Ollama Embed Failed: ' . $e->getMessage());
+            return [];
         }
     }
 }

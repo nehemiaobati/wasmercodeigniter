@@ -1,79 +1,257 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Ollama\Controllers;
 
 use App\Controllers\BaseController;
+use App\Entities\User;
 use App\Modules\Ollama\Libraries\OllamaService;
-use App\Modules\Ollama\Libraries\OllamaMemoryService;
-use App\Modules\Ollama\Models\OllamaEntityModel;
-use App\Modules\Ollama\Models\OllamaInteractionModel;
+use App\Modules\Gemini\Models\PromptModel; // Reuse Gemini models for now
+use App\Modules\Gemini\Models\UserSettingsModel; // Reuse Gemini models for now
+use App\Modules\Gemini\Models\InteractionModel; // Reuse Gemini models for now
+use App\Modules\Gemini\Models\EntityModel; // Reuse Gemini models for now
+use App\Models\UserModel;
+use CodeIgniter\HTTP\RedirectResponse;
+use CodeIgniter\HTTP\ResponseInterface;
+use CodeIgniter\I18n\Time;
+use Parsedown;
 
 class OllamaController extends BaseController
 {
-    private OllamaService $apiService;
+    protected UserModel $userModel;
+    protected OllamaService $ollamaService;
+    protected PromptModel $promptModel;
+    protected UserSettingsModel $userSettingsModel;
+
+    private const SUPPORTED_MIME_TYPES = [
+        'image/png',
+        'image/jpeg',
+        'image/jpg', // Some clients send this
+        'image/webp',
+        'image/gif',
+        //'application/pdf',
+    ];
+    private const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    private const MAX_FILES = 3;
+    private const COST_PER_REQUEST = 1.00; // Flat rate per request
 
     public function __construct()
     {
-        $this->apiService = new OllamaService();
+        $this->userModel         = new UserModel();
+        $this->ollamaService     = new OllamaService();
+        $this->promptModel       = new PromptModel();
+        $this->userSettingsModel = new UserSettingsModel();
     }
 
+    /**
+     * Displays the main application dashboard.
+     */
     public function index(): string
     {
         $userId = (int) session()->get('userId');
-        
-        // Fetch history directly for view presentation
-        $history = model(OllamaInteractionModel::class)
-            ->where('user_id', $userId)
-            ->orderBy('created_at', 'DESC')
-            ->limit(20)
-            ->findAll();
+        $prompts = $this->promptModel->where('user_id', $userId)->findAll();
+        $userSetting = $this->userSettingsModel->where('user_id', $userId)->first();
 
-        $isOnline = $this->apiService->isOnline();
-        if (!$isOnline) {
-            session()->setFlashdata('error', 'Local Ollama service is unreachable.');
+        // Fetch available models
+        $availableModels = $this->ollamaService->getModels();
+        if (empty($availableModels)) {
+            $availableModels = ['llama3']; // Fallback
         }
 
-        return view('App\Modules\Ollama\Views\ollama\chat', [
-            'pageTitle'    => 'Local AI | Ollama & DeepSeek',
-            'isOnline'     => $isOnline,
-            'history'      => $history,
-            'canonicalUrl' => url_to('ollama.index'),
-            'robotsTag' => 'noindex, nofollow', 
+        $data = [
+            'pageTitle'              => 'Local AI Workspace | Ollama',
+            'metaDescription'        => 'Interact with local LLMs via Ollama.',
+            'canonicalUrl'           => url_to('ollama.index'),
+            'result'                 => session()->getFlashdata('result'),
+            'error'                  => session()->getFlashdata('error'),
+            'prompts'                => $prompts,
+            'assistant_mode_enabled' => $userSetting ? $userSetting->assistant_mode_enabled : true,
+            'maxFileSize'            => self::MAX_FILE_SIZE,
+            'maxFiles'               => self::MAX_FILES,
+            'supportedMimeTypes'     => json_encode(self::SUPPORTED_MIME_TYPES),
+            'availableModels'        => $availableModels,
+        ];
+        $data['robotsTag'] = 'noindex, follow';
+
+        return view('App\Modules\Ollama\Views\ollama\query_form', $data);
+    }
+
+    /**
+     * Handles file uploads.
+     */
+    public function uploadMedia(): ResponseInterface
+    {
+        $userId = (int) session()->get('userId');
+        if ($userId <= 0) {
+            return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Auth required.']);
+        }
+
+        if (!$this->validate([
+            'file' => [
+                'label' => 'File',
+                'rules' => 'uploaded[file]|max_size[file,' . (self::MAX_FILE_SIZE / 1024) . ']|mime_in[file,' . implode(',', self::SUPPORTED_MIME_TYPES) . ']',
+            ],
+        ])) {
+            return $this->response->setStatusCode(400)->setJSON(['status' => 'error', 'message' => $this->validator->getErrors()['file']]);
+        }
+
+        $file = $this->request->getFile('file');
+        $userTempPath = WRITEPATH . 'uploads/ollama_temp/' . $userId . '/';
+
+        if (!is_dir($userTempPath)) {
+            mkdir($userTempPath, 0777, true);
+        }
+
+        $fileName = $file->getRandomName();
+        if (!$file->move($userTempPath, $fileName)) {
+            return $this->response->setStatusCode(500)->setJSON(['status' => 'error', 'message' => 'Save failed.']);
+        }
+
+        return $this->response->setJSON([
+            'status'        => 'success',
+            'file_id'       => $fileName,
+            'original_name' => $file->getClientName(),
+            'csrf_token'    => csrf_hash(),
         ]);
     }
 
-    public function chat()
+    /**
+     * Deletes a temporary uploaded file.
+     */
+    public function deleteMedia(): ResponseInterface
     {
-        $prompt = trim((string) $this->request->getPost('prompt'));
-
-        if ($prompt === '') {
-            return redirect()->back()->with('error', 'Please enter a prompt.');
-        }
-
-        if (!$this->apiService->isOnline()) {
-            return redirect()->back()->withInput()->with('error', 'Ollama service is offline.');
-        }
-
-        // Delegate complex logic to Memory Service
         $userId = (int) session()->get('userId');
-        $memory = new OllamaMemoryService($userId);
-        
-        $result = $memory->processChat($prompt);
+        if ($userId <= 0) return $this->response->setStatusCode(403);
 
-        if (!$result['success']) {
-            return redirect()->back()->withInput()->with('error', $result['error']);
+        $fileId = $this->request->getPost('file_id');
+        if (!$fileId) return $this->response->setStatusCode(400);
+
+        $filePath = WRITEPATH . 'uploads/ollama_temp/' . $userId . '/' . basename($fileId);
+
+        if (file_exists($filePath) && unlink($filePath)) {
+            return $this->response->setJSON(['status' => 'success', 'csrf_token' => csrf_hash()]);
         }
 
-        // Return raw response. The View (JS) handles the Markdown/<think> rendering.
-        return redirect()->back()->with('success_response', $result['response']);
+        return $this->response->setStatusCode(404)->setJSON(['status' => 'error', 'message' => 'File not found']);
     }
 
-    public function clearHistory()
+    /**
+     * Generates content using Ollama with Memory Integration.
+     */
+    public function generate(): RedirectResponse
     {
         $userId = (int) session()->get('userId');
-        model(OllamaInteractionModel::class)->where('user_id', $userId)->delete();
-        model(OllamaEntityModel::class)->where('user_id', $userId)->delete();
-        
-        return redirect()->back()->with('success', 'Conversation history cleared.');
+        $user = $this->userModel->find($userId);
+
+        if (!$user) return redirect()->back()->with('error', 'User not found.');
+
+        // Input Validation
+        if (!$this->validate([
+            'prompt' => 'max_length[100000]',
+            'model'  => 'required'
+        ])) {
+            return redirect()->back()->withInput()->with('error', 'Invalid input.');
+        }
+
+        $inputText = (string) $this->request->getPost('prompt');
+        $selectedModel = (string) $this->request->getPost('model');
+        $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
+
+        $userSetting = $this->userSettingsModel->where('user_id', $userId)->first();
+        $isAssistantMode = $userSetting ? $userSetting->assistant_mode_enabled : true;
+
+        // 1. Check Balance
+        if ($user->balance < self::COST_PER_REQUEST) {
+            return redirect()->back()->withInput()->with('error', 'Insufficient balance.');
+        }
+
+        // 2. Handle Files (Multimodal)
+        $images = [];
+        $userTempPath = WRITEPATH . 'uploads/ollama_temp/' . $userId . '/';
+        foreach ($uploadedFileIds as $fileId) {
+            $filePath = $userTempPath . basename($fileId);
+            if (file_exists($filePath)) {
+                $images[] = base64_encode(file_get_contents($filePath));
+                @unlink($filePath); // Cleanup immediately
+            }
+        }
+
+        $response = [];
+
+        if (!empty($images)) {
+            // Multimodal Request (Direct API, no RAG for now)
+            $messages = [
+                ['role' => 'user', 'content' => $inputText, 'images' => $images]
+            ];
+            $response = $this->ollamaService->generateChat($selectedModel, $messages);
+        } elseif ($isAssistantMode) {
+            // Text-only Request with Assistant Mode (Use MemoryService for RAG)
+            $memoryService = new \App\Modules\Ollama\Libraries\OllamaMemoryService($userId);
+            $response = $memoryService->processChat($inputText, $selectedModel);
+        } else {
+            // Simple Text Request (Direct API, no Memory)
+            $messages = [
+                ['role' => 'user', 'content' => $inputText]
+            ];
+            $response = $this->ollamaService->generateChat($selectedModel, $messages);
+        }
+
+        if (isset($response['error']) || (isset($response['success']) && !$response['success'])) {
+            $msg = $response['error'] ?? 'Unknown error';
+            return redirect()->back()->withInput()->with('error', $msg);
+        }
+
+        // Normalize response format
+        $resultText = $response['result'] ?? $response['response'] ?? '';
+
+        // 3. Deduct Balance
+        $this->userModel->deductBalance((int)$user->id, (string)self::COST_PER_REQUEST);
+
+        // 4. Output
+        $parsedown = new Parsedown();
+        $parsedown->setSafeMode(true);
+
+        return redirect()->back()->withInput()
+            ->with('result', $parsedown->text($resultText))
+            ->with('raw_result', $resultText)
+            ->with('success', 'Generated successfully. Cost: ' . self::COST_PER_REQUEST . ' credits.');
+    }
+
+    public function updateSetting(): ResponseInterface
+    {
+        $userId = (int) session()->get('userId');
+        $key = $this->request->getPost('setting_key');
+        $enabled = $this->request->getPost('enabled') === 'true';
+
+        if (!in_array($key, ['assistant_mode_enabled', 'voice_output_enabled'])) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Invalid setting']);
+        }
+
+        $setting = $this->userSettingsModel->where('user_id', $userId)->first();
+        if (!$setting) {
+            $setting = new \App\Modules\Gemini\Entities\UserSetting();
+            $setting->user_id = $userId;
+        }
+
+        $setting->$key = $enabled;
+        $this->userSettingsModel->save($setting);
+
+        return $this->response->setJSON(['status' => 'success', 'csrf_token' => csrf_hash()]);
+    }
+
+    public function clearMemory(): RedirectResponse
+    {
+        $userId = (int) session()->get('userId');
+
+        // Clear Interactions
+        $interactionModel = new \App\Modules\Ollama\Models\OllamaInteractionModel();
+        $interactionModel->where('user_id', $userId)->delete();
+
+        // Clear Entities
+        $entityModel = new \App\Modules\Ollama\Models\OllamaEntityModel();
+        $entityModel->where('user_id', $userId)->delete();
+
+        return redirect()->back()->with('success', 'Memory cleared.');
     }
 }

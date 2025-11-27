@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Controllers\BaseController;
 use CodeIgniter\HTTP\ResponseInterface;
 use App\Models\UserModel;
+use CodeIgniter\I18n\Time;
 
 /**
  * Handles user authentication processes, including registration, login, logout,
@@ -280,7 +281,7 @@ class AuthController extends BaseController
             // Generate a reset token and set its expiration time (1 hour).
             $token = bin2hex(random_bytes(50));
             $user->reset_token = $token;
-            $user->reset_expires = date('Y-m-d H:i:s', time() + 3600); // Token expires in 1 hour.
+            $user->reset_expires = Time::now()->addHours(1)->toDateTimeString(); // Token expires in 1 hour.
             $userModel->save($user);
 
             // Prepare and send the password reset email.
@@ -321,7 +322,7 @@ class AuthController extends BaseController
         $user = $userModel->where('reset_token', $token)->first();
 
         // Check if the token is valid and has not expired.
-        if (! $user || strtotime($user->reset_expires) < time()) {
+        if (! $user || Time::parse($user->reset_expires)->isBefore(Time::now())) {
             return redirect()->to(url_to('auth.forgot_password'))->with('error', 'Invalid or expired password reset token.');
         }
 
@@ -355,7 +356,7 @@ class AuthController extends BaseController
         $user = $userModel->where('reset_token', $this->request->getVar('token'))->first();
 
         // Re-validate token and expiration.
-        if (! $user || strtotime($user->reset_expires) < time()) {
+        if (! $user || Time::parse($user->reset_expires)->isBefore(Time::now())) {
             return redirect()->to(url_to('auth.forgot_password'))->with('error', 'Invalid or expired password reset token.');
         }
 

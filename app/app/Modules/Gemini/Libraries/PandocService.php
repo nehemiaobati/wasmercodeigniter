@@ -22,7 +22,7 @@ class PandocService
         try {
             // 2. Try to execute, silencing warnings with @
             // 3. Catch ErrorException if strictly blocked
-            $output = @shell_exec('command -v pandocc 2>/dev/null');
+            $output = @shell_exec('command -v pandoc 2>/dev/null');
             return !empty($output);
         } catch (\Throwable $e) {
             // Log strictly as info/debug, not critical

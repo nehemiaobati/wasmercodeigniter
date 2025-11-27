@@ -16,6 +16,7 @@ use App\Modules\Gemini\Models\UserSettingsModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 use App\Modules\Gemini\Libraries\DocumentService;
+use CodeIgniter\I18n\Time;
 use Parsedown;
 
 class GeminiController extends BaseController
@@ -43,8 +44,8 @@ class GeminiController extends BaseController
         'application/pdf',
         'text/plain'
     ];
-    private const MAX_FILE_SIZE = 150 * 1024 * 1024; // 150MB
-    private const MAX_FILES = 10;
+    private const MAX_FILE_SIZE = 10 * 1024 * 1024; // 150MB
+    private const MAX_FILES = 5;
     private const USD_TO_KSH_RATE = 129;
     private const DEFAULT_DEDUCTION = 10.00;
     private const MINIMUM_BALANCE = 0.01;
@@ -279,12 +280,14 @@ class GeminiController extends BaseController
         $userId = (int) session()->get('userId');
         if ($userId <= 0) return $this->response->setStatusCode(403);
 
-        $settingKey = $this->request->getPost('setting_key'); // 'assistant_mode_enabled' or 'voice_output_enabled'
-        $isEnabled = $this->request->getPost('enabled') === 'true';
-
-        if (!in_array($settingKey, ['assistant_mode_enabled', 'voice_output_enabled'])) {
+        if (!$this->validate([
+            'setting_key' => 'required|in_list[assistant_mode_enabled,voice_output_enabled]',
+        ])) {
             return $this->response->setStatusCode(400)->setJSON(['status' => 'error', 'message' => 'Invalid setting']);
         }
+
+        $settingKey = $this->request->getPost('setting_key'); // 'assistant_mode_enabled' or 'voice_output_enabled'
+        $isEnabled = $this->request->getPost('enabled') === 'true';
 
         $setting = $this->userSettingsModel->where('user_id', $userId)->first();
 
@@ -402,13 +405,16 @@ class GeminiController extends BaseController
      */
     public function downloadDocument()
     {
-        $content = $this->request->getPost('raw_response');
-        $format = $this->request->getPost('format');
-
         // Basic Validation
-        if (!$content || !in_array($format, ['pdf', 'docx'])) {
+        if (!$this->validate([
+            'raw_response' => 'required',
+            'format'       => 'required|in_list[pdf,docx]'
+        ])) {
             return redirect()->back()->with('error', 'Invalid request parameters.');
         }
+
+        $content = $this->request->getPost('raw_response');
+        $format = $this->request->getPost('format');
 
         // Execution: Service now guarantees a 'fileData' string on success
         $result = service('documentService')->generate($content, $format);
@@ -418,7 +424,7 @@ class GeminiController extends BaseController
                 ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
                 : 'application/pdf';
 
-            $filename = 'Studio-Output-' . date('Ymd-His') . '.' . $format;
+            $filename = 'Studio-Output-' . Time::now()->format('Ymd-His') . '.' . $format;
 
             return $this->response
                 ->setHeader('Content-Type', $mime)
@@ -442,7 +448,7 @@ class GeminiController extends BaseController
             $recalled = $memoryService->getRelevantContext($inputText);
 
             $template = $memoryService->getTimeAwareSystemPrompt();
-            $template = str_replace('{{CURRENT_TIME}}', date('Y-m-d H:i:s T'), $template);
+            $template = str_replace('{{CURRENT_TIME}}', Time::now()->format('Y-m-d H:i:s T'), $template);
             $template = str_replace('{{CONTEXT_FROM_MEMORY_SERVICE}}', $recalled['context'], $template);
             $template = str_replace('{{USER_QUERY}}', htmlspecialchars($inputText), $template);
             $template = str_replace('{{TONE_INSTRUCTION}}', "Maintain default persona: dry, witty, concise.", $template);

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Ollama\Libraries;
 
@@ -21,6 +23,8 @@ class OllamaMemoryService
     private const HYBRID_ALPHA = 0.5;
     private const DECAY_RATE   = 0.05;
     private const BOOST_RATE   = 0.5;
+    private const CONTEXT_TOKEN_BUDGET = 4000;
+    private const FORCED_RECENT_COUNT = 0;
 
     public function __construct(int $userId)
     {
@@ -35,93 +39,202 @@ class OllamaMemoryService
     /**
      * Main orchestration method for handling a user chat interaction.
      */
-    public function processChat(string $prompt): array
+    public function processChat(string $prompt, ?string $model = null): array
     {
-        // 1. Build Context
-        $messages = $this->buildContext($prompt);
+        // 1. Build Context (Gemini Style)
+        $contextData = $this->getRelevantContext($prompt);
 
-        // 2. Call API
-        $result = $this->api->chat($messages);
+        // 2. Construct System Prompt
+        $systemPrompt = $this->constructSystemPrompt($contextData['context']);
+
+        // 3. Assemble Messages (System + User only, as history is in context)
+        $messages = [
+            ['role' => 'system', 'content' => $systemPrompt],
+            ['role' => 'user', 'content' => $prompt]
+        ];
+
+        // 4. Call API
+        $result = $this->api->chat($messages, $model);
 
         if (!$result['success']) {
             return $result;
         }
 
-        // 3. Save Memory (Fire and forget logic handled internally)
-        $this->saveInteraction($prompt, $result['response'], $result['model']);
+        // 5. Save Memory
+        $this->saveInteraction($prompt, $result['response'], $result['model'], $contextData['used_interaction_ids']);
 
         return $result;
     }
 
-    private function buildContext(string $userInput): array
+    /**
+     * Retrieves relevant context from memory based on user input.
+     * Replicates Gemini's MemoryService workflow.
+     */
+    private function getRelevantContext(string $userInput): array
     {
+        // 1. Vector Search (Semantic)
+        $semanticResults = [];
         $inputVector = $this->api->embed($userInput);
-        $keywords    = $this->tokenizer->processText($userInput);
-        $relevantIds = $this->performHybridSearch($inputVector, $keywords);
-        
-        $systemPrompt = $this->constructSystemPrompt($relevantIds);
-        
-        return $this->assembleMessageChain($systemPrompt, $userInput);
-    }
+        if (!empty($inputVector)) {
+            $candidates = $this->interactionModel
+                ->where('user_id', $this->userId)
+                ->where('embedding IS NOT NULL')
+                ->findAll();
 
-    private function constructSystemPrompt(array $memoryIds): string
-    {
-        $contextText = "";
-        if (!empty($memoryIds)) {
-            $memories = $this->interactionModel->whereIn('id', $memoryIds)->findAll();
-            foreach ($memories as $mem) {
-                $contextText .= "- [Memory]: User: '{$mem->user_input}' | AI: '{$mem->ai_response}'\n";
+            foreach ($candidates as $c) {
+                if (empty($c->embedding)) continue;
+                $sim = $this->cosineSimilarity($inputVector, $c->embedding);
+                $semanticResults[$c->id] = $sim;
+            }
+            arsort($semanticResults);
+            $semanticResults = array_slice($semanticResults, 0, 50, true);
+        }
+
+        // 2. Keyword Search (Lexical)
+        $keywords = $this->tokenizer->processText($userInput);
+        $keywordResults = [];
+        if (!empty($keywords)) {
+            $entities = $this->entityModel
+                ->where('user_id', $this->userId)
+                ->whereIn('entity_key', $keywords)
+                ->findAll();
+
+            $candidateIds = [];
+            foreach ($entities as $entity) {
+                if (!empty($entity->mentioned_in)) {
+                    foreach ($entity->mentioned_in as $intId) {
+                        $candidateIds[] = $intId;
+                    }
+                }
+            }
+
+            if (!empty($candidateIds)) {
+                $candidateIds = array_unique($candidateIds);
+                $interactions = $this->interactionModel
+                    ->where('user_id', $this->userId)
+                    ->whereIn('id', $candidateIds)
+                    ->findAll();
+
+                foreach ($interactions as $int) {
+                    // Gemini uses the interaction's persistent relevance_score
+                    $keywordResults[$int->id] = $int->relevance_score;
+                }
+            }
+            arsort($keywordResults);
+        }
+
+        // 3. Hybrid Fusion
+        $fusedScores = [];
+        $allIds = array_unique(array_merge(array_keys($semanticResults), array_keys($keywordResults)));
+        foreach ($allIds as $id) {
+            $semanticScore = $semanticResults[$id] ?? 0.0;
+            // Apply tanh normalization with scaling (Gemini uses / 10)
+            $keywordScore  = isset($keywordResults[$id]) ? tanh($keywordResults[$id] / 10) : 0.0;
+            $fusedScores[$id] = (self::HYBRID_ALPHA * $semanticScore) + ((1 - self::HYBRID_ALPHA) * $keywordScore);
+        }
+        arsort($fusedScores);
+
+        // 4. Build Context String
+        $context = "";
+        $tokenCount = 0;
+        $usedInteractionIds = [];
+
+        // A. Forced Recent Interactions (Short-Term Memory)
+        $recentInteractions = [];
+        if (self::FORCED_RECENT_COUNT > 0) {
+            $recentInteractions = $this->interactionModel
+                ->where('user_id', $this->userId)
+                ->orderBy('created_at', 'DESC')
+                ->limit(self::FORCED_RECENT_COUNT)
+                ->findAll();
+        }
+
+        // Reverse to maintain chronological order
+        $recentInteractions = array_reverse($recentInteractions);
+
+        foreach ($recentInteractions as $interaction) {
+            $memoryText = "[Recent]: User: '{$interaction->user_input}' | AI: '{$interaction->ai_response}'\n";
+            $itemTokens = $this->tokenizer->estimateTokenCount($memoryText);
+
+            if ($tokenCount + $itemTokens <= self::CONTEXT_TOKEN_BUDGET) {
+                $context .= $memoryText;
+                $tokenCount += $itemTokens;
+                $usedInteractionIds[] = $interaction->id;
             }
         }
 
-        return "You are DeepSeek R1. " .
-               "Use <think></think> tags for reasoning on complex queries.\n\n" .
-               "Relevant Context:\n" . ($contextText ?: "None available.");
-    }
+        // B. Relevant Long-Term Memories
+        foreach ($fusedScores as $id => $score) {
+            // Skip if already included via recent list
+            if (in_array($id, $usedInteractionIds)) {
+                continue;
+            }
 
-    private function assembleMessageChain(string $systemPrompt, string $userInput): array
-    {
-        $messages = [['role' => 'system', 'content' => $systemPrompt]];
+            $memory = $this->interactionModel->find($id);
+            if (!$memory) continue;
 
-        // Add recent history (Last 3 interactions)
-        $recent = $this->interactionModel
-            ->where('user_id', $this->userId)
-            ->orderBy('created_at', 'DESC')
-            ->limit(3)
-            ->findAll();
-        
-        foreach (array_reverse($recent) as $r) {
-            $messages[] = ['role' => 'user', 'content' => $r->user_input];
-            $messages[] = ['role' => 'assistant', 'content' => $r->ai_response];
+            $memoryText = "[Relevant]: User: '{$memory->user_input}' | AI: '{$memory->ai_response}'\n";
+            $itemTokens = $this->tokenizer->estimateTokenCount($memoryText);
+
+            if ($tokenCount + $itemTokens <= self::CONTEXT_TOKEN_BUDGET) {
+                $context .= $memoryText;
+                $tokenCount += $itemTokens;
+                $usedInteractionIds[] = $id;
+            } else {
+                break; // Stop if budget exceeded
+            }
         }
 
-        $messages[] = ['role' => 'user', 'content' => $userInput];
-
-        return $messages;
+        return [
+            'context' => empty($context) ? "No previous context available." : $context,
+            'used_interaction_ids' => $usedInteractionIds
+        ];
     }
 
-    private function saveInteraction(string $input, string $response, string $modelName): void
+    private function constructSystemPrompt(string $contextText): string
+    {
+        return "You are DeepSeek R1, a helpful AI assistant. " .
+            "CONTEXT FROM MEMORY:\n" . $contextText . "\n\n" .
+            "INSTRUCTIONS:\n" .
+            "1. Use the above context to answer the user's query.\n" .
+            "2. If the context contains the answer, cite it implicitly.\n" .
+            "3. Do not explicitly say 'According to my memory'.";
+    }
+
+    private function saveInteraction(string $input, string $response, string $modelName, array $usedIds): void
     {
         $keywords  = $this->tokenizer->processText($input);
-        $embedding = $this->api->embed("User: $input | AI: $response");
 
-        // Create Entity object to utilize Casts (auto JSON encoding)
+        // Strip HTML tags for cleaner embedding
+        $cleanInput = strip_tags($input);
+        $cleanResponse = strip_tags($response);
+        $embedding = $this->api->embed("User: $cleanInput | AI: $cleanResponse");
+
+        if (empty($embedding)) {
+            log_message('error', 'Ollama Memory: Embedding generation failed for interaction.');
+        } else {
+            log_message('info', 'Ollama Memory: Embedding generated. Size: ' . count($embedding));
+        }
+
         $interaction = new OllamaInteraction([
             'user_id'         => $this->userId,
             'prompt_hash'     => hash('sha256', $input),
             'user_input'      => $input,
             'ai_response'     => $response,
             'ai_model'        => $modelName,
-            'embedding'       => $embedding, // Entity cast handles array->json
-            'keywords'        => $keywords,  // Entity cast handles array->json
+            'embedding'       => $embedding,
+            'keywords'        => $keywords,
             'relevance_score' => 1.0
         ]);
 
         $interactionId = $this->interactionModel->insert($interaction);
 
         if ($interactionId) {
+            log_message('info', "Ollama Memory: Interaction saved. ID: {$interactionId}");
             $this->updateKnowledgeGraph($keywords, (int)$interactionId);
-            $this->applyDecay();
+            $this->applyDecay($usedIds); // Reward used, decay others
+        } else {
+            log_message('error', 'Ollama Memory: Failed to save interaction. Errors: ' . json_encode($this->interactionModel->errors()));
         }
     }
 
@@ -134,7 +247,6 @@ class OllamaMemoryService
                 ->first();
 
             if ($entity) {
-                // Entity casts 'mentioned_in' to array automatically
                 $mentionedIn = $entity->mentioned_in ?? [];
                 if (!in_array($interactionId, $mentionedIn)) {
                     $mentionedIn[] = $interactionId;
@@ -143,7 +255,7 @@ class OllamaMemoryService
                 $entity->access_count++;
                 $entity->relevance_score += self::BOOST_RATE;
                 $entity->mentioned_in     = $mentionedIn;
-                
+
                 $this->entityModel->save($entity);
             } else {
                 $newEntity = new OllamaEntity([
@@ -159,60 +271,30 @@ class OllamaMemoryService
         }
     }
 
-    private function applyDecay(): void
+    private function applyDecay(array $usedIds): void
     {
-        // Direct Builder call to optimize bulk update
+        // 1. Reward Used Interactions
+        if (!empty($usedIds)) {
+            $this->interactionModel->builder()
+                ->where('user_id', $this->userId)
+                ->whereIn('id', $usedIds) // Note: 'id' not 'unique_id' for Ollama model
+                ->set('relevance_score', "relevance_score + " . self::BOOST_RATE, false)
+                ->update();
+        }
+
+        // 2. Decay All (Simplification: Decay everyone, the boost above offsets it for used ones)
+        // Or strictly: Decay unused. Let's decay all to keep scores normalized over time.
         $this->interactionModel->builder()
-             ->where('user_id', $this->userId)
-             ->set('relevance_score', "relevance_score - " . self::DECAY_RATE, false)
-             ->update();
-    }
-
-    private function performHybridSearch(?array $vector, array $keywords): array
-    {
-        $scores = [];
-
-        // 1. Vector Search
-        if ($vector) {
-            $candidates = $this->interactionModel
-                ->where('user_id', $this->userId)
-                ->where('embedding IS NOT NULL')
-                ->orderBy('created_at', 'DESC')
-                ->limit(50)
-                ->findAll();
-
-            foreach ($candidates as $c) {
-                // Entity cast handles JSON decoding
-                if (empty($c->embedding)) continue;
-                
-                $sim = $this->cosineSimilarity($vector, $c->embedding);
-                $scores[$c->id] = ($scores[$c->id] ?? 0) + ($sim * self::HYBRID_ALPHA);
-            }
-        }
-
-        // 2. Keyword Search
-        if (!empty($keywords)) {
-            $entities = $this->entityModel
-                ->where('user_id', $this->userId)
-                ->whereIn('entity_key', $keywords)
-                ->findAll();
-
-            foreach ($entities as $entity) {
-                if (!empty($entity->mentioned_in)) {
-                    foreach ($entity->mentioned_in as $intId) {
-                        $scores[$intId] = ($scores[$intId] ?? 0) + ((1 - self::HYBRID_ALPHA) * ($entity->relevance_score / 10));
-                    }
-                }
-            }
-        }
-
-        arsort($scores);
-        return array_keys(array_slice($scores, 0, 5, true));
+            ->where('user_id', $this->userId)
+            ->set('relevance_score', "relevance_score - " . self::DECAY_RATE, false)
+            ->update();
     }
 
     private function cosineSimilarity(array $vecA, array $vecB): float
     {
-        $dot = 0.0; $magA = 0.0; $magB = 0.0;
+        $dot = 0.0;
+        $magA = 0.0;
+        $magB = 0.0;
         foreach ($vecA as $i => $val) {
             if (!isset($vecB[$i])) continue;
             $dot += $val * $vecB[$i];

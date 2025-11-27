@@ -31,7 +31,6 @@
     /* Results Card - Account for Sticky Header */
     #results-card {
         scroll-margin-top: 100px;
-        /* Adjust based on your header height */
     }
 
     /* Code Block Styling with Copy Button */
@@ -92,35 +91,13 @@
 <div class="container my-3 my-lg-5">
     <!-- Header -->
     <div class="blueprint-header text-center mb-4">
-        <h1 class="fw-bold"><i class="bi bi-stars text-primary"></i> AI Studio</h1>
+        <h1 class="fw-bold"><i class="bi bi-cpu text-success"></i> Local AI Studio (Ollama)</h1>
     </div>
-
-    <!-- Audio Player -->
-    <?php
-    $audioFilePath = session()->getFlashdata('audio_file_path');
-    if ($audioFilePath && file_exists($audioFilePath)):
-        $audioBase64 = base64_encode(file_get_contents($audioFilePath));
-        $mimeType = (pathinfo($audioFilePath, PATHINFO_EXTENSION) === 'mp3') ? 'audio/mp3' : 'audio/wav';
-    ?>
-        <div class="alert alert-info d-flex align-items-center">
-            <i class="bi bi-volume-up-fill fs-4 me-3"></i>
-            <audio controls autoplay class="w-100">
-                <source src="data:<?= $mimeType ?>;base64,<?= $audioBase64 ?>">
-            </audio>
-        </div>
-    <?php elseif (session()->getFlashdata('audio_url')): ?>
-        <div class="alert alert-info d-flex align-items-center">
-            <i class="bi bi-volume-up-fill fs-4 me-3"></i>
-            <audio controls autoplay class="w-100">
-                <source src="<?= url_to('gemini.serve_audio', session()->getFlashdata('audio_url')) ?>">
-            </audio>
-        </div>
-    <?php endif; ?>
 
     <div class="row g-4">
         <!-- Left Column: Input -->
         <div class="col-lg-8">
-            <form id="geminiForm" action="<?= url_to('gemini.generate') ?>" method="post" enctype="multipart/form-data">
+            <form id="ollamaForm" action="<?= url_to('ollama.generate') ?>" method="post" enctype="multipart/form-data">
                 <?= csrf_field() ?>
 
                 <div class="card blueprint-card prompt-card">
@@ -135,7 +112,7 @@
                             <div id="mediaUploadArea" class="mb-3 text-center rounded">
                                 <input type="file" id="media-input-trigger" multiple class="d-none">
                                 <label for="media-input-trigger" class="btn btn-outline-secondary btn-sm">
-                                    <i class="bi bi-paperclip"></i> Attach Files
+                                    <i class="bi bi-paperclip"></i> Attach Images
                                 </label>
                                 <!-- File List Container -->
                                 <div id="upload-list-wrapper" class="mt-3 text-start"></div>
@@ -147,13 +124,16 @@
                                 <button type="button" class="btn btn-link text-decoration-none" data-bs-toggle="modal" data-bs-target="#savePromptModal">
                                     <i class="bi bi-bookmark-plus"></i> Save Prompt
                                 </button>
-                                <button type="submit" id="generateBtn" class="btn btn-primary fw-bold px-4">
-                                    <i class="bi bi-sparkles"></i> Generate
+                                <button type="submit" id="generateBtn" class="btn btn-success fw-bold px-4">
+                                    <i class="bi bi-lightning-charge"></i> Generate
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Model Selection (Hidden Input populated by sidebar) -->
+                <input type="hidden" name="model" id="selectedModelInput" value="<?= $availableModels[0] ?? 'llama3' ?>">
             </form>
         </div>
 
@@ -162,21 +142,27 @@
             <div class="card blueprint-card">
                 <div class="card-header bg-transparent fw-bold"><i class="bi bi-sliders"></i> Configuration</div>
                 <div class="card-body">
+
+                    <!-- Model Selector -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Model</label>
+                        <select class="form-select" id="modelSelector">
+                            <?php foreach ($availableModels as $model): ?>
+                                <option value="<?= esc($model) ?>"><?= esc($model) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div class="form-text text-muted small mt-1">
+                            Select the Ollama model to use.
+                        </div>
+                    </div>
+
                     <!-- Toggles -->
                     <div class="form-check form-switch mb-3">
                         <input class="form-check-input setting-toggle" type="checkbox" id="assistantMode"
                             data-key="assistant_mode_enabled" <?= $assistant_mode_enabled ? 'checked' : '' ?>>
-                        <label class="form-check-label" for="assistantMode">Conversational Memory</label>
+                        <label class="form-check-label" for="assistantMode">Assistant Mode</label>
                         <div class="form-text text-muted small mt-1">
-                            Maintains context from previous messages for a continuous conversation.
-                        </div>
-                    </div>
-                    <div class="form-check form-switch mb-4">
-                        <input class="form-check-input setting-toggle" type="checkbox" id="voiceOutput"
-                            data-key="voice_output_enabled" <?= $voice_output_enabled ? 'checked' : '' ?>>
-                        <label class="form-check-label" for="voiceOutput">Voice Output (TTS)</label>
-                        <div class="form-text text-muted small mt-1">
-                            Reads the AI response aloud using text-to-speech.
+                            Maintains context from previous messages.
                         </div>
                     </div>
 
@@ -197,16 +183,16 @@
                         </div>
                     <?php else: ?>
                         <div class="alert alert-light border mb-3 small text-muted">
-                            <i class="bi bi-info-circle me-1"></i> No saved prompts yet. Save one after generating!
+                            <i class="bi bi-info-circle me-1"></i> No saved prompts yet.
                         </div>
                     <?php endif; ?>
 
                     <!-- Clear Memory -->
                     <hr>
-                    <form action="<?= url_to('gemini.memory.clear') ?>" method="post" onsubmit="return confirm('Are you sure? This cannot be undone.');">
+                    <form action="<?= url_to('ollama.memory.clear') ?>" method="post" onsubmit="return confirm('Are you sure?');">
                         <?= csrf_field() ?>
                         <button type="submit" class="btn btn-outline-danger w-100 btn-sm">
-                            <i class="bi bi-trash"></i> Clear Conversation History
+                            <i class="bi bi-trash"></i> Clear History
                         </button>
                     </form>
                 </div>
@@ -216,39 +202,20 @@
 
     <!-- Results Section -->
     <?php if ($result = session()->getFlashdata('result')): ?>
-        <div class="card blueprint-card mt-5 shadow-lg border-primary" id="results-card">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <span class="fw-bold">Studio Output</span>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-sm btn-light" id="copyFullResponseBtn" title="Copy Full Text">
-                        <i class="bi bi-clipboard"></i> Copy
-                    </button>
-                    <div class="dropdown">
-                        <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">Export</button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item download-action" href="#" data-format="pdf">PDF</a></li>
-                            <li><a class="dropdown-item download-action" href="#" data-format="docx">Word</a></li>
-                        </ul>
-                    </div>
-                </div>
+        <div class="card blueprint-card mt-5 shadow-lg border-success" id="results-card">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <span class="fw-bold">Ollama Output</span>
+                <button class="btn btn-sm btn-light" id="copyFullResponseBtn" title="Copy Full Text">
+                    <i class="bi bi-clipboard"></i> Copy
+                </button>
             </div>
             <div class="card-body response-content" id="ai-response-body">
                 <?= $result ?>
             </div>
             <textarea id="raw-response" class="d-none"><?= esc(session()->getFlashdata('raw_result')) ?></textarea>
-            <div class="card-footer bg-transparent border-0 text-center">
-                <small class="text-muted fst-italic"><i class="bi bi-info-circle me-1"></i> AI can make mistakes. Please verify important information.</small>
-            </div>
         </div>
     <?php endif; ?>
 </div>
-
-<!-- Hidden Forms/Modals -->
-<form id="downloadForm" method="post" action="<?= url_to('gemini.download_document') ?>" target="_blank" class="d-none">
-    <?= csrf_field() ?>
-    <input type="hidden" name="raw_response" id="dl_raw">
-    <input type="hidden" name="format" id="dl_format">
-</form>
 
 <!-- Hidden Delete Prompt Form -->
 <form id="deletePromptForm" method="post" action="" class="d-none">
@@ -258,7 +225,7 @@
 <!-- Save Prompt Modal -->
 <div class="modal fade" id="savePromptModal" tabindex="-1">
     <div class="modal-dialog">
-        <form action="<?= url_to('gemini.prompts.add') ?>" method="post" class="modal-content">
+        <form action="<?= url_to('ollama.prompts.add') ?>" method="post" class="modal-content">
             <?= csrf_field() ?>
             <div class="modal-header">
                 <h5 class="modal-title">Save Prompt</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -292,10 +259,10 @@
             maxFileSize: <?= $maxFileSize ?>,
             maxFiles: <?= $maxFiles ?>,
             endpoints: {
-                upload: '<?= url_to('gemini.upload_media') ?>',
-                deleteMedia: '<?= url_to('gemini.delete_media') ?>',
-                settings: '<?= url_to('gemini.settings.update') ?>',
-                deletePromptBase: '<?= url_to('gemini.prompts.delete', 0) ?>'.slice(0, -1) // Remove the '0'
+                upload: '<?= url_to('ollama.upload_media') ?>',
+                deleteMedia: '<?= url_to('ollama.delete_media') ?>',
+                settings: '<?= url_to('ollama.settings.update') ?>',
+                deletePromptBase: '<?= url_to('ollama.prompts.delete', 0) ?>'.slice(0, -1)
             }
         };
 
@@ -322,7 +289,7 @@
             const rmBtn = uiElement.querySelector('.remove-btn');
 
             pBar.classList.remove('progress-bar-striped', 'progress-bar-animated');
-            rmBtn.classList.remove('disabled'); // Always enable remove button on completion
+            rmBtn.classList.remove('disabled');
 
             if (type === 'success') {
                 pBar.classList.add('bg-success');
@@ -330,7 +297,6 @@
             } else {
                 pBar.classList.add('bg-danger');
                 pBar.style.width = '100%';
-                // Show a short error in UI, full error in tooltip/toast
                 statusTxt.innerHTML = `<span class="text-danger small" title="${message}">${message}</span>`;
             }
         };
@@ -343,8 +309,7 @@
             statusbar: false,
             plugins: 'autolink lists',
             toolbar: 'blocks | bold italic strikethrough | bullist numlist | link | alignleft aligncenter alignright | clean',
-            block_formats: 'Text=p; Heading 1=h1; Heading 2=h2; Heading 3=h3',
-            placeholder: 'Enter your prompt here...',
+            placeholder: 'Ask Ollama something...',
             license_key: 'gpl',
             mobile: {
                 menubar: false,
@@ -356,7 +321,16 @@
             }
         });
 
-        // --- 4. Settings Toggles ---
+        // --- 4. Model Selector Sync ---
+        const modelSelector = document.getElementById('modelSelector');
+        const hiddenInput = document.getElementById('selectedModelInput');
+        if (modelSelector) {
+            modelSelector.addEventListener('change', (e) => {
+                hiddenInput.value = e.target.value;
+            });
+        }
+
+        // --- 5. Settings Toggles ---
         document.querySelectorAll('.setting-toggle').forEach(toggle => {
             toggle.addEventListener('change', async (e) => {
                 const formData = new FormData();
@@ -379,7 +353,7 @@
             });
         });
 
-        // --- 5. File Upload Logic ---
+        // --- 6. File Upload Logic ---
         const uploadArea = document.getElementById('mediaUploadArea');
         const fileInput = document.getElementById('media-input-trigger');
         const listWrapper = document.getElementById('upload-list-wrapper');
@@ -420,11 +394,9 @@
         };
 
         const processQueue = () => {
-            // If uploading or empty, stop
             if (isUploading || uploadQueue.length === 0) return;
-
             isUploading = true;
-            const job = uploadQueue.shift(); // Get first item
+            const job = uploadQueue.shift();
             performUpload(job);
         };
 
@@ -434,8 +406,6 @@
                 uiElement,
                 uniqueId
             } = job;
-
-            // Update UI to "Uploading"
             uiElement.querySelector('.status-text').textContent = "Uploading...";
 
             const xhr = new XMLHttpRequest();
@@ -456,33 +426,23 @@
                     let response = {};
                     try {
                         response = JSON.parse(xhr.responseText);
-                        // Always try to refresh CSRF if provided, even on error
                         if (response.csrf_token) refreshCsrf(response.csrf_token);
-                    } catch (e) {
-                        console.error('Invalid JSON response');
-                    }
+                    } catch (e) {}
 
                     if (xhr.status === 200 && response.status === 'success') {
                         updateUIState(uiElement, 'success');
-
-                        // Attach Server File ID
                         const rmBtn = uiElement.querySelector('.remove-btn');
                         rmBtn.dataset.serverFileId = response.file_id;
 
-                        // Add Hidden Input
                         const input = document.createElement('input');
                         input.type = 'hidden';
                         input.name = 'uploaded_media[]';
                         input.value = response.file_id;
                         input.id = `input-${uniqueId}`;
                         document.getElementById('uploaded-files-container').appendChild(input);
-
                     } else {
-                        const errorMsg = response.message || 'Upload failed';
-                        updateUIState(uiElement, 'error', errorMsg);
+                        updateUIState(uiElement, 'error', response.message || 'Upload failed');
                     }
-
-                    // Trigger Next
                     isUploading = false;
                     processQueue();
                 }
@@ -495,55 +455,28 @@
 
         const handleFiles = (files) => {
             const currentUploadedCount = document.querySelectorAll('input[name="uploaded_media[]"]').length;
-            const currentQueueCount = uploadQueue.length;
-
-            if (currentUploadedCount + currentQueueCount + files.length > appState.maxFiles) {
-                showToast(`You can only upload a maximum of ${appState.maxFiles} files.`);
+            if (currentUploadedCount + uploadQueue.length + files.length > appState.maxFiles) {
+                showToast(`Max ${appState.maxFiles} files.`);
                 return;
             }
 
             Array.from(files).forEach(file => {
                 const uniqueId = Math.random().toString(36).substr(2, 9);
                 const uiElement = createProgressBar(file, uniqueId);
-
-                // 1. Client-Side Validation
-                const supportedTypes = [
-                    'image/png', 'image/jpeg', 'image/webp', 'audio/mpeg', 'audio/mp3',
-                    'audio/wav', 'video/mov', 'video/mpeg', 'video/mp4', 'video/mpg',
-                    'video/avi', 'video/wmv', 'video/mpegps', 'video/flv',
-                    'application/pdf', 'text/plain'
-                ];
-
-                if (file.size > appState.maxFileSize) {
-                    const maxMB = Math.floor(appState.maxFileSize / (1024 * 1024));
-                    updateUIState(uiElement, 'error', `File too large (Max ${maxMB}MB)`);
-                    return; // Don't queue
-                }
-
-                if (!supportedTypes.includes(file.type)) {
-                    updateUIState(uiElement, 'error', 'Unsupported file type');
-                    return; // Don't queue
-                }
-
-                // 2. Add to Queue
                 uploadQueue.push({
                     file,
                     uiElement,
                     uniqueId
                 });
             });
-
-            // Reset input
             fileInput.value = '';
-
-            // Start processing if idle
             processQueue();
         };
 
         fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
         uploadArea.addEventListener('drop', (e) => handleFiles(e.dataTransfer.files));
 
-        // --- 6. Remove File Logic ---
+        // --- 7. Remove File Logic ---
         listWrapper.addEventListener('click', async (e) => {
             const btn = e.target.closest('.remove-btn');
             if (!btn || btn.classList.contains('disabled')) return;
@@ -551,12 +484,9 @@
             const uiId = btn.dataset.id;
             const serverId = btn.dataset.serverFileId;
             const uiItem = document.getElementById(`file-item-${uiId}`);
-
-            // Optimistically remove from UI
             uiItem.style.opacity = '0.5';
 
             if (serverId) {
-                // If it was uploaded successfully, delete from server
                 const formData = new FormData();
                 formData.append('file_id', serverId);
                 formData.append(appState.csrfName, appState.csrfHash);
@@ -568,36 +498,21 @@
                     });
                     const data = await res.json();
                     if (data.csrf_token) refreshCsrf(data.csrf_token);
-
                     if (data.status === 'success') {
                         uiItem.remove();
                         document.getElementById(`input-${uiId}`)?.remove();
                     } else {
-                        alert('Failed to delete file from server.');
                         uiItem.style.opacity = '1';
                     }
                 } catch (err) {
-                    console.error(err);
-                    alert('Network error while deleting file.');
                     uiItem.style.opacity = '1';
                 }
             } else {
-                // If it failed upload or client validation, just remove UI
                 uiItem.remove();
             }
         });
 
-        // --- 7. Downloads & Copy ---
-        document.querySelectorAll('.download-action').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                document.getElementById('dl_raw').value = document.getElementById('raw-response').value;
-                document.getElementById('dl_format').value = e.target.dataset.format;
-                document.getElementById('downloadForm').submit();
-            });
-        });
-
-        // Copy Full Response
+        // --- 8. Copy Full Response ---
         const copyFullBtn = document.getElementById('copyFullResponseBtn');
         if (copyFullBtn) {
             copyFullBtn.addEventListener('click', () => {
@@ -610,30 +525,22 @@
             });
         }
 
-        // --- 8. Saved Prompts Logic (Load & Delete) ---
+        // --- 9. Saved Prompts ---
         const savedSelect = document.getElementById('savedPrompts');
         const deletePromptBtn = document.getElementById('deletePromptBtn');
-
         if (savedSelect) {
-            // Enable/Disable delete button based on selection
             savedSelect.addEventListener('change', () => {
-                const hasValue = !!savedSelect.value;
-                if (deletePromptBtn) deletePromptBtn.disabled = !hasValue;
+                deletePromptBtn.disabled = !savedSelect.value;
             });
-
-            // Load Prompt
             document.getElementById('usePromptBtn').addEventListener('click', () => {
                 const val = savedSelect.value;
                 if (val) tinymce.get('prompt').setContent(val);
             });
-
-            // Delete Prompt
             if (deletePromptBtn) {
                 deletePromptBtn.addEventListener('click', () => {
                     const selectedOption = savedSelect.options[savedSelect.selectedIndex];
                     const promptId = selectedOption.dataset.id;
-
-                    if (promptId && confirm('Are you sure you want to delete this saved prompt?')) {
+                    if (promptId && confirm('Delete this prompt?')) {
                         const form = document.getElementById('deletePromptForm');
                         form.action = appState.endpoints.deletePromptBase + promptId;
                         form.submit();
@@ -642,44 +549,21 @@
             }
         }
 
-        // --- 9. Code Highlighting & Copy Snippets ---
+        // --- 10. Highlight & Modal ---
         hljs.highlightAll();
-
-        // Inject Copy Buttons into Code Blocks
-        document.querySelectorAll('pre code').forEach((block) => {
-            const pre = block.parentElement;
-
-            // Create Button
-            const btn = document.createElement('button');
-            btn.className = 'btn btn-sm btn-dark copy-code-btn';
-            btn.innerHTML = '<i class="bi bi-clipboard"></i>';
-            btn.title = 'Copy code';
-
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                navigator.clipboard.writeText(block.innerText).then(() => {
-                    btn.innerHTML = '<i class="bi bi-check-lg text-success"></i>';
-                    setTimeout(() => btn.innerHTML = '<i class="bi bi-clipboard"></i>', 2000);
-                });
-            });
-
-            pre.appendChild(btn);
-        });
-
-        // --- 10. Modal & Loading ---
         document.getElementById('savePromptModal').addEventListener('show.bs.modal', () => {
             document.getElementById('modalPromptText').value = tinymce.get('prompt').getContent({
                 format: 'text'
             });
         });
 
-        document.getElementById('geminiForm').addEventListener('submit', function() {
+        document.getElementById('ollamaForm').addEventListener('submit', function() {
             const btn = document.getElementById('generateBtn');
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Thinking...';
         });
 
-        // --- 11. Auto Scroll to Results (Sticky Header Fix) ---
+        // --- 11. Auto Scroll ---
         const resultsCard = document.getElementById('results-card');
         if (resultsCard) {
             setTimeout(() => {

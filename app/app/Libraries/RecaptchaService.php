@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Libraries;
 
@@ -7,30 +9,30 @@ class RecaptchaService
     public function verify(string $response): bool
     {
         $secret = config('Config\Custom\Recaptcha')->secretKey;
-        $credential = [
-            'secret'   => $secret,
-            'response' => $response,
-        ];
 
-        $verify = curl_init();
-        curl_setopt($verify, CURLOPT_URL, 'https://www.google.com/recaptcha/api/siteverify');
-        curl_setopt($verify, CURLOPT_POST, true);
-        curl_setopt($verify, CURLOPT_POSTFIELDS, http_build_query($credential));
-        curl_setopt($verify, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($verify, CURLOPT_RETURNTRANSFER, true);
-        $result = curl_exec($verify);
-        $error  = curl_error($verify);
-        $errno  = curl_errno($verify);
-        curl_close($verify); // Always close the cURL handle
+        try {
+            $client = \Config\Services::curlrequest();
+            $response = $client->post('https://www.google.com/recaptcha/api/siteverify', [
+                'form_params' => [
+                    'secret'   => $secret,
+                    'response' => $response,
+                ],
+                'verify' => false, // Equivalent to CURLOPT_SSL_VERIFYPEER false
+                'timeout' => 10,
+            ]);
 
-        if ($result === false) {
-            log_message('error', "[RecaptchaService] cURL error: ({$errno}) {$error}");
-            return false; // Network error or other cURL failure
+            $result = $response->getBody();
+            $status = json_decode($result, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                log_message('error', '[RecaptchaService] JSON Decode Error: ' . json_last_error_msg());
+                return false;
+            }
+
+            return ($status !== null && ($status['success'] ?? false));
+        } catch (\Exception $e) {
+            log_message('error', '[RecaptchaService] HTTP Request failed: ' . $e->getMessage());
+            return false;
         }
-
-        $status = json_decode($result, true);
-
-        // Check if json_decode failed or if 'success' key is missing/false
-        return ($status !== null && ($status['success'] ?? false));
     }
 }

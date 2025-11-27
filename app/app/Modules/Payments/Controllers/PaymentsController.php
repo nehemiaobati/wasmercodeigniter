@@ -1,12 +1,15 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Payments\Controllers;
 
 use App\Controllers\BaseController; // BaseController is still in app/Controllers
-use App\Modules\Payments\Libraries\PaystackService; 
+use App\Modules\Payments\Libraries\PaystackService;
 use App\Modules\Payments\Models\PaymentModel; // Updated path
 use App\Models\UserModel; // UserModel is still in app/Models
 use CodeIgniter\HTTP\RedirectResponse;
+use CodeIgniter\I18n\Time;
 
 class PaymentsController extends BaseController
 {
@@ -53,7 +56,7 @@ class PaymentsController extends BaseController
         $amount = (int) $this->request->getPost('amount');
         $userId = session()->get('userId');
 
-        $reference = 'PAY-' . time() . '-' . bin2hex(random_bytes(5));
+        $reference = 'PAY-' . Time::now()->getTimestamp() . '-' . bin2hex(random_bytes(5));
 
         $this->paymentModel->insert([
             'user_id'   => $userId,
@@ -97,7 +100,7 @@ class PaymentsController extends BaseController
         $response = $this->paystackService->verifyTransaction($paystackReference);
 
         if ($response['status'] === true && isset($response['data']['status']) && $response['data']['status'] === 'success') {
-            
+
             $db = \Config\Database::connect();
             $db->transStart();
 
