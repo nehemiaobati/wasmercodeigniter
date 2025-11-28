@@ -7,10 +7,12 @@ namespace App\Modules\Ollama\Controllers;
 use App\Controllers\BaseController;
 use App\Entities\User;
 use App\Modules\Ollama\Libraries\OllamaService;
-use App\Modules\Gemini\Models\PromptModel; // Reuse Gemini models for now
-use App\Modules\Gemini\Models\UserSettingsModel; // Reuse Gemini models for now
-use App\Modules\Gemini\Models\InteractionModel; // Reuse Gemini models for now
-use App\Modules\Gemini\Models\EntityModel; // Reuse Gemini models for now
+use App\Modules\Ollama\Models\OllamaPromptModel;
+use App\Modules\Ollama\Models\OllamaUserSettingsModel;
+use App\Modules\Ollama\Models\OllamaInteractionModel;
+use App\Modules\Ollama\Models\OllamaEntityModel;
+use App\Modules\Ollama\Libraries\OllamaDocumentService;
+use App\Modules\Ollama\Entities\OllamaUserSetting;
 use App\Models\UserModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -21,8 +23,8 @@ class OllamaController extends BaseController
 {
     protected UserModel $userModel;
     protected OllamaService $ollamaService;
-    protected PromptModel $promptModel;
-    protected UserSettingsModel $userSettingsModel;
+    protected OllamaPromptModel $promptModel;
+    protected OllamaUserSettingsModel $userSettingsModel;
 
     private const SUPPORTED_MIME_TYPES = [
         'image/png',
@@ -40,8 +42,8 @@ class OllamaController extends BaseController
     {
         $this->userModel         = new UserModel();
         $this->ollamaService     = new OllamaService();
-        $this->promptModel       = new PromptModel();
-        $this->userSettingsModel = new UserSettingsModel();
+        $this->promptModel       = new OllamaPromptModel();
+        $this->userSettingsModel = new OllamaUserSettingsModel();
     }
 
     /**
@@ -141,6 +143,9 @@ class OllamaController extends BaseController
      */
     public function generate(): RedirectResponse
     {
+        // Timeout Safety: Prevent PHP timeouts during slow local LLM inference
+        set_time_limit(300);
+
         $userId = (int) session()->get('userId');
         $user = $this->userModel->find($userId);
 
@@ -224,13 +229,13 @@ class OllamaController extends BaseController
         $key = $this->request->getPost('setting_key');
         $enabled = $this->request->getPost('enabled') === 'true';
 
-        if (!in_array($key, ['assistant_mode_enabled', 'voice_output_enabled'])) {
+        if (!in_array($key, ['assistant_mode_enabled'])) {
             return $this->response->setJSON(['status' => 'error', 'message' => 'Invalid setting']);
         }
 
         $setting = $this->userSettingsModel->where('user_id', $userId)->first();
         if (!$setting) {
-            $setting = new \App\Modules\Gemini\Entities\UserSetting();
+            $setting = new OllamaUserSetting();
             $setting->user_id = $userId;
         }
 
@@ -245,13 +250,46 @@ class OllamaController extends BaseController
         $userId = (int) session()->get('userId');
 
         // Clear Interactions
-        $interactionModel = new \App\Modules\Ollama\Models\OllamaInteractionModel();
+        $interactionModel = new OllamaInteractionModel();
         $interactionModel->where('user_id', $userId)->delete();
 
         // Clear Entities
-        $entityModel = new \App\Modules\Ollama\Models\OllamaEntityModel();
+        $entityModel = new OllamaEntityModel();
         $entityModel->where('user_id', $userId)->delete();
 
         return redirect()->back()->with('success', 'Memory cleared.');
+    }
+
+    /**
+     * Downloads the generated content as a document.
+     */
+    public function downloadDocument()
+    {
+        $userId = (int) session()->get('userId');
+        if ($userId <= 0) return redirect()->back()->with('error', 'Auth required.');
+
+        $content = $this->request->getPost('content');
+        $format  = $this->request->getPost('format');
+
+        if (empty($content) || !in_array($format, ['pdf', 'docx'])) {
+            return redirect()->back()->with('error', 'Invalid content or format.');
+        }
+
+        $docService = new OllamaDocumentService();
+        $result = $docService->generate($content, $format, [
+            'author' => 'Ollama User ' . $userId
+        ]);
+
+        if ($result['status'] === 'success') {
+            $filename = 'ollama_export_' . date('Ymd_His') . '.' . $format;
+            $contentType = ($format === 'pdf') ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+            return $this->response
+                ->setHeader('Content-Type', $contentType)
+                ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
+                ->setBody($result['fileData']);
+        }
+
+        return redirect()->back()->with('error', $result['message'] ?? 'Export failed.');
     }
 }

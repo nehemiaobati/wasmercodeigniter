@@ -4,74 +4,63 @@ declare(strict_types=1);
 
 namespace App\Modules\Ollama\Libraries;
 
+use NlpTools\Tokenizers\WhitespaceAndPunctuationTokenizer;
+use NlpTools\Stemmers\PorterStemmer;
+use NlpTools\Utils\StopWords;
+
 /**
  * Simple keyword extractor for Ollama memory.
  * (A simplified version of the Gemini TokenService to keep dependencies low)
  */
 class OllamaTokenService
 {
-    private array $stopWords = [
-        'a',
-        'an',
-        'the',
-        'and',
-        'or',
-        'but',
-        'if',
-        'then',
-        'else',
-        'when',
-        'at',
-        'by',
-        'for',
-        'from',
-        'in',
-        'out',
-        'on',
-        'to',
-        'with',
-        'is',
-        'are',
-        'was',
-        'were',
-        'be',
-        'been',
-        'being',
-        'have',
-        'has',
-        'had',
-        'do',
-        'does',
-        'did',
-        'can',
-        'could',
-        'should',
-        'would',
-        'will',
-        'user',
-        'assistant',
-        'system',
-        'please',
-        'note'
-    ];
+    private array $stopWords;
 
+    /**
+     * Constructor.
+     * Loads the NLP stop words from the custom Ollama configuration.
+     */
+    public function __construct()
+    {
+        $this->stopWords = config(\App\Modules\Ollama\Config\Ollama::class)->nlpStopWords;
+    }
+
+    /**
+     * Processes raw text through an NLP pipeline to extract a clean list of keyword stems.
+     *
+     * @param string $text The input text to process.
+     * @return array<string> A unique, filtered, and stemmed list of keywords.
+     */
     public function processText(string $text): array
     {
-        // 1. Strip HTML and lowercase
-        $text = strtolower(strip_tags($text));
+        // 1. **[NEW FIX]** Strip all HTML tags from the input string first.
+        $text = strip_tags($text);
 
-        // 2. Remove punctuation and special chars
-        $text = preg_replace('/[^a-z0-9\s]/', '', $text);
+        // 2. Sanitize and Normalize Text
+        $text = strtolower($text);
+        $text = preg_replace('/https?:\/\/[^\s]+/', ' ', $text); // Remove URLs
 
-        // 3. Tokenize by whitespace
-        $tokens = explode(' ', $text);
+        // 3. Tokenize the text using the library's robust tokenizer
+        $tokenizer = new WhitespaceAndPunctuationTokenizer();
+        $tokens = $tokenizer->tokenize($text);
 
-        // 4. Filter stop words and short words
-        $keywords = array_filter($tokens, function ($word) {
-            return strlen($word) > 2 && !in_array($word, $this->stopWords);
-        });
+        // 4. Filter out stop words using the configured list
+        $stopWordsFilter = new StopWords($this->stopWords);
+        $filteredTokens = [];
+        foreach ($tokens as $token) {
+            // The transform method returns null if the token is a stop word
+            $transformedToken = $stopWordsFilter->transform($token);
+            if ($transformedToken !== null) {
+                $filteredTokens[] = $transformedToken;
+            }
+        }
 
-        return array_unique(array_values($keywords));
+        // 5. Reduce words to their root form (stemming)
+        $stemmer = new PorterStemmer();
+        $stemmedTokens = array_map([$stemmer, 'stem'], $filteredTokens);
+
+        // 6. Final cleanup: return unique, non-empty tokens with a length > 2
+        return array_values(array_filter(array_unique($stemmedTokens), fn($word) => strlen($word) > 2));
     }
 
     /**

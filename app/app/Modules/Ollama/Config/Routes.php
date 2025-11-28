@@ -15,6 +15,7 @@ $routes->group('ollama', ['namespace' => 'App\Modules\Ollama\Controllers', 'filt
     // File Uploads (reuse Gemini's logic or implement similar)
     $routes->post('upload-media', 'OllamaController::uploadMedia', ['as' => 'ollama.upload_media']);
     $routes->post('delete-media', 'OllamaController::deleteMedia', ['as' => 'ollama.delete_media']);
+    $routes->post('download-document', 'OllamaController::downloadDocument', ['as' => 'ollama.download_document']);
 
     // Settings & Prompts (reuse Gemini's logic or implement similar)
     $routes->post('settings/update', 'OllamaController::updateSetting', ['as' => 'ollama.settings.update']);

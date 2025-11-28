@@ -205,9 +205,21 @@
         <div class="card blueprint-card mt-5 shadow-lg border-success" id="results-card">
             <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                 <span class="fw-bold">Ollama Output</span>
-                <button class="btn btn-sm btn-light" id="copyFullResponseBtn" title="Copy Full Text">
-                    <i class="bi bi-clipboard"></i> Copy
-                </button>
+                <div>
+                    <button class="btn btn-sm btn-light" id="copyFullResponseBtn" title="Copy Full Text">
+                        <i class="bi bi-clipboard"></i> Copy
+                    </button>
+                    <!-- Export Dropdown -->
+                    <div class="btn-group ms-2">
+                        <button type="button" class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="bi bi-download"></i> Export
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item download-action" href="#" data-format="pdf"><i class="bi bi-file-pdf text-danger"></i> PDF Document</a></li>
+                            <li><a class="dropdown-item download-action" href="#" data-format="docx"><i class="bi bi-file-word text-primary"></i> Word Document</a></li>
+                        </ul>
+                    </div>
+                </div>
             </div>
             <div class="card-body response-content" id="ai-response-body">
                 <?= $result ?>
@@ -220,6 +232,13 @@
 <!-- Hidden Delete Prompt Form -->
 <form id="deletePromptForm" method="post" action="" class="d-none">
     <?= csrf_field() ?>
+</form>
+
+<!-- Hidden Download Form -->
+<form id="downloadForm" action="<?= url_to('ollama.download_document') ?>" method="post" target="_blank" class="d-none">
+    <?= csrf_field() ?>
+    <input type="hidden" name="content" id="downloadContent">
+    <input type="hidden" name="format" id="downloadFormat">
 </form>
 
 <!-- Save Prompt Modal -->
@@ -572,6 +591,19 @@
                 });
             }, 100);
         }
+
+        // --- 12. Export Document ---
+        document.querySelectorAll('.download-action').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const format = e.currentTarget.dataset.format;
+                const content = document.getElementById('raw-response').value; // Use raw markdown
+
+                document.getElementById('downloadContent').value = content;
+                document.getElementById('downloadFormat').value = format;
+                document.getElementById('downloadForm').submit();
+            });
+        });
     });
 </script>
 <?= $this->endSection() ?>

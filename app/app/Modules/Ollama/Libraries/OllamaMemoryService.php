@@ -20,11 +20,8 @@ class OllamaMemoryService
     private int $userId;
 
     // Tuning Parameters
-    private const HYBRID_ALPHA = 0.5;
-    private const DECAY_RATE   = 0.05;
-    private const BOOST_RATE   = 0.5;
-    private const CONTEXT_TOKEN_BUDGET = 4000;
-    private const FORCED_RECENT_COUNT = 0;
+    // Tuning Parameters
+
 
     public function __construct(int $userId)
     {
@@ -130,7 +127,7 @@ class OllamaMemoryService
             $semanticScore = $semanticResults[$id] ?? 0.0;
             // Apply tanh normalization with scaling (Gemini uses / 10)
             $keywordScore  = isset($keywordResults[$id]) ? tanh($keywordResults[$id] / 10) : 0.0;
-            $fusedScores[$id] = (self::HYBRID_ALPHA * $semanticScore) + ((1 - self::HYBRID_ALPHA) * $keywordScore);
+            $fusedScores[$id] = ($this->config->hybridSearchAlpha * $semanticScore) + ((1 - $this->config->hybridSearchAlpha) * $keywordScore);
         }
         arsort($fusedScores);
 
@@ -141,11 +138,11 @@ class OllamaMemoryService
 
         // A. Forced Recent Interactions (Short-Term Memory)
         $recentInteractions = [];
-        if (self::FORCED_RECENT_COUNT > 0) {
+        if ($this->config->forcedRecentInteractions > 0) {
             $recentInteractions = $this->interactionModel
                 ->where('user_id', $this->userId)
                 ->orderBy('created_at', 'DESC')
-                ->limit(self::FORCED_RECENT_COUNT)
+                ->limit($this->config->forcedRecentInteractions)
                 ->findAll();
         }
 
@@ -156,7 +153,7 @@ class OllamaMemoryService
             $memoryText = "[Recent]: User: '{$interaction->user_input}' | AI: '{$interaction->ai_response}'\n";
             $itemTokens = $this->tokenizer->estimateTokenCount($memoryText);
 
-            if ($tokenCount + $itemTokens <= self::CONTEXT_TOKEN_BUDGET) {
+            if ($tokenCount + $itemTokens <= $this->config->contextTokenBudget) {
                 $context .= $memoryText;
                 $tokenCount += $itemTokens;
                 $usedInteractionIds[] = $interaction->id;
@@ -176,7 +173,7 @@ class OllamaMemoryService
             $memoryText = "[Relevant]: User: '{$memory->user_input}' | AI: '{$memory->ai_response}'\n";
             $itemTokens = $this->tokenizer->estimateTokenCount($memoryText);
 
-            if ($tokenCount + $itemTokens <= self::CONTEXT_TOKEN_BUDGET) {
+            if ($tokenCount + $itemTokens <= $this->config->contextTokenBudget) {
                 $context .= $memoryText;
                 $tokenCount += $itemTokens;
                 $usedInteractionIds[] = $id;
@@ -230,7 +227,7 @@ class OllamaMemoryService
         $interactionId = $this->interactionModel->insert($interaction);
 
         if ($interactionId) {
-            log_message('info', "Ollama Memory: Interaction saved. ID: {$interactionId}");
+            log_message('info', 'Ollama Memory: Interaction saved. ID: ' . $interactionId);
             $this->updateKnowledgeGraph($keywords, (int)$interactionId);
             $this->applyDecay($usedIds); // Reward used, decay others
         } else {
@@ -253,7 +250,7 @@ class OllamaMemoryService
                 }
 
                 $entity->access_count++;
-                $entity->relevance_score += self::BOOST_RATE;
+                $entity->relevance_score += $this->config->rewardScore;
                 $entity->mentioned_in     = $mentionedIn;
 
                 $this->entityModel->save($entity);
@@ -278,7 +275,7 @@ class OllamaMemoryService
             $this->interactionModel->builder()
                 ->where('user_id', $this->userId)
                 ->whereIn('id', $usedIds) // Note: 'id' not 'unique_id' for Ollama model
-                ->set('relevance_score', "relevance_score + " . self::BOOST_RATE, false)
+                ->set('relevance_score', "relevance_score + " . $this->config->rewardScore, false)
                 ->update();
         }
 
@@ -286,7 +283,7 @@ class OllamaMemoryService
         // Or strictly: Decay unused. Let's decay all to keep scores normalized over time.
         $this->interactionModel->builder()
             ->where('user_id', $this->userId)
-            ->set('relevance_score', "relevance_score - " . self::DECAY_RATE, false)
+            ->set('relevance_score', "relevance_score - " . $this->config->decayScore, false)
             ->update();
     }
 
