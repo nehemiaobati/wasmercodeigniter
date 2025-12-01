@@ -102,7 +102,7 @@ class OllamaController extends BaseController
         $userTempPath = WRITEPATH . 'uploads/ollama_temp/' . $userId . '/';
 
         if (!is_dir($userTempPath)) {
-            mkdir($userTempPath, 0777, true);
+            mkdir($userTempPath, 0755, true);
         }
 
         $fileName = $file->getRandomName();

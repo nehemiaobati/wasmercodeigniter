@@ -185,6 +185,9 @@ class AuthController extends BaseController
             'member_since' => $user->created_at, // Store creation date as member since.
         ]);
 
+        // Prevent session fixation attacks
+        $this->session->regenerate();
+
         // --- NEW LOGIC STARTS HERE ---
 
         // 1. Check if a redirect_url exists in the session

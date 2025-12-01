@@ -15,6 +15,7 @@
         margin-top: 1.5rem;
         position: relative;
     }
+
     .prompt-suggestion .copy-btn {
         position: absolute;
         top: 0.5rem;
@@ -26,25 +27,27 @@
 
 <?= $this->section('content') ?>
 <?php
-    $tips = [
-        "**Conversational Memory:** Enable 'Conversational Memory' in the AI Studio to have the AI remember past interactions for better follow-up questions.",
-        "**Multi-File Uploads:** Did you know you can upload multiple files (images, PDFs, etc.) to the AI Studio for comprehensive analysis in a single prompt?",
-        "**Saving Prompts:** Save your most-used prompts in the AI Studio to reuse them later, saving you time and effort.",
-        "**Crypto Transactions:** When querying crypto transactions, you can specify the number of recent transactions you want to see (up to 50).",
-        "**Precise Balance:** All account balance calculations use high-precision math to ensure every cent is accurately tracked."
-    ];
-    $randomTip = $tips[array_rand($tips)];
+$tips = [
+    "**Conversational Memory:** Enable 'Conversational Memory' in the AI Studio to have the AI remember past interactions for better follow-up questions.",
+    "**Multi-File Uploads:** Did you know you can upload multiple files (images, PDFs, etc.) to the AI Studio for comprehensive analysis in a single prompt?",
+    "**Saving Prompts:** Save your most-used prompts in the AI Studio to reuse them later, saving you time and effort.",
+    "**Crypto Transactions:** When querying crypto transactions, you can specify the number of recent transactions you want to see (up to 50).",
+    "**Precise Balance:** All account balance calculations use high-precision math to ensure every cent is accurately tracked.",
+    "**Image Generation:** Describe the scene you imagine in detail to generate stunning, unique images for your projects.",
+    "**Video Synthesis:** Turn your text prompts into short, engaging video clips to bring your stories to life."
+];
+$randomTip = $tips[array_rand($tips)];
 ?>
 <div class="container my-5">
 
     <?php if (isset($balance) && (float)$balance < 50): ?>
-    <div class="alert alert-warning d-flex align-items-center" role="alert">
-        <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
-        <div>
-            <h5 class="alert-heading fw-bold">Your Balance is Low!</h5>
-            <p class="mb-0">Don't let your creative flow be interrupted. Top up your account to continue using our services without a hitch.</p>
+        <div class="alert alert-warning d-flex align-items-center" role="alert">
+            <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+            <div>
+                <h5 class="alert-heading fw-bold">Your Balance is Low!</h5>
+                <p class="mb-0">Don't let your creative flow be interrupted. Top up your account to continue using our services without a hitch.</p>
+            </div>
         </div>
-    </div>
     <?php endif; ?>
 
     <div class="blueprint-header text-center mt-4">
@@ -62,8 +65,8 @@
             <div class="card blueprint-card h-100">
                 <div class="card-body p-4 d-flex flex-column">
                     <div class="fs-1 text-primary mb-3"><i class="bi bi-stars"></i></div>
-                    <h4 class="fw-bold text-body-emphasis">AI Studio</h4>
-                    <p class="text-body-secondary">Your creative co-pilot for writing, analysis, and brainstorming. Powered by Google's Gemini.</p>
+                    <h4 class="fw-bold text-body-emphasis">AI Studio <span class="badge bg-success-subtle text-success-emphasis fs-6 ms-2">New Features</span></h4>
+                    <p class="text-body-secondary">Your creative co-pilot for writing, <strong>image generation</strong>, <strong>video synthesis</strong>, and document analysis. Powered by Google's Gemini.</p>
                     <div class="prompt-suggestion">
                         <span class="badge bg-primary-subtle text-primary-emphasis rounded-pill copy-btn" id="copyPromptBtn" title="Copy prompt">
                             <i class="bi bi-clipboard"></i>
@@ -86,7 +89,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="col">
             <div class="card blueprint-card h-100">
                 <div class="card-body p-4 d-flex flex-column">
@@ -132,7 +135,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         const copyBtn = document.getElementById('copyPromptBtn');
         const promptText = document.getElementById('promptToCopy').innerText;
-        
+
         if (copyBtn) {
             copyBtn.addEventListener('click', function() {
                 navigator.clipboard.writeText(promptText).then(() => {
@@ -140,7 +143,7 @@
                     this.innerHTML = '<i class="bi bi-check-lg"></i>';
                     this.classList.remove('bg-primary-subtle', 'text-primary-emphasis');
                     this.classList.add('bg-success-subtle', 'text-success-emphasis');
-                    
+
                     setTimeout(() => {
                         this.innerHTML = originalIcon;
                         this.classList.remove('bg-success-subtle', 'text-success-emphasis');

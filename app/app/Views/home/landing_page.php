@@ -160,7 +160,7 @@
                         <div class="card-body p-4">
                             <div class="feature-icon"><i class="bi bi-robot"></i></div>
                             <h3 class="fs-4 fw-bold">Your Creative AI Co-Pilot <br><small class="text-muted fs-6">Powered by Gemini</small></h3>
-                            <p class="text-muted">From writing marketing copy to analyzing documents, our AI assistant, powered by Google's Gemini, helps you work smarter.</p>
+                            <p class="text-muted">From writing marketing copy and <strong>generating images</strong> to analyzing documents, our AI assistant, powered by Google's Gemini, helps you work smarter.</p>
                         </div>
                     </div>
                 </div>

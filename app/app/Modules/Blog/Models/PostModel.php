@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Blog\Models;
 
@@ -12,8 +14,16 @@ class PostModel extends Model
     protected $returnType       = Post::class;
     protected $useTimestamps    = true;
     protected $allowedFields    = [
-        'title', 'slug', 'excerpt', 'body_content', 'featured_image_url',
-        'author_name', 'category_name', 'meta_description', 'status', 'published_at'
+        'title',
+        'slug',
+        'excerpt',
+        'body_content',
+        'featured_image_url',
+        'author_name',
+        'category_name',
+        'meta_description',
+        'status',
+        'published_at'
     ];
 
     protected $validationRules = [
@@ -48,10 +58,10 @@ class PostModel extends Model
 
             // If a post with the same slug exists, append a unique identifier.
             if ($existing) {
-                $slug .= '-' . uniqid();
+                $slug .= '-' . bin2hex(random_bytes(3));
             }
             // --- FIX ENDS HERE ---
-            
+
             $data['data']['slug'] = $slug;
         }
         return $data;

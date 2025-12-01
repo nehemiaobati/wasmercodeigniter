@@ -4,10 +4,12 @@
 <style>
     /* MODIFICATION: Removed blueprint-card styles. Only page-specific styles remain. */
     .hero-section {
-        background-color: var(--bs-tertiary-bg); /* Use theme-aware variable */
+        background-color: var(--bs-tertiary-bg);
+        /* Use theme-aware variable */
         padding: 4rem 0;
         border-bottom: 1px solid var(--border-color);
     }
+
     .feature-icon {
         font-size: 2.5rem;
         color: var(--primary-color);
@@ -55,6 +57,28 @@
                     <i class="bi bi-arrow-repeat feature-icon mb-3"></i>
                     <h5 class="card-title fw-bold">Conversational Memory</h5>
                     <p class="card-text text-muted">The AI remembers previous parts of your conversation, allowing for complex, multi-step tasks and follow-up questions.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Row for Multimedia Features -->
+    <div class="row g-4 mt-2 justify-content-center">
+        <div class="col-md-4">
+            <div class="card blueprint-card h-100">
+                <div class="card-body text-center p-4">
+                    <i class="bi bi-image feature-icon mb-3"></i>
+                    <h5 class="card-title fw-bold">Image Generation</h5>
+                    <p class="card-text text-muted">Turn text into stunning visuals. Create unique artwork, marketing assets, and illustrations instantly.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card blueprint-card h-100">
+                <div class="card-body text-center p-4">
+                    <i class="bi bi-camera-reels feature-icon mb-3"></i>
+                    <h5 class="card-title fw-bold">Video Synthesis</h5>
+                    <p class="card-text text-muted">Create engaging videos from simple prompts. Bring your stories to life with AI-generated motion.</p>
                 </div>
             </div>
         </div>

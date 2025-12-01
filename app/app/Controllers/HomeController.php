@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Controllers;
 
@@ -44,9 +46,9 @@ class HomeController extends BaseController
     {
         $data = [
             'pageTitle'       => 'Afrikenkid | AI Tools & Crypto Data for Kenya & Africa',
-            'metaDescription' => 'Access powerful Generative AI tools for content creation and real-time Bitcoin & Litecoin market insights. A pay-as-you-go solution for creators and businesses.',
+            'metaDescription' => 'Access powerful Generative AI tools for content, image, and video creation, plus real-time Bitcoin & Litecoin market insights. A pay-as-you-go solution.',
             'heroTitle'       => 'The All-in-One Platform for AI & Crypto Insights',
-            'heroSubtitle'    => 'Analyze blockchain trends and leverage Google\'s Gemini AI for content generation with simple, pay-as-you-go pricing. No API integration required.',
+            'heroSubtitle'    => 'Leverage Google\'s Gemini AI for text, image, and video generation and analyze blockchain trends with simple, pay-as-you-go pricing.',
             'canonicalUrl'    => url_to('landing'),
         ];
         return view('home/landing_page', $data);

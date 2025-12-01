@@ -115,6 +115,96 @@ class ModelPayloadService
                 ];
                 break;
 
+            // -------------------------------------------------------
+            // IMAGEN 4.0 (Standard/Ultra/Fast)
+            // -------------------------------------------------------
+            // -------------------------------------------------------
+            // GEMINI IMAGE GENERATION (Multimodal)
+            // -------------------------------------------------------
+            case 'gemini-3-pro-image-preview':
+                $payload = [
+                    "contents" => [
+                        ["role" => "user", "parts" => $parts]
+                    ],
+                    "generationConfig" => [
+                        "responseModalities" => ["IMAGE", "TEXT"],
+                        "imageConfig" => [
+                            "image_size" => "1K"
+                        ],
+                    ],
+                    "tools" => [
+                        ["googleSearch" => new \stdClass()]
+                    ],
+                ];
+                break;
+
+            case 'gemini-2.5-flash-image':
+            case 'gemini-2.5-flash-image-preview':
+                $payload = [
+                    "contents" => [
+                        ["role" => "user", "parts" => $parts]
+                    ],
+                    "generationConfig" => [
+                        "responseModalities" => ["IMAGE", "TEXT"],
+                    ],
+                ];
+                break;
+
+            // -------------------------------------------------------
+            // IMAGEN 4.0 (Standard/Ultra)
+            // -------------------------------------------------------
+            case 'imagen-4.0-generate-preview-06-06':
+            case 'imagen-4.0-ultra-generate-preview-06-06':
+            case 'imagen-4.0-ultra-generate-001':
+                // Extract prompt
+                $promptText = '';
+                foreach ($parts as $part) {
+                    if (isset($part['text'])) $promptText .= $part['text'] . ' ';
+                }
+                $promptText = trim($promptText);
+
+                $payload = [
+                    "instances" => [
+                        ["prompt" => $promptText]
+                    ],
+                    "parameters" => [
+                        "outputMimeType" => "image/jpeg",
+                        "sampleCount" => 1,
+                        "personGeneration" => "ALLOW_ALL",
+                        "aspectRatio" => "1:1",
+                        "imageSize" => "1K",
+                    ]
+                ];
+                $apiMethod = 'predict';
+                $url = "https://generativelanguage.googleapis.com/v1beta/models/{$modelId}:{$apiMethod}?key=" . urlencode($apiKey);
+                break;
+
+            // -------------------------------------------------------
+            // VEO 2.0 (Video Generation)
+            // -------------------------------------------------------
+            case 'veo-2.0-generate-001':
+                // Extract prompt
+                $promptText = '';
+                foreach ($parts as $part) {
+                    if (isset($part['text'])) $promptText .= $part['text'] . ' ';
+                }
+                $promptText = trim($promptText);
+
+                $payload = [
+                    "instances" => [
+                        ["prompt" => $promptText]
+                    ],
+                    "parameters" => [
+                        "aspectRatio" => "16:9",
+                        "sampleCount" => 1,
+                        "durationSeconds" => 8,
+                        "personGeneration" => "ALLOW_ALL",
+                    ]
+                ];
+                $apiMethod = 'predictLongRunning';
+                $url = "https://generativelanguage.googleapis.com/v1beta/models/{$modelId}:{$apiMethod}?key=" . urlencode($apiKey);
+                break;
+
             default:
                 // RETURN NULL if the model is not explicitly configured.
                 // This prevents 'generic' payloads from failing on specialized models.

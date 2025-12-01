@@ -47,7 +47,7 @@ class DocumentService
         // 3. Strategy A: Pandoc (Preferred)
         // Checks availability inside the service to keep controller clean
         if ($this->pandocService->isAvailable()) {
-            $pandocResult = $this->pandocService->generate($fullHtml, $format, 'temp_' . uniqid());
+            $pandocResult = $this->pandocService->generate($fullHtml, $format, 'temp_' . bin2hex(random_bytes(8)));
 
             if ($pandocResult['status'] === 'success' && file_exists($pandocResult['filePath'])) {
                 // READ -> DELETE -> RETURN

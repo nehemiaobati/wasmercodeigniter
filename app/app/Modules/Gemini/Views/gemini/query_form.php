@@ -85,6 +85,28 @@
         height: 4px;
         margin-top: 4px;
     }
+
+    /* Model Selection Cards */
+    .model-card {
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 2px solid transparent;
+    }
+
+    .model-card:hover {
+        transform: translateY(-4px);
+        background-color: var(--bs-gray-100);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .model-card.active {
+        border-color: var(--bs-primary);
+        background-color: var(--bs-primary-bg-subtle);
+    }
+
+    .model-icon {
+        font-size: 1.5rem;
+    }
 </style>
 <?= $this->endSection() ?>
 
@@ -124,9 +146,79 @@
                 <?= csrf_field() ?>
 
                 <div class="card blueprint-card prompt-card">
+                    <!-- Tabs (Correctly placed in card-header) -->
+                    <div class="card-header bg-transparent border-bottom-0 pt-3 px-3 ">
+                        <ul class="nav nav-tabs card-header-tabs" id="generationTabs" role="tablist">
+                            <!-- Text Tab -->
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="text-tab" data-bs-toggle="tab" data-bs-target="#text-pane" type="button" role="tab" data-type="text" data-model="gemini-2.0-flash">
+                                    <i class="bi bi-chat-text me-2"></i>Text
+                                </button>
+                            </li>
+                            <!-- Image Tab -->
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="image-tab" data-bs-toggle="tab" data-bs-target="#image-pane" type="button" role="tab" data-type="image">
+                                    <i class="bi bi-image me-2"></i>Image
+                                </button>
+                            </li>
+                            <!-- Video Tab -->
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="video-tab" data-bs-toggle="tab" data-bs-target="#video-pane" type="button" role="tab" data-type="video">
+                                    <i class="bi bi-camera-video me-2"></i>Video
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+
                     <div class="card-body p-0 d-flex flex-column">
+
+                        <!-- Model Selection Area -->
+                        <div id="model-selection-area" class="p-3 bg-body-tertiary border-bottom d-none">
+                            <div class="small fw-bold text-muted mb-2 text-uppercase">Select Model</div>
+
+                            <!-- Image Models Grid -->
+                            <div id="image-models-grid" class="row g-2 d-none">
+                                <?php if (!empty($mediaConfigs)): ?>
+                                    <?php foreach ($mediaConfigs as $modelId => $config): ?>
+                                        <?php if (strpos($config['type'], 'image') !== false): ?>
+                                            <div class="col-6 col-md-4">
+                                                <div class="card model-card h-100" data-model="<?= esc($modelId) ?>" data-type="image">
+                                                    <div class="card-body p-2 text-center">
+                                                        <div class="model-icon text-primary mb-1"><i class="bi bi-image"></i></div>
+                                                        <div class="small fw-bold text-truncate"><?= esc($config['name']) ?></div>
+                                                        <div class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill mt-1">$<?= esc($config['cost']) ?></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endif; ?>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </div>
+
+                            <!-- Video Models Grid -->
+                            <div id="video-models-grid" class="row g-2 d-none">
+                                <?php if (!empty($mediaConfigs)): ?>
+                                    <?php foreach ($mediaConfigs as $modelId => $config): ?>
+                                        <?php if ($config['type'] === 'video'): ?>
+                                            <div class="col-6 col-md-4">
+                                                <div class="card model-card h-100" data-model="<?= esc($modelId) ?>" data-type="video">
+                                                    <div class="card-body p-2 text-center">
+                                                        <div class="model-icon text-danger mb-1"><i class="bi bi-camera-video"></i></div>
+                                                        <div class="small fw-bold text-truncate"><?= esc($config['name']) ?></div>
+                                                        <div class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill mt-1">$<?= esc($config['cost']) ?></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endif; ?>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
                         <!-- Editor -->
                         <div class="prompt-editor-wrapper p-3 flex-grow-1">
+                            <input type="hidden" name="model_id" id="selectedModelId" value="gemini-2.0-flash">
+                            <input type="hidden" name="generation_type" id="generationType" value="text">
                             <textarea id="prompt" name="prompt" class="visually-hidden"><?= old('prompt') ?></textarea>
                         </div>
 
@@ -688,6 +780,313 @@
                 });
             }, 100);
         }
+
+        // --- 12. Generative Media Logic (Tabs & Polling) ---
+        const tabButtons = document.querySelectorAll('#generationTabs button[data-bs-toggle="tab"]');
+        const modelInput = document.getElementById('selectedModelId');
+        const typeInput = document.getElementById('generationType');
+        const form = document.getElementById('geminiForm');
+        const generateBtn = document.getElementById('generateBtn');
+
+        const modelSelectionArea = document.getElementById('model-selection-area');
+        const imageModelsGrid = document.getElementById('image-models-grid');
+        const videoModelsGrid = document.getElementById('video-models-grid');
+        const modelCards = document.querySelectorAll('.model-card');
+
+        // Helper to select a model card
+        const selectModelCard = (modelId) => {
+            modelCards.forEach(card => {
+                if (card.dataset.model === modelId) {
+                    card.classList.add('active');
+                    modelInput.value = modelId;
+                } else {
+                    card.classList.remove('active');
+                }
+            });
+        };
+
+        // Tab Switching
+        tabButtons.forEach(btn => {
+            btn.addEventListener('shown.bs.tab', (e) => {
+                const type = e.target.dataset.type;
+                typeInput.value = type;
+
+                // Reset UI
+                modelSelectionArea.classList.add('d-none');
+                imageModelsGrid.classList.add('d-none');
+                videoModelsGrid.classList.add('d-none');
+
+                const editor = tinymce.get('prompt');
+
+                if (type === 'text') {
+                    modelInput.value = 'gemini-2.0-flash'; // Default text model
+                    editor.getBody().setAttribute('data-placeholder', 'Enter your prompt here...');
+                } else {
+                    // Show Selection Area
+                    modelSelectionArea.classList.remove('d-none');
+
+                    if (type === 'image') {
+                        imageModelsGrid.classList.remove('d-none');
+                        editor.getBody().setAttribute('data-placeholder', 'Describe the image you want to generate...');
+
+                        // Auto-select first image model if none active
+                        const firstImage = imageModelsGrid.querySelector('.model-card');
+                        if (firstImage) selectModelCard(firstImage.dataset.model);
+
+                    } else if (type === 'video') {
+                        videoModelsGrid.classList.remove('d-none');
+                        editor.getBody().setAttribute('data-placeholder', 'Describe the video you want to create...');
+
+                        // Auto-select first video model
+                        const firstVideo = videoModelsGrid.querySelector('.model-card');
+                        if (firstVideo) selectModelCard(firstVideo.dataset.model);
+                    }
+                }
+            });
+        });
+
+        // Model Card Click Event
+        modelCards.forEach(card => {
+            card.addEventListener('click', () => {
+                selectModelCard(card.dataset.model);
+            });
+        });
+
+        // Form Submission Intercept
+        form.addEventListener('submit', async (e) => {
+            const type = typeInput.value;
+
+            // Allow normal submission for Text (handled by existing logic or backend)
+            // BUT if we want to handle Media via AJAX, we must intercept.
+            if (type === 'text') return;
+
+            e.preventDefault();
+
+            const promptVal = tinymce.get('prompt').getContent({
+                format: 'text'
+            }).trim();
+            if (!promptVal) {
+                showToast('Please enter a prompt.');
+                return;
+            }
+
+            // UI Loading State
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generating...';
+
+            const formData = new FormData();
+            formData.append(appState.csrfName, appState.csrfHash);
+            formData.append('prompt', promptVal);
+            formData.append('model_id', modelInput.value);
+
+            // --- MOCK TESTING INTERCEPT (Start) ---
+            // To remove mock functionality, delete this block.
+            if (handleMockGeneration(promptVal, type)) return;
+            // --- MOCK TESTING INTERCEPT (End) ---
+
+            try {
+                const res = await fetch('<?= url_to('gemini.media.generate') ?>', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData
+                });
+
+                const data = await res.json();
+
+                // CRITICAL: Always refresh CSRF token if returned, regardless of success/error
+                if (data.token) {
+                    refreshCsrf(data.token);
+                }
+
+                if (data.status === 'error') {
+                    showToast(data.message || 'Generation failed.');
+                    resetBtn();
+                    return;
+                }
+
+                if (data.type === 'image') {
+                    // Show Image Result
+                    showMediaResult(data.url, 'image');
+                    resetBtn();
+                } else if (data.type === 'video') {
+                    // Start Polling
+                    pollVideo(data.op_id);
+                }
+
+            } catch (err) {
+                console.error(err);
+                showToast('Network error.');
+                resetBtn();
+            }
+        });
+
+        // --- MOCK GENERATION LOGIC (Start) ---
+        // Returns true if a mock request was handled, false otherwise.
+        const handleMockGeneration = (prompt, type) => {
+            const lowerPrompt = prompt.toLowerCase();
+
+            if (lowerPrompt === 'test image' && type === 'image') {
+                setTimeout(() => {
+                    showMediaResult('https://picsum.photos/200/300?random=' + new Date().getTime(), 'image');
+                    resetBtn();
+                    showToast('Mock image generated successfully.');
+                }, 1500);
+                return true;
+            }
+
+            if (lowerPrompt === 'test video' && type === 'video') {
+                setTimeout(() => {
+                    // Using a sample video for testing
+                    showMediaResult('http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', 'video');
+                    resetBtn();
+                    showToast('Mock video generated successfully.');
+                }, 2000);
+                return true;
+            }
+
+            return false;
+        };
+        // --- MOCK GENERATION LOGIC (End) ---
+
+        const resetBtn = () => {
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = '<i class="bi bi-sparkles"></i> Generate';
+        };
+
+        const showMediaResult = (url, type) => {
+            // Prepare Download Function Call
+            const downloadFn = `downloadMedia('${url}', '${type}')`;
+
+            // Create or Update Result Card
+            let resultContainer = document.getElementById('media-result-container');
+            if (!resultContainer) {
+                resultContainer = document.createElement('div');
+                resultContainer.id = 'media-result-container';
+                resultContainer.className = 'card blueprint-card mt-5 shadow-lg border-primary';
+                // Append to the main container (parent of the row) to span full width
+                document.querySelector('.container.my-3.my-lg-5').appendChild(resultContainer);
+            }
+
+            // Update Header with Download Button
+            resultContainer.innerHTML = `
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">Studio Output</span>
+                    <div>
+                        <button onclick="${downloadFn}" class="btn btn-sm btn-light" id="mediaDownloadBtn">
+                            <i class="bi bi-download me-1"></i> Download
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body text-center p-4" id="media-content-area"></div>
+            `;
+
+            const contentArea = document.getElementById('media-content-area');
+            let mediaHtml = '';
+
+            if (type === 'image') {
+                mediaHtml = `<img src="${url}" class="img-fluid rounded shadow-sm" alt="Generated Image">`;
+            } else if (type === 'video') {
+                mediaHtml = `
+                    <video controls autoplay loop class="w-100 rounded shadow-sm">
+                        <source src="${url}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>`;
+            }
+
+            contentArea.innerHTML = mediaHtml;
+
+            resultContainer.scrollIntoView({
+                behavior: 'smooth'
+            });
+        };
+
+        // Global function for downloading media
+        window.downloadMedia = async (url, type) => {
+            // 1. Internal URL (Real API): Use backend forced download
+            if (url.includes('gemini/media/serve')) {
+                const downloadUrl = url + (url.includes('?') ? '&' : '?') + 'download=1';
+                window.location.href = downloadUrl;
+                return;
+            }
+
+            // --- MOCK DOWNLOAD LOGIC (Start) ---
+            // To remove mock functionality, delete this block.
+            await handleMockDownload(url, type);
+            // --- MOCK DOWNLOAD LOGIC (End) ---
+        };
+
+        // --- MOCK DOWNLOAD HANDLER (Start) ---
+        const handleMockDownload = async (url, type) => {
+            try {
+                const btn = document.getElementById('mediaDownloadBtn');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Downloading...';
+                btn.disabled = true;
+
+                const response = await fetch(url);
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                // Generate filename: mock_image_123.jpg
+                const ext = type === 'video' ? 'mp4' : 'jpg';
+                a.download = `mock_${type}_${new Date().getTime()}.${ext}`;
+                document.body.appendChild(a);
+                a.click();
+
+                window.URL.revokeObjectURL(blobUrl);
+                document.body.removeChild(a);
+
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            } catch (err) {
+                console.error('Download failed:', err);
+                alert('Failed to download media.');
+            }
+        };
+        // --- MOCK DOWNLOAD HANDLER (End) ---
+
+        const pollVideo = async (opId) => {
+            generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing Video...';
+
+            const pollInterval = setInterval(async () => {
+                try {
+                    const formData = new FormData();
+                    formData.append(appState.csrfName, appState.csrfHash);
+                    formData.append('op_id', opId);
+
+                    const res = await fetch('<?= url_to('gemini.media.poll') ?>', {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: formData
+                    });
+
+                    const data = await res.json();
+                    if (data.token) refreshCsrf(data.token);
+
+                    if (data.status === 'completed') {
+                        clearInterval(pollInterval);
+                        showMediaResult(data.url, 'video');
+                        resetBtn();
+                    } else if (data.status === 'failed') {
+                        clearInterval(pollInterval);
+                        showToast(data.message || 'Video generation failed.');
+                        resetBtn();
+                    }
+                    // If pending, continue polling
+
+                } catch (err) {
+                    console.error(err);
+                    // Don't stop polling immediately on network glitch, but maybe count errors?
+                    // For now, let's just log.
+                }
+            }, 5000); // Poll every 5 seconds
+        };
     });
 </script>
 <?= $this->endSection() ?>

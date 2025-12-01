@@ -19,6 +19,16 @@ use App\Modules\Gemini\Libraries\DocumentService;
 use CodeIgniter\I18n\Time;
 use Parsedown;
 
+/**
+ * Controller for managing Gemini AI interactions.
+ *
+ * This controller orchestrates the entire user flow for AI content generation, including:
+ * - Handling user input and file uploads.
+ * - Managing context and memory (Assistant Mode).
+ * - Estimating and deducting costs.
+ * - Calling the GeminiService for text and speech generation.
+ * - Processing and displaying results.
+ */
 class GeminiController extends BaseController
 {
     protected UserModel $userModel;
@@ -44,11 +54,9 @@ class GeminiController extends BaseController
         'application/pdf',
         'text/plain'
     ];
-    private const MAX_FILE_SIZE = 10 * 1024 * 1024; // 150MB
+    private const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     private const MAX_FILES = 5;
-    private const USD_TO_KSH_RATE = 129;
-    private const DEFAULT_DEDUCTION = 10.00;
-    private const MINIMUM_BALANCE = 0.01;
+
 
     public function __construct()
     {
@@ -67,16 +75,18 @@ class GeminiController extends BaseController
     {
         $data = [
             'pageTitle'       => 'Intelligent Content & Document Analysis Platform | Powered by Gemini',
-            'metaDescription' => 'Transform how you work with AI. Generate professional content, extract insights from PDFs, and convert text to speech using our advanced, context-aware platform.',
+            'metaDescription' => 'Transform how you work with AI. Generate professional content, create stunning images, synthesize videos, and extract insights from PDFs using our advanced platform.',
             'canonicalUrl'    => url_to('gemini.public'),
             'heroTitle'       => 'Enterprise-Grade AI Solutions',
-            'heroSubtitle'    => 'A complete suite for content generation, intelligent document processing, and audio synthesis - tailored for your workflow.'
+            'heroSubtitle'    => 'A complete suite for content generation, image creation, video synthesis, and intelligent document processing - tailored for your workflow.'
         ];
         return view('App\Modules\Gemini\Views\gemini\public_page.php', $data);
     }
 
     /**
      * Displays the main application dashboard.
+     *
+     * Loads user-specific data such as saved prompts and settings.
      *
      * @return string The rendered view.
      */
@@ -85,6 +95,10 @@ class GeminiController extends BaseController
         $userId = (int) session()->get('userId');
         $prompts = $this->promptModel->where('user_id', $userId)->findAll();
         $userSetting = $this->userSettingsModel->where('user_id', $userId)->first();
+
+        // Fetch Media Configs for Dynamic Tabs
+        $mediaService = service('mediaGenerationService');
+        $mediaConfigs = $mediaService->getMediaConfig();
 
         $data = [
             'pageTitle'              => 'AI Workspace | Afrikenkid',
@@ -99,6 +113,7 @@ class GeminiController extends BaseController
             'maxFileSize'            => self::MAX_FILE_SIZE,
             'maxFiles'               => self::MAX_FILES,
             'supportedMimeTypes'     => json_encode(self::SUPPORTED_MIME_TYPES),
+            'mediaConfigs'           => $mediaConfigs, // Pass to view
         ];
         $data['robotsTag'] = 'noindex, follow';
 
@@ -106,9 +121,12 @@ class GeminiController extends BaseController
     }
 
     /**
-     * Handles file uploads for the Gemini context.
+     * Handles asynchronous file uploads for the Gemini context.
      *
-     * @return ResponseInterface JSON response with upload status.
+     * Files are stored temporarily and associated with the user's session
+     * until the final generation request is made.
+     *
+     * @return ResponseInterface JSON response with upload status and file metadata.
      */
     public function uploadMedia(): ResponseInterface
     {
@@ -130,7 +148,7 @@ class GeminiController extends BaseController
         $userTempPath = WRITEPATH . 'uploads/gemini_temp/' . $userId . '/';
 
         if (!is_dir($userTempPath)) {
-            mkdir($userTempPath, 0777, true);
+            mkdir($userTempPath, 0755, true);
         }
 
         $fileName = $file->getRandomName();
@@ -171,6 +189,16 @@ class GeminiController extends BaseController
 
     /**
      * Generates content using the Gemini API based on user input and context.
+     *
+     * This is the core method that handles the generation workflow:
+     * 1. Validates input and user balance.
+     * 2. Prepares context (memory) and files.
+     * 3. Estimates cost and checks balance again.
+     * 4. Calls the Gemini API for text generation.
+     * 5. Optionally calls the TTS API for audio generation.
+     * 6. Updates user memory with the interaction.
+     * 7. Calculates final cost and deducts balance.
+     * 8. Returns the result to the view.
      *
      * @return RedirectResponse Redirects back with results or errors.
      */
@@ -214,11 +242,14 @@ class GeminiController extends BaseController
             return redirect()->back()->withInput()->with('error', 'Please provide a prompt or file.');
         }
 
-        // 2. Check Balance
-        $balanceCheck = $this->_checkBalanceAgainstCost($user, $parts);
-        if (isset($balanceCheck['error'])) {
+        // 2. Check Balance (Estimation via Service)
+        $estimate = $this->geminiService->estimateCost($parts);
+        if ($estimate['status'] && $user->balance < $estimate['costKSH']) {
             $this->_cleanupTempFiles($uploadedFileIds, $userId);
-            return redirect()->back()->withInput()->with('error', $balanceCheck['error']);
+            return redirect()->back()->withInput()->with('error', "Insufficient balance. Estimated Input Cost: KSH " . number_format($estimate['costKSH'], 2));
+        } elseif (!$estimate['status']) {
+            // Log warning but allow to proceed if estimation fails
+            log_message('warning', 'Cost estimation failed: ' . $estimate['error']);
         }
 
         // 3. Call API
@@ -245,10 +276,26 @@ class GeminiController extends BaseController
             }
         }
 
-        // 5. Process Payment & Memory
-        $this->_processApiResponse($user, $apiResponse, $isAssistantMode, $contextData, $audioUsage);
+        // 5. Update Memory (Assistant Mode)
+        if ($isAssistantMode && isset($contextData['memoryService'])) {
+            $contextData['memoryService']->updateMemory(
+                (string)$this->request->getPost('prompt'),
+                $apiResponse['result'],
+                $contextData['usedInteractionIds']
+            );
+        }
 
-        // 6. Output
+        // 6. Deduct Cost & Flash Message
+        if (isset($apiResponse['usage']) || $audioUsage) {
+            $textUsage = $apiResponse['usage'] ?? [];
+            $costData = $this->geminiService->calculateCost($textUsage, $audioUsage);
+            $deduction = number_format($costData['costKSH'], 4, '.', '');
+
+            $this->userModel->deductBalance($userId, $deduction);
+            session()->setFlashdata('success', "KSH " . number_format($costData['costKSH'], 2) . " deducted.");
+        }
+
+        // 7. Output
         $parsedown = new Parsedown();
         $parsedown->setSafeMode(true);
         $parsedown->setBreaksEnabled(true);
@@ -267,9 +314,6 @@ class GeminiController extends BaseController
         return $redirect;
     }
 
-    /**
-     * Unified Settings Update Method
-     */
     /**
      * Updates user settings (Assistant Mode, Voice Output).
      *
@@ -368,6 +412,9 @@ class GeminiController extends BaseController
     /**
      * Serves the file with correct headers for inline playback.
      *
+     * This method ensures secure access to generated audio files by validating
+     * the user ID and serving the file through PHP rather than direct public access.
+     *
      * @param string $fileName The name of the file to serve.
      * @return ResponseInterface The file response.
      * @throws \CodeIgniter\Exceptions\PageNotFoundException If the file does not exist.
@@ -439,6 +486,20 @@ class GeminiController extends BaseController
 
     // --- Private Helpers ---
 
+    /**
+     * Prepares the context for the AI generation request.
+     *
+     * If Assistant Mode is enabled, this retrieves relevant past interactions
+     * from the MemoryService and constructs a context-aware system prompt.
+     *
+     * @param int $userId The user ID.
+     * @param string $inputText The user's current query.
+     * @param bool $isAssistantMode Whether Assistant Mode is enabled.
+     * @return array An array containing:
+     *               - 'finalPrompt' (string): The constructed prompt with context.
+     *               - 'memoryService' (MemoryService|null): The memory service instance.
+     *               - 'usedInteractionIds' (array): IDs of interactions used for context.
+     */
     private function _prepareContext(int $userId, string $inputText, bool $isAssistantMode): array
     {
         $data = ['finalPrompt' => $inputText, 'memoryService' => null, 'usedInteractionIds' => []];
@@ -460,6 +521,16 @@ class GeminiController extends BaseController
         return $data;
     }
 
+    /**
+     * Processes files that were uploaded asynchronously.
+     *
+     * Reads the temporary files, validates their MIME types, and converts them
+     * to the base64 format expected by the Gemini API.
+     *
+     * @param array $fileIds Array of file IDs (filenames) to process.
+     * @param int $userId The user ID.
+     * @return array An array containing 'parts' (array of API-ready file objects) or 'error' (string).
+     */
     private function _handlePreUploadedFiles(array $fileIds, int $userId): array
     {
         $parts = [];
@@ -485,6 +556,12 @@ class GeminiController extends BaseController
         return ['parts' => $parts];
     }
 
+    /**
+     * Cleans up temporary files after processing.
+     *
+     * @param array $fileIds Array of file IDs to delete.
+     * @param int $userId The user ID.
+     */
     private function _cleanupTempFiles(array $fileIds, int $userId): void
     {
         foreach ($fileIds as $fileId) {
@@ -492,104 +569,23 @@ class GeminiController extends BaseController
         }
     }
 
-    private function _checkBalanceAgainstCost(User $user, array $parts): array
-    {
-        $response = $this->geminiService->countTokens($parts);
-        if (!$response['status']) return ['error' => $response['error']];
-
-        $costData = $this->_calculateCost(['promptTokenCount' => $response['totalTokens']], null);
-
-        if ($user->balance < $costData['costInKSH']) {
-            return ['error' => "Insufficient balance. Cost: KSH " . number_format($costData['costInKSH'], 2)];
-        }
-        return [];
-    }
-
-    private function _processApiResponse(User $user, array $apiResponse, bool $isAssistantMode, array $contextData, ?array $audioUsage = null): void
-    {
-        // Calculate Total Cost
-        $costData = $this->_calculateCost($apiResponse['usage'] ?? [], $audioUsage);
-
-        $db = \Config\Database::connect();
-        $db->transStart();
-
-        $this->userModel->deductBalance((int)$user->id, (string)$costData['deductionAmount']);
-
-        if ($isAssistantMode && isset($contextData['memoryService'])) {
-            $contextData['memoryService']->updateMemory(
-                (string)$this->request->getPost('prompt'),
-                $apiResponse['result'],
-                $contextData['usedInteractionIds']
-            );
-        }
-
-        $db->transComplete();
-
-        if ($db->transStatus() === false) {
-            log_message('critical', "Transaction failed User {$user->id}");
-            session()->setFlashdata('error', 'System error processing transaction.');
-        } else {
-            session()->setFlashdata('success', $costData['costMessage']);
-        }
-    }
-
-    private function _calculateCost(array $textUsage, ?array $audioUsage = null): array
-    {
-        // Audio Pricing (Per 1M tokens)
-        $audioInputPrice = 0.50;
-        $audioOutputPrice = 10.00;
-
-        // 1. Text Pricing (Gemini 3 Pro Preview)
-        $textInput = (int)($textUsage['promptTokenCount'] ?? 0);
-        $textOutput = (int)($textUsage['candidatesTokenCount'] ?? 0);
-
-        $tier1 = $textInput <= 200000;
-        $inRate = ($tier1 ? 2.00 : 4.00) * 1.60; // USD per million, +60%
-        $outRate = ($tier1 ? 12.00 : 18.00) * 1.60; // USD per million, +60%
-
-        $textUsd = (($textInput / 1e6) * $inRate) + (($textOutput / 1e6) * $outRate);
-
-        // 2. Audio Pricing
-        $audioInput = (int)($audioUsage['promptTokenCount'] ?? 0);
-        $audioOutput = (int)($audioUsage['candidatesTokenCount'] ?? 0);
-
-        $audioUsd = (($audioInput / 1e6) * $audioInputPrice) + (($audioOutput / 1e6) * $audioOutputPrice);
-
-        // 3. Total
-        $totalUsd = $textUsd + $audioUsd;
-        $totalKsh = $totalUsd * self::USD_TO_KSH_RATE;
-
-        // 4. Minimum Deduction Rule
-        // If there was ANY usage (text or audio), enforce minimum charge.
-        $hasUsage = ($textInput + $textOutput + $audioInput + $audioOutput) > 0;
-        $deduction = ($hasUsage && $totalKsh < self::MINIMUM_BALANCE)
-            ? self::MINIMUM_BALANCE
-            : ceil($totalKsh * 100) / 100;
-
-        // Fallback for zero usage (shouldn't happen in success path but safe to keep)
-        if (!$hasUsage) {
-            $deduction = self::DEFAULT_DEDUCTION;
-        }
-
-        return [
-            'deductionAmount' => $deduction,
-            'costMessage' => "KSH " . number_format($deduction, 2) . " deducted.",
-            'costInKSH' => $totalKsh
-        ];
-    }
-
     /**
-     * Handles the storage and conversion of the raw audio.
+     * Handles the storage and conversion of the raw audio data.
+     *
+     * Delegates to the FFmpegService to convert the raw audio to a browser-compatible format.
+     *
+     * @param string $base64Data Base64 encoded raw audio data.
+     * @return string|null The filename of the processed audio file, or null on failure.
      */
     private function _processAudioData(string $base64Data): ?string
     {
         $userId = (int) session()->get('userId');
         $securePath = WRITEPATH . 'uploads/ttsaudio_secure/' . $userId . '/';
 
-        if (!is_dir($securePath)) mkdir($securePath, 0775, true);
+        if (!is_dir($securePath)) mkdir($securePath, 0755, true);
 
         // Generate base name (e.g., "speech_651a...")
-        $filenameBase = uniqid('speech_');
+        $filenameBase = 'speech_' . bin2hex(random_bytes(8));
 
         // Delegate to Service (Returns .mp3 OR .wav)
         $result = service('ffmpegService')->processAudio(

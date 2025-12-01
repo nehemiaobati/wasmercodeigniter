@@ -8,6 +8,13 @@ use App\Modules\Gemini\Libraries\ModelPayloadService;
 
 /**
  * Service layer for interacting with the Google Gemini API.
+ *
+ * This service handles:
+ * - Text generation using various Gemini models.
+ * - Text-to-Speech (TTS) generation.
+ * - Token counting and cost estimation.
+ * - Cost calculation based on usage metadata.
+ * - Payload configuration management via ModelPayloadService.
  */
 class GeminiService
 {
@@ -18,47 +25,82 @@ class GeminiService
     protected $apiKey;
 
     /**
-     * Reference to the payload configuration service
+     * Reference to the payload configuration service.
      * @var ModelPayloadService
      */
     protected $payloadService;
 
     /**
      * An ordered list of Gemini model IDs to try, from most preferred to least preferred.
-     * Updated to reflect new complexity requirements.
+     * This fallback mechanism ensures high availability even if specific models are rate-limited.
+     *
      * @var array<string>
      */
     protected array $modelPriorities = [
-        //"gemini-3-pro-preview", // Multimodal, Thinking Level High
-        //"gemini-2.5-pro",       // Multimodal, Thinking Budget
-        "gemini-flash-latest",
-        "gemini-flash-lite-latest", // Standard Fast
-        "gemini-2.5-flash",
-        "gemini-2.5-flash-lite", // Standard Fast
-        "gemini-2.0-flash",      // Fallbacks
-        "gemini-2.0-flash-lite", // Fallbacks
+        "gemini-3-pro-preview", // Multimodal, Thinking Level High
+        "gemini-2.5-pro",       // Multimodal, Thinking Budget
+        "gemini-flash-latest",      // Primary: Latest Flash model for speed and efficiency
+        "gemini-flash-lite-latest", // Secondary: Lite version for lower latency
+        "gemini-2.5-flash",         // Fallback: Stable Flash version
+        "gemini-2.5-flash-lite",    // Fallback: Stable Lite version
+        "gemini-2.0-flash",         // Legacy Fallback
+        "gemini-2.0-flash-lite",    // Legacy Fallback
+    ];
+
+    /**
+     * Reference to the User Model for balance updates.
+     * @var \App\Models\UserModel
+     */
+    protected $userModel;
+
+    /**
+     * Pricing configuration for text and audio models (per 1 Million tokens).
+     *
+     * Text Pricing:
+     * - Tier 1 (<= 200k tokens): Lower rate for standard context windows.
+     * - Tier 2 (> 200k tokens): Higher rate for long-context processing.
+     *
+     * Audio Pricing:
+     * - Fixed rate for input and output audio tokens.
+     */
+    protected array $pricingConfig = [
+        'default' => [
+            'tier1' => ['input' => 2.00, 'output' => 12.00],
+            'tier2' => ['input' => 4.00, 'output' => 18.00],
+            'tier_threshold' => 200000
+        ],
+        'audio' => [
+            'input' => 0.50,
+            'output' => 10.00
+        ]
     ];
 
     /**
      * Constructor.
+     * Initializes dependencies and loads the API key from the environment.
      */
     public function __construct()
     {
         $this->apiKey = env('GEMINI_API_KEY') ?? getenv('GEMINI_API_KEY');
-        // Initialize the specific configuration service
-        $this->payloadService = new ModelPayloadService();
-        // Alternatively use service('modelPayloadService') if registered in Services.php
+        $this->payloadService = service('modelPayloadService');
+        $this->userModel = new \App\Models\UserModel();
     }
 
     /**
      * Sends a request to the Gemini API for text generation.
      *
-     * @param array $parts An array of content parts.
-     * @return array An associative array with 'result' (string) and 'usage' (array) or 'error' (string).
+     * Iterates through the configured model priorities. If a model fails due to
+     * quota limits (429), it automatically retries with exponential backoff
+     * or fails over to the next available model.
+     *
+     * @param array $parts An array of content parts (text, images, files).
+     * @return array An associative array containing:
+     *               - 'result' (string): The generated text.
+     *               - 'usage' (array|null): Token usage metadata.
+     *               - 'error' (string): Error message if the operation failed.
      */
     public function generateContent(array $parts): array
     {
-        // This method remains unchanged and is fully functional.
         if (!$this->apiKey) {
             return ['error' => 'GEMINI_API_KEY not set in .env file.'];
         }
@@ -73,20 +115,17 @@ class GeminiService
         foreach ($this->modelPriorities as $model) {
             $currentModel = $model;
 
-            // --- CHANGED: logic delegates to PayloadService ---
-            // We get the decoupled full request configuration here
-            // 1. Get the config
+            // Retrieve the specific payload configuration for the current model
             $config = $this->payloadService->getPayloadConfig($currentModel, $apiKey, $parts);
 
-            // 2. SAFETY CHECK: If no payload exists for this model, SKIP it.
+            // Skip if no valid configuration exists for this model
             if (empty($config)) {
                 log_message('warning', "GeminiService: Skipping model '$currentModel' because no payload configuration was found.");
-                continue; // Move to the next model in the priority list
+                continue;
             }
 
             $apiUrl = $config['url'];
             $requestBody = $config['body'];
-            // --------------------------------------------------
 
             $maxRetries = 3;
             $initialDelay = 1;
@@ -95,7 +134,7 @@ class GeminiService
                 try {
                     $client = \Config\Services::curlrequest();
                     $response = $client->request('POST', $apiUrl, [
-                        'body' => $requestBody, // Use the decoupled body
+                        'body' => $requestBody,
                         'headers' => ['Content-Type' => 'application/json'],
                         'timeout' => 90,
                         'connect_timeout' => 15,
@@ -104,17 +143,19 @@ class GeminiService
                     $statusCode = $response->getStatusCode();
                     $responseBody = $response->getBody();
 
+                    // Handle Rate Limiting (Quota Exceeded)
                     if ($statusCode === 429) {
                         log_message('warning', "Gemini API Quota Exceeded (429) for model '{$currentModel}' on attempt {$attempt}.");
                         $lastError = ['error' => "Quota exceeded for model '{$currentModel}'."];
                         if ($attempt < $maxRetries) {
-                            sleep($initialDelay * pow(2, $attempt - 1));
+                            sleep($initialDelay * pow(2, $attempt - 1)); // Exponential backoff
                             continue;
                         } else {
-                            break;
+                            break; // Try next model
                         }
                     }
 
+                    // Handle General API Errors
                     if ($statusCode !== 200) {
                         $errorData = json_decode($responseBody, true);
                         $errorMessage = $errorData['error']['message'] ?? 'Unknown API error';
@@ -128,6 +169,7 @@ class GeminiService
                         return ['error' => 'Failed to decode API response.'];
                     }
 
+                    // Extract Generated Text
                     $processedText = '';
                     if (isset($responseData['candidates'][0]['content']['parts'])) {
                         foreach ($responseData['candidates'][0]['content']['parts'] as $part) {
@@ -152,6 +194,7 @@ class GeminiService
             }
         }
 
+        // Final error handling if all models fail
         $finalErrorMsg = $lastError['error'] ?? 'An unexpected error occurred after multiple retries across all models.';
         if (str_contains($finalErrorMsg, 'Quota exceeded')) {
             return ['error' => 'All available AI models have exceeded their quota. Please wait and try again later.'];
@@ -161,14 +204,18 @@ class GeminiService
     }
 
     /**
-     * [UPDATED] Generates raw PCM audio data from a text string using the Gemini TTS API.
-     * ... (Remaining methods generateSpeech and countTokens stay as is) ...
-     */
-    /**
      * Generates raw PCM audio data from a text string using the Gemini TTS API.
      *
-     * @param string $textToSpeak The text to convert to speech.
-     * @return array ['status' => bool, 'audioData' => string|null, 'error' => string|null]
+     * Uses the 'gemini-2.5-flash-preview-tts' model to synthesize speech.
+     * The output is raw audio data that needs to be processed (e.g., by FFmpeg)
+     * before being played in a browser.
+     *
+     * @param string $textToSpeak The text content to convert to speech.
+     * @return array An associative array containing:
+     *               - 'status' (bool): Success status.
+     *               - 'audioData' (string|null): Base64 encoded raw audio data.
+     *               - 'usage' (array|null): Token usage metadata for the audio generation.
+     *               - 'error' (string|null): Error message on failure.
      */
     public function generateSpeech(string $textToSpeak): array
     {
@@ -223,7 +270,7 @@ class GeminiService
                 return ['status' => false, 'error' => 'Failed to decode API speech response.'];
             }
 
-            // Resiliently parse the response to find the audio data
+            // Parse the streamed response chunks to aggregate audio data
             $audioData = '';
             $foundAudio = false;
             $usageMetadata = null;
@@ -258,20 +305,21 @@ class GeminiService
     }
 
     /**
-     * Counts the number of tokens in the provided parts.
+     * Counts the number of tokens in the provided content parts.
+     *
+     * Useful for pre-request validation and cost estimation.
      *
      * @param array $parts The content parts to count tokens for.
      * @return array ['status' => bool, 'totalTokens' => int, 'error' => string|null]
      */
     public function countTokens(array $parts): array
     {
-        // This method remains unchanged and is fully functional.
         $apiKey = trim($this->apiKey);
         if (!$apiKey) {
             return ['status' => false, 'error' => 'GEMINI_API_KEY not set in .env file.'];
         }
 
-        $currentModel = "gemini-2.0-flash"; // Updated default for token counting
+        $currentModel = "gemini-2.0-flash"; // Default model for token counting
         $countTokensApi = "countTokens";
         $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$currentModel}:{$countTokensApi}?key=" . urlencode($apiKey);
 
@@ -296,6 +344,10 @@ class GeminiService
             }
 
             $responseData = json_decode($responseBody, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                log_message('error', 'Gemini API countTokens JSON Decode Error: ' . json_last_error_msg());
+                return ['status' => false, 'error' => 'Failed to decode API response.'];
+            }
             $totalTokens = $responseData['totalTokens'] ?? 0;
 
             return ['status' => true, 'totalTokens' => $totalTokens];
@@ -303,5 +355,98 @@ class GeminiService
             log_message('error', 'Gemini API countTokens Exception: ' . $e->getMessage());
             return ['status' => false, 'error' => 'Could not connect to the AI service to estimate cost.'];
         }
+    }
+
+    /**
+     * Estimates the cost of a request based on input tokens.
+     *
+     * This method is used by the controller to check if the user has sufficient balance
+     * *before* making the actual generation request. It uses Tier 1 pricing for a conservative estimate.
+     *
+     * @param array $parts The content parts to estimate.
+     * @return array ['status' => bool, 'costKSH' => float, 'totalTokens' => int, 'error' => string]
+     */
+    public function estimateCost(array $parts): array
+    {
+        $response = $this->countTokens($parts);
+        if (!$response['status']) {
+            return ['status' => false, 'error' => $response['error']];
+        }
+
+        $estimatedTokens = $response['totalTokens'];
+
+        // Use Tier 1 pricing for estimation (conservative approach)
+        $pricing = $this->pricingConfig['default']['tier1'];
+
+        $estimatedCostUSD = ($estimatedTokens / 1000000) * $pricing['input'];
+        $usdToKsh = 129; // Fixed exchange rate
+        $estimatedCostKSH = $estimatedCostUSD * $usdToKsh;
+
+        return [
+            'status' => true,
+            'costKSH' => $estimatedCostKSH,
+            'totalTokens' => $estimatedTokens
+        ];
+    }
+
+    /**
+     * Calculates the actual cost based on usage metadata for text and optional audio.
+     *
+     * This method aggregates costs from both text generation (input/output tokens)
+     * and audio generation (if applicable). It handles tiered pricing for text.
+     *
+     * @param array $textUsage Usage metadata from the text generation API.
+     * @param array|null $audioUsage Usage metadata from the audio generation API (optional).
+     * @return array An associative array containing:
+     *               - 'costUSD' (float): Total cost in USD.
+     *               - 'costKSH' (float): Total cost in KSH.
+     *               - 'tokens' (int): Total combined tokens.
+     *               - 'promptTokens' (int): Text prompt tokens.
+     *               - 'candidatesTokens' (int): Text output tokens.
+     */
+    public function calculateCost(array $textUsage, ?array $audioUsage = null): array
+    {
+        // 1. Calculate Text Generation Cost
+        $promptTokens = $textUsage['promptTokenCount'] ?? 0;
+        $candidatesTokens = $textUsage['candidatesTokenCount'] ?? 0;
+        $totalTextTokens = $textUsage['totalTokenCount'] ?? ($promptTokens + $candidatesTokens);
+
+        $pricing = $this->pricingConfig['default'];
+        // Determine pricing tier based on total text tokens
+        $tier = ($totalTextTokens > $pricing['tier_threshold']) ? 'tier2' : 'tier1';
+        $rates = $pricing[$tier];
+
+        $textInputCost = ($promptTokens / 1000000) * $rates['input'];
+        $textOutputCost = ($candidatesTokens / 1000000) * $rates['output'];
+        $totalTextCostUSD = $textInputCost + $textOutputCost;
+
+        // 2. Calculate Audio Generation Cost (if applicable)
+        $totalAudioCostUSD = 0;
+        $audioTokens = 0;
+
+        if ($audioUsage) {
+            $audioInputTokens = $audioUsage['promptTokenCount'] ?? 0;
+            $audioOutputTokens = $audioUsage['candidatesTokenCount'] ?? 0;
+            $audioTokens = $audioUsage['totalTokenCount'] ?? ($audioInputTokens + $audioOutputTokens);
+
+            $audioPricing = $this->pricingConfig['audio'];
+            $audioInputCost = ($audioInputTokens / 1000000) * $audioPricing['input'];
+            $audioOutputCost = ($audioOutputTokens / 1000000) * $audioPricing['output'];
+            $totalAudioCostUSD = $audioInputCost + $audioOutputCost;
+        }
+
+        // 3. Aggregate Total Costs
+        $totalCostUSD = $totalTextCostUSD + $totalAudioCostUSD;
+        $usdToKsh = 129;
+        $totalCostKsh = $totalCostUSD * $usdToKsh;
+        $totalTokens = $totalTextTokens + $audioTokens;
+
+        return [
+            'costUSD' => $totalCostUSD,
+            'costKSH' => $totalCostKsh,
+            'tokens' => $totalTokens,
+            'promptTokens' => $promptTokens,
+            'candidatesTokens' => $candidatesTokens
+        ];
     }
 }

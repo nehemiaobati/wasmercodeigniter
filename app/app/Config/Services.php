@@ -14,6 +14,8 @@ use App\Libraries\RecaptchaService;
 use App\Modules\Gemini\Libraries\FfmpegService;
 use App\Modules\Gemini\Libraries\PandocService;
 use App\Modules\Gemini\Libraries\DocumentService;
+use App\Modules\Gemini\Libraries\ModelPayloadService;
+use App\Modules\Gemini\Libraries\MediaGenerationService;
 
 /**
  * Services Configuration file.
@@ -192,5 +194,33 @@ class Services extends BaseService
             return static::getSharedInstance('documentService');
         }
         return new DocumentService();
+    }
+
+    /**
+     * The Model Payload service.
+     *
+     * @param bool $getShared
+     * @return ModelPayloadService
+     */
+    public static function modelPayloadService(bool $getShared = true): ModelPayloadService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('modelPayloadService');
+        }
+        return new ModelPayloadService();
+    }
+
+    /**
+     * The Media Generation service.
+     *
+     * @param bool $getShared
+     * @return MediaGenerationService
+     */
+    public static function mediaGenerationService(bool $getShared = true): MediaGenerationService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('mediaGenerationService');
+        }
+        return new MediaGenerationService();
     }
 }
