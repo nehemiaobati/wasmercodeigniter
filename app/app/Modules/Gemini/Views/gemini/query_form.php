@@ -280,24 +280,26 @@
 
                     <!-- Saved Prompts -->
                     <label class="form-label small fw-bold text-uppercase text-muted">Saved Prompts</label>
-                    <?php if (!empty($prompts)): ?>
-                        <div class="input-group mb-3">
-                            <select class="form-select" id="savedPrompts">
-                                <option value="" disabled selected>Select...</option>
-                                <?php foreach ($prompts as $p): ?>
-                                    <option value="<?= esc($p->prompt_text, 'attr') ?>" data-id="<?= $p->id ?>"><?= esc($p->title) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                            <button class="btn btn-outline-secondary" type="button" id="usePromptBtn">Load</button>
-                            <button class="btn btn-outline-danger" type="button" id="deletePromptBtn" disabled title="Delete Saved Prompt">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    <?php else: ?>
-                        <div class="alert alert-light border mb-3 small text-muted">
-                            <i class="bi bi-info-circle me-1"></i> No saved prompts yet. Save one after generating!
-                        </div>
-                    <?php endif; ?>
+                    <div id="saved-prompts-wrapper">
+                        <?php if (!empty($prompts)): ?>
+                            <div class="input-group mb-3">
+                                <select class="form-select" id="savedPrompts">
+                                    <option value="" disabled selected>Select...</option>
+                                    <?php foreach ($prompts as $p): ?>
+                                        <option value="<?= esc($p->prompt_text, 'attr') ?>" data-id="<?= $p->id ?>"><?= esc($p->title) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <button class="btn btn-outline-secondary" type="button" id="usePromptBtn">Load</button>
+                                <button class="btn btn-outline-danger" type="button" id="deletePromptBtn" disabled title="Delete Saved Prompt">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        <?php else: ?>
+                            <div class="alert alert-light border mb-3 small text-muted">
+                                <i class="bi bi-info-circle me-1"></i> No saved prompts yet. Save one after generating!
+                            </div>
+                        <?php endif; ?>
+                    </div>
 
                     <!-- Clear Memory -->
                     <hr>
@@ -433,6 +435,36 @@
             }
         };
 
+        const sendAjaxRequest = async (url, data = null) => {
+            const formData = data instanceof FormData ? data : new FormData();
+            // Ensure CSRF token is present and up-to-date
+            if (!formData.has(appState.csrfName)) {
+                formData.append(appState.csrfName, appState.csrfHash);
+            }
+
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const responseData = await res.json();
+
+                // Handle CSRF refresh automatically
+                const newToken = responseData.token || responseData.csrf_token;
+                if (newToken) refreshCsrf(newToken);
+
+                return responseData;
+            } catch (err) {
+                console.error(err);
+                showToast('Network error occurred.');
+                throw err;
+            }
+        };
+
         // --- 3. TinyMCE ---
         tinymce.init({
             selector: '#prompt',
@@ -458,21 +490,14 @@
         document.querySelectorAll('.setting-toggle').forEach(toggle => {
             toggle.addEventListener('change', async (e) => {
                 const formData = new FormData();
-                formData.append(appState.csrfName, appState.csrfHash);
                 formData.append('setting_key', e.target.dataset.key);
                 formData.append('enabled', e.target.checked);
 
                 try {
-                    const res = await fetch(appState.endpoints.settings, {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const data = await res.json();
-                    refreshCsrf(data.csrf_token);
+                    const data = await sendAjaxRequest(appState.endpoints.settings, formData);
                     showToast(data.status === 'success' ? 'Setting saved.' : 'Failed to save.');
                 } catch (err) {
-                    console.error(err);
-                    showToast('Network error.');
+                    // Error handled in helper
                 }
             });
         });
@@ -657,15 +682,9 @@
                 // If it was uploaded successfully, delete from server
                 const formData = new FormData();
                 formData.append('file_id', serverId);
-                formData.append(appState.csrfName, appState.csrfHash);
 
                 try {
-                    const res = await fetch(appState.endpoints.deleteMedia, {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const data = await res.json();
-                    if (data.csrf_token) refreshCsrf(data.csrf_token);
+                    const data = await sendAjaxRequest(appState.endpoints.deleteMedia, formData);
 
                     if (data.status === 'success') {
                         uiItem.remove();
@@ -675,7 +694,6 @@
                         uiItem.style.opacity = '1';
                     }
                 } catch (err) {
-                    console.error(err);
                     alert('Network error while deleting file.');
                     uiItem.style.opacity = '1';
                 }
@@ -709,36 +727,78 @@
         }
 
         // --- 8. Saved Prompts Logic (Load & Delete) ---
-        const savedSelect = document.getElementById('savedPrompts');
-        const deletePromptBtn = document.getElementById('deletePromptBtn');
+        const savedPromptsWrapper = document.getElementById('saved-prompts-wrapper');
 
-        if (savedSelect) {
-            // Enable/Disable delete button based on selection
-            savedSelect.addEventListener('change', () => {
-                const hasValue = !!savedSelect.value;
-                if (deletePromptBtn) deletePromptBtn.disabled = !hasValue;
-            });
+        // Helper to attach listeners to dynamic elements
+        const attachSavedPromptsListeners = () => {
+            const savedSelect = document.getElementById('savedPrompts');
+            const deletePromptBtn = document.getElementById('deletePromptBtn');
+            const usePromptBtn = document.getElementById('usePromptBtn');
 
-            // Load Prompt
-            document.getElementById('usePromptBtn').addEventListener('click', () => {
-                const val = savedSelect.value;
-                if (val) tinymce.get('prompt').setContent(val);
-            });
-
-            // Delete Prompt
-            if (deletePromptBtn) {
-                deletePromptBtn.addEventListener('click', () => {
-                    const selectedOption = savedSelect.options[savedSelect.selectedIndex];
-                    const promptId = selectedOption.dataset.id;
-
-                    if (promptId && confirm('Are you sure you want to delete this saved prompt?')) {
-                        const form = document.getElementById('deletePromptForm');
-                        form.action = appState.endpoints.deletePromptBase + promptId;
-                        form.submit();
-                    }
+            if (savedSelect) {
+                // Enable/Disable delete button based on selection
+                savedSelect.addEventListener('change', () => {
+                    const hasValue = !!savedSelect.value;
+                    if (deletePromptBtn) deletePromptBtn.disabled = !hasValue;
                 });
+
+                // Load Prompt
+                if (usePromptBtn) {
+                    usePromptBtn.addEventListener('click', () => {
+                        const val = savedSelect.value;
+                        if (val) tinymce.get('prompt').setContent(val);
+                    });
+                }
+
+                // Delete Prompt
+                if (deletePromptBtn) {
+                    deletePromptBtn.addEventListener('click', async () => {
+                        const selectedOption = savedSelect.options[savedSelect.selectedIndex];
+                        const promptId = selectedOption.dataset.id;
+
+                        if (promptId && confirm('Are you sure you want to delete this saved prompt?')) {
+                            const originalText = deletePromptBtn.innerHTML;
+                            deletePromptBtn.disabled = true;
+                            deletePromptBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+                            try {
+                                const data = await sendAjaxRequest(appState.endpoints.deletePromptBase + promptId);
+
+                                if (data.status === 'success') {
+                                    showToast('Prompt deleted.');
+                                    selectedOption.remove();
+                                    savedSelect.value = ""; // Reset selection
+                                    deletePromptBtn.disabled = true; // Disable delete button
+
+                                    // If no prompts left, show alert
+                                    if (savedSelect.options.length <= 1) { // 1 because of "Select..." placeholder
+                                        savedPromptsWrapper.innerHTML = `
+                                            <div class="alert alert-light border mb-3 small text-muted">
+                                                <i class="bi bi-info-circle me-1"></i> No saved prompts yet. Save one after generating!
+                                            </div>
+                                        `;
+                                    }
+                                } else {
+                                    showToast(data.message || 'Failed to delete prompt.');
+                                }
+                            } catch (err) {
+                                // Error handled in helper
+                            } finally {
+                                // Check if button still exists (it might be gone if we switched to alert)
+                                const currentBtn = document.getElementById('deletePromptBtn');
+                                if (currentBtn) {
+                                    currentBtn.disabled = !savedSelect.value;
+                                    currentBtn.innerHTML = originalText;
+                                }
+                            }
+                        }
+                    });
+                }
             }
-        }
+        };
+
+        // Initial attachment
+        attachSavedPromptsListeners();
 
         // --- 9. Code Highlighting & Copy Snippets ---
         hljs.highlightAll();
@@ -770,6 +830,71 @@
                 format: 'text'
             });
         });
+
+        // AJAX Save Prompt
+        const savePromptForm = document.querySelector('#savePromptModal form');
+        if (savePromptForm) {
+            savePromptForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = savePromptForm.querySelector('button[type="submit"]');
+                const originalText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving...';
+
+                const formData = new FormData(savePromptForm);
+
+                try {
+                    const data = await sendAjaxRequest(savePromptForm.action, formData);
+
+                    if (data.status === 'success') {
+                        showToast('Prompt saved successfully!');
+
+                        // Close Modal
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('savePromptModal'));
+                        modal.hide();
+
+                        // Check if we need to switch from Alert to Dropdown
+                        let savedSelect = document.getElementById('savedPrompts');
+                        if (!savedSelect) {
+                            savedPromptsWrapper.innerHTML = `
+                                <div class="input-group mb-3">
+                                    <select class="form-select" id="savedPrompts">
+                                        <option value="" disabled>Select...</option>
+                                    </select>
+                                    <button class="btn btn-outline-secondary" type="button" id="usePromptBtn">Load</button>
+                                    <button class="btn btn-outline-danger" type="button" id="deletePromptBtn" disabled title="Delete Saved Prompt">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            `;
+                            // Re-attach listeners since we created new elements
+                            attachSavedPromptsListeners();
+                            savedSelect = document.getElementById('savedPrompts');
+                        }
+
+                        // Add to Dropdown
+                        const option = document.createElement('option');
+                        option.value = data.prompt.prompt_text;
+                        option.dataset.id = data.prompt.id;
+                        option.textContent = data.prompt.title;
+                        savedSelect.appendChild(option);
+
+                        // Auto-select and trigger change
+                        savedSelect.value = data.prompt.prompt_text;
+                        savedSelect.dispatchEvent(new Event('change'));
+
+                        savePromptForm.reset();
+                    } else {
+                        showToast(data.message || 'Failed to save prompt.');
+                    }
+                } catch (err) {
+                    // Error handled in helper
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            });
+        }
 
         document.getElementById('geminiForm').addEventListener('submit', function() {
             const btn = document.getElementById('generateBtn');

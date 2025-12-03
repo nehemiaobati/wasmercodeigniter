@@ -54,7 +54,7 @@ class GeminiController extends BaseController
         'application/pdf',
         'text/plain'
     ];
-    private const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    private const MAX_FILE_SIZE = 100 * 1024 * 1024; // 10MB
     private const MAX_FILES = 5;
 
 
@@ -352,18 +352,51 @@ class GeminiController extends BaseController
      *
      * @return RedirectResponse Redirects back with success or error message.
      */
-    public function addPrompt(): RedirectResponse
+    /**
+     * Adds a new saved prompt for the user.
+     *
+     * @return ResponseInterface|RedirectResponse JSON response for AJAX, Redirect for standard.
+     */
+    public function addPrompt()
     {
         $userId = (int) session()->get('userId');
-        if (!$this->validate(['title' => 'required|max_length[255]', 'prompt_text' => 'required'])) {
+
+        $rules = [
+            'title' => 'required|max_length[255]',
+            'prompt_text' => 'required'
+        ];
+
+        if (!$this->validate($rules)) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'message' => 'Invalid input.',
+                    'errors' => $this->validator->getErrors(),
+                    'token' => csrf_hash()
+                ]);
+            }
             return redirect()->back()->withInput()->with('error', 'Invalid input.');
         }
 
-        $this->promptModel->save([
+        $id = $this->promptModel->insert([
             'user_id' => $userId,
             'title' => $this->request->getPost('title'),
             'prompt_text' => $this->request->getPost('prompt_text')
         ]);
+
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON([
+                'status' => 'success',
+                'message' => 'Prompt saved successfully.',
+                'token' => csrf_hash(),
+                'prompt' => [
+                    'id' => $id,
+                    'title' => $this->request->getPost('title'),
+                    'prompt_text' => $this->request->getPost('prompt_text')
+                ]
+            ]);
+        }
+
         return redirect()->back()->with('success', 'Prompt saved.');
     }
 
@@ -373,14 +406,39 @@ class GeminiController extends BaseController
      * @param int $id The ID of the prompt to delete.
      * @return RedirectResponse Redirects back with success or error message.
      */
-    public function deletePrompt(int $id): RedirectResponse
+    /**
+     * Deletes a saved prompt.
+     *
+     * @param int $id The ID of the prompt to delete.
+     * @return ResponseInterface|RedirectResponse JSON response for AJAX, Redirect for standard.
+     */
+    public function deletePrompt(int $id)
     {
         $userId = (int) session()->get('userId');
         $prompt = $this->promptModel->find($id);
+
         if ($prompt && $prompt->user_id == $userId) {
             $this->promptModel->delete($id);
+
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'status' => 'success',
+                    'message' => 'Prompt deleted.',
+                    'token' => csrf_hash()
+                ]);
+            }
+
             return redirect()->back()->with('success', 'Prompt deleted.');
         }
+
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON([
+                'status' => 'error',
+                'message' => 'Unauthorized or not found.',
+                'token' => csrf_hash()
+            ]);
+        }
+
         return redirect()->back()->with('error', 'Unauthorized.');
     }
 
