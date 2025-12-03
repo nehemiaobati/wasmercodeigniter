@@ -70,6 +70,11 @@ class Backup extends BaseCommand
         }
 
         $path = WRITEPATH . 'backups/' . $filename;
+        $directory = dirname($path);
+
+        if (! is_dir($directory)) {
+            mkdir($directory, 0755, true);
+        }
 
         $db = Database::connect();
         $hostname = $db->hostname;
