@@ -54,7 +54,7 @@ class GeminiController extends BaseController
         'application/pdf',
         'text/plain'
     ];
-    private const MAX_FILE_SIZE = 100 * 1024 * 1024; // 10MB
+    private const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     private const MAX_FILES = 5;
 
 
@@ -441,7 +441,10 @@ class GeminiController extends BaseController
             ->setHeader('Content-Disposition', 'inline; filename="' . $fileName . '"');
 
         // Efficiently output file content without loading into memory
-        readfile($path);
+        if (readfile($path) !== false) {
+            // Auto-delete the file after serving (Serverless/Privacy optimization)
+            @unlink($path);
+        }
         return $this->response;
     }
 

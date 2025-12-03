@@ -73,22 +73,21 @@ class AuthController extends BaseController
         $userModel = new UserModel();
         // Generate a unique token for email verification.
         $token = bin2hex(random_bytes(50));
-        $data = [
-            'username' => $this->request->getVar('username'),
-            'email'    => $this->request->getVar('email'),
-            'password' => password_hash($this->request->getVar('password'), PASSWORD_DEFAULT),
-            'balance'  => 30, // Set initial balance for new users.
-            'verification_token' => $token,
-        ];
+        $user = new \App\Entities\User();
+        $user->username = $this->request->getVar('username');
+        $user->email    = $this->request->getVar('email');
+        $user->password = password_hash($this->request->getVar('password'), PASSWORD_DEFAULT);
+        $user->balance  = 30.00; // Set initial balance for new users.
+        $user->verification_token = $token;
 
         // Prepare and send the email verification message.
         $emailService = service('email');
-        $emailService->setTo($data['email']);
+        $emailService->setTo($user->email);
         $emailService->setReplyTo('afrikenkid@gmail.com');
         $emailService->setSubject('Email Verification');
         $verificationLink = url_to('verify_email', $token);
         $message = view('emails/verification_email', [
-            'name' => $data['username'],
+            'name' => $user->username,
             'verificationLink' => $verificationLink
         ]);
         $emailService->setMessage($message);
@@ -96,7 +95,7 @@ class AuthController extends BaseController
         // If email sending is successful, save the user and redirect to login with a success message.
         if ($emailService->send()) {
             // Save the new user data to the database.
-            $userModel->save($data);
+            $userModel->save($user);
             return redirect()->to(url_to('login'))->with('success', 'Registration successful. Please check your email to verify your account.');
         }
 

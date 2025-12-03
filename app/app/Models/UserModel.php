@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -71,10 +73,13 @@ class UserModel extends Model
      */
     public function deductBalance(int $userId, string $amount): bool
     {
+        $this->db->transStart();
+
         /** @var User|null $user */
         $user = $this->find($userId);
 
         if (! $user) {
+            $this->db->transRollback();
             return false; // User not found
         }
 
@@ -84,6 +89,13 @@ class UserModel extends Model
         // Deduct the balance regardless of the check
         $user->balance = bcsub((string) $user->balance, $amount, 2);
         $this->save($user);
+
+        $this->db->transComplete();
+
+        if ($this->db->transStatus() === false) {
+            log_message('critical', 'Transaction failed in deductBalance for user ' . $userId);
+            return false;
+        }
 
         // Return the result of the initial balance check
         return $sufficientBalance;
@@ -99,15 +111,27 @@ class UserModel extends Model
      */
     public function addBalance(int $userId, string $amount): bool
     {
+        $this->db->transStart();
+
         /** @var User|null $user */
         $user = $this->find($userId);
 
         if ($user) {
             $currentBalance = $user->balance !== null ? (string) $user->balance : '0.00';
             $user->balance = bcadd($currentBalance, (string)$amount, 2);
-            return $this->save($user);
+            $this->save($user);
+
+            $this->db->transComplete();
+
+            if ($this->db->transStatus() === false) {
+                log_message('critical', 'Transaction failed in addBalance for user ' . $userId);
+                return false;
+            }
+
+            return true;
         }
 
+        $this->db->transRollback();
         return false;
     }
 }

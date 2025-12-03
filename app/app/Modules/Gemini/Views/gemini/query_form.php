@@ -3,39 +3,30 @@
 <?= $this->section('styles') ?>
 <link rel="stylesheet" href="<?= base_url('public/assets/highlight/styles/atom-one-dark.min.css') ?>">
 <style>
-    :root {
+    /* Scoped Styles for Gemini View */
+    .gemini-view-container {
         --code-bg: #282c34;
     }
 
     /* Desktop-only full height */
     @media (min-width: 992px) {
-        .prompt-card {
+        .gemini-view-container .prompt-card {
             min-height: calc(100vh - 210px);
         }
     }
 
-    /* Mobile Toast Centering */
-    @media (max-width: 991.98px) {
-        .toast-container {
-            left: 50% !important;
-            transform: translateX(-50%) !important;
-            right: auto !important;
-        }
-    }
-
-    .prompt-editor-wrapper {
+    .gemini-view-container .prompt-editor-wrapper {
         height: 190px;
         overflow-y: auto;
     }
 
     /* Results Card - Account for Sticky Header */
-    #results-card {
+    .gemini-view-container #results-card {
         scroll-margin-top: 100px;
-        /* Adjust based on your header height */
     }
 
     /* Code Block Styling with Copy Button */
-    pre {
+    .gemini-view-container pre {
         background: var(--code-bg);
         color: #fff;
         padding: 1rem;
@@ -44,7 +35,7 @@
         margin-top: 1rem;
     }
 
-    .copy-code-btn {
+    .gemini-view-container .copy-code-btn {
         position: absolute;
         top: 5px;
         right: 5px;
@@ -53,12 +44,12 @@
         border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
-    pre:hover .copy-code-btn {
+    .gemini-view-container pre:hover .copy-code-btn {
         opacity: 1;
     }
 
     /* Upload Area & File Items */
-    #mediaUploadArea {
+    .gemini-view-container #mediaUploadArea {
         border: 2px dashed var(--bs-border-color);
         padding: 1rem;
         background: var(--bs-tertiary-bg);
@@ -66,52 +57,67 @@
     }
 
     @media (min-width: 992px) {
-        #mediaUploadArea {
+        .gemini-view-container #mediaUploadArea {
             padding: 2rem;
         }
     }
 
-    #mediaUploadArea.dragover {
+    .gemini-view-container #mediaUploadArea.dragover {
         background: var(--bs-primary-bg-subtle);
         border-color: var(--bs-primary);
     }
 
-    .file-item {
+    .gemini-view-container .file-item {
         background: var(--bs-body-bg);
         border: 1px solid var(--bs-border-color);
     }
 
-    .file-item .progress {
+    .gemini-view-container .file-item .progress {
         height: 4px;
         margin-top: 4px;
     }
 
     /* Model Selection Cards */
-    .model-card {
+    .gemini-view-container .model-card {
         cursor: pointer;
         transition: all 0.2s;
         border: 2px solid transparent;
     }
 
-    .model-card:hover {
+    .gemini-view-container .model-card:hover {
         transform: translateY(-4px);
         background-color: var(--bs-gray-100);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
-    .model-card.active {
+    .gemini-view-container .model-card.active {
         border-color: var(--bs-primary);
         background-color: var(--bs-primary-bg-subtle);
     }
 
-    .model-icon {
+    .gemini-view-container .model-icon {
         font-size: 1.5rem;
+    }
+
+    /* Responsive Toast Positioning */
+    .gemini-view-container .gemini-toast-container {
+        right: 0;
+        left: auto;
+        transform: none;
+    }
+
+    @media (max-width: 991.98px) {
+        .gemini-view-container .gemini-toast-container {
+            left: 50%;
+            right: auto;
+            transform: translateX(-50%);
+        }
     }
 </style>
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
-<div class="container my-3 my-lg-5">
+<div class="container my-3 my-lg-5 gemini-view-container">
     <!-- Header -->
     <div class="blueprint-header text-center mb-4">
         <h1 class="fw-bold"><i class="bi bi-stars text-primary"></i> AI Studio</h1>
@@ -219,7 +225,7 @@
                         <div class="prompt-editor-wrapper p-3 flex-grow-1">
                             <input type="hidden" name="model_id" id="selectedModelId" value="gemini-2.0-flash">
                             <input type="hidden" name="generation_type" id="generationType" value="text">
-                            <textarea id="prompt" name="prompt" class="visually-hidden"><?= old('prompt') ?></textarea>
+                            <textarea id="prompt" name="prompt"><?= old('prompt') ?></textarea>
                         </div>
 
                         <!-- Upload & Actions -->
@@ -364,7 +370,7 @@
     </div>
 </div>
 
-<div class="toast-container position-fixed bottom-0 end-0 p-3">
+<div class="toast-container position-fixed bottom-0 p-3 gemini-toast-container">
     <div id="liveToast" class="toast text-bg-dark" role="alert">
         <div class="toast-body"></div>
     </div>

@@ -60,6 +60,29 @@ class MediaController extends BaseController
         $userId = (int) session()->get('userId');
         $prompt = $this->request->getVar('prompt');
         $modelId = $this->request->getVar('model_id');
+        $uploadedFileIds = (array) $this->request->getVar('uploaded_media');
+
+        // Check if we have uploaded files to process
+        $input = $prompt;
+        if (!empty($uploadedFileIds)) {
+            $parts = [['text' => $prompt]];
+            $userTempPath = WRITEPATH . 'uploads/gemini_temp/' . $userId . '/';
+
+            foreach ($uploadedFileIds as $fileId) {
+                $filePath = $userTempPath . basename($fileId);
+                if (file_exists($filePath)) {
+                    $mimeType = mime_content_type($filePath);
+                    $parts[] = ['inlineData' => [
+                        'mimeType' => $mimeType,
+                        'data' => base64_encode(file_get_contents($filePath))
+                    ]];
+                    // Cleanup handled in service or separate job, but for now we leave it or clean up here?
+                    // GeminiController cleans up after generation. We should probably do the same.
+                    @unlink($filePath);
+                }
+            }
+            $input = $parts;
+        }
 
         // Validate that the requested model ID exists in the configuration
         $configs = $this->mediaService->getMediaConfig();
@@ -68,7 +91,7 @@ class MediaController extends BaseController
         }
 
         try {
-            $result = $this->mediaService->generateMedia($userId, $prompt, $modelId);
+            $result = $this->mediaService->generateMedia($userId, $input, $modelId);
 
             // Append CSRF token to response for frontend refresh
             $result['token'] = csrf_hash();
@@ -150,7 +173,11 @@ class MediaController extends BaseController
         }
 
         // Use readfile for efficient output buffering
-        readfile($path);
+        if (readfile($path) !== false) {
+            // Auto-delete the file after serving (Serverless/Privacy optimization)
+            // This ensures we don't accumulate files in a stateless/ephemeral environment.
+            @unlink($path);
+        }
         exit;
     }
 }

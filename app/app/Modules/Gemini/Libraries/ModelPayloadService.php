@@ -153,10 +153,17 @@ class ModelPayloadService
             // -------------------------------------------------------
             // IMAGEN 4.0 (Standard/Ultra)
             // -------------------------------------------------------
+            // -------------------------------------------------------
+            // IMAGEN 4.0 (Standard/Ultra/Fast)
+            // -------------------------------------------------------
             case 'imagen-4.0-generate-preview-06-06':
             case 'imagen-4.0-ultra-generate-preview-06-06':
             case 'imagen-4.0-ultra-generate-001':
-                // Extract prompt
+            case 'imagen-4.0-fast-generate-001':
+            case 'imagen-4.0-generate-001':
+                // Extract prompt (Text ONLY)
+                // Worst-case handling: If user sends image+text, we MUST strip the image 
+                // because Imagen 'predict' endpoint will 400 Error on unknown fields or complex structures.
                 $promptText = '';
                 foreach ($parts as $part) {
                     if (isset($part['text'])) $promptText .= $part['text'] . ' ';
@@ -183,7 +190,8 @@ class ModelPayloadService
             // VEO 2.0 (Video Generation)
             // -------------------------------------------------------
             case 'veo-2.0-generate-001':
-                // Extract prompt
+                // Extract prompt (Text ONLY)
+                // Veo currently only supports text-to-video via this specific endpoint structure.
                 $promptText = '';
                 foreach ($parts as $part) {
                     if (isset($part['text'])) $promptText .= $part['text'] . ' ';

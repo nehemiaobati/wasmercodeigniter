@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Controllers;
 
@@ -13,6 +15,8 @@ use CodeIgniter\HTTP\RedirectResponse;
  */
 class CampaignController extends BaseController
 {
+
+
     /**
      * Displays the email campaign creation form.
      *
@@ -33,7 +37,7 @@ class CampaignController extends BaseController
             'metaDescription' => 'Compose and send a new email campaign to all registered users.',
             'canonicalUrl'    => url_to('admin.campaign.create'),
             // Fetch campaigns ordered by creation date, descending
-            'campaigns'       => $campaignModel->orderBy('created_at', 'DESC')->findAll(), 
+            'campaigns'       => $campaignModel->orderBy('created_at', 'DESC')->findAll(),
         ];
 
         return view('admin/campaign/create', $data);
@@ -129,8 +133,12 @@ class CampaignController extends BaseController
         $subject = $this->request->getPost('subject');
         $messageBody = $this->request->getPost('message');
 
-        // Define allowed tags for sanitization, mirroring what's in the email view.
+        // Define allowed tags for sanitization.
         $allowed_tags = '<p><a><strong><em><ul><ol><li><br><h1><h2><h3><h4><h5><h6>';
+
+        // Replace [your_base_url] placeholder with the actual base URL.
+        $messageBody = str_replace('[your_base_url]', rtrim(base_url(), '/'), $messageBody);
+
         // Sanitize the message body before use.
         $sanitizedMessageBody = strip_tags($messageBody, $allowed_tags);
 
@@ -164,9 +172,9 @@ class CampaignController extends BaseController
                 $successCount++;
             } else {
                 $failedCount++;
-            // Log the error for this specific user.
-            log_message('error', 'Campaign email sending failed for user ' . $user->email . ': ' . $emailService->printDebugger(['headers']));
-        }
+                // Log the error for this specific user.
+                log_message('error', 'Campaign email sending failed for user ' . $user->email . ': ' . $emailService->printDebugger(['headers']));
+            }
             // It's good practice to clear recipients if the email service object is reused,
             // though CodeIgniter's service might handle this internally.
             // $emailService->clearTo();

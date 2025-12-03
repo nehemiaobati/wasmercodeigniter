@@ -28,9 +28,7 @@ class CreateGeneratedMediaTable extends Migration
                 'type'       => 'VARCHAR',
                 'constraint' => 100,
             ],
-            'prompt' => [
-                'type' => 'TEXT',
-            ],
+
             'local_path' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 255,
