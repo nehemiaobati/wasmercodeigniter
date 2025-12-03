@@ -93,7 +93,7 @@ class DocumentService
     {
         try {
             $options = new Options();
-            $options->set('defaultFont', 'Georgia');
+            $options->set('defaultFont', 'Calibri');
             $options->set('isRemoteEnabled', true);
             // CRITICAL: For wasmer production environments always include this
             $options->set('isFontSubsettingEnabled', false);
@@ -264,7 +264,7 @@ class DocumentService
                 <style>
                     /* Professional Typography Hierarchy */
                     body {
-                        font-family: Georgia, Cambria, "Times New Roman", serif;
+                        font-family: Calibri, Arial, sans-serif;
                         font-size: 11pt;
                         line-height: 1.6;
                         color: #2c3e50;
@@ -273,7 +273,7 @@ class DocumentService
                     }
 
                     h1 {
-                        font-family: Helvetica, Arial, sans-serif;
+                        font-family: Calibri, Arial, sans-serif;
                         font-size: 22pt;
                         font-weight: 700;
                         color: #1a1a1a;
@@ -283,7 +283,7 @@ class DocumentService
                     }
 
                     h2 {
-                        font-family: Helvetica, Arial, sans-serif;
+                        font-family: Calibri, Arial, sans-serif;
                         font-size: 16pt;
                         font-weight: 600;
                         color: #2c3e50;
@@ -291,7 +291,7 @@ class DocumentService
                     }
 
                     h3 {
-                        font-family: Helvetica, Arial, sans-serif;
+                        font-family: Calibri, Arial, sans-serif;
                         font-size: 13pt;
                         font-weight: 600;
                         color: #34495e;
