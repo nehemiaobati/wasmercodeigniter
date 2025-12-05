@@ -1,82 +1,89 @@
-<?php declare(strict_types=1);
+<?php
 
-namespace App\Modules\Blog\Database\Migrations;
+declare(strict_types=1);
 
-use CodeIgniter\Database\Migration;
+/**
+ * This file is part of CodeIgniter 4 framework.
+ *
+ * (c) CodeIgniter Foundation <admin@codeigniter.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
 
-class CreatePostsTable extends Migration
+namespace CodeIgniter\Commands\Database;
+
+use CodeIgniter\CLI\BaseCommand;
+use CodeIgniter\CLI\CLI;
+
+/**
+ * Does a rollback followed by a latest to refresh the current state
+ * of the database.
+ */
+class MigrateRefresh extends BaseCommand
 {
-    public function up()
-    {
-        $this->forge->addField([
-            'id' => [
-                'type'           => 'INT',
-                'constraint'     => 11,
-                'unsigned'       => true,
-                'auto_increment' => true,
-            ],
-            'title' => [
-                'type'       => 'VARCHAR',
-                'constraint' => '255',
-            ],
-            'slug' => [
-                'type'       => 'VARCHAR',
-                'constraint' => '255',
-                'unique'     => true,
-            ],
-            'excerpt' => [
-                'type'       => 'TEXT',
-                'null'       => true,
-            ],
-            // FIX: Renamed column to 'body_content' and changed type to JSON.
-            'body_content' => [
-                'type' => 'JSON',
-                'null' => true,
-            ],
-            'featured_image_url' => [
-                'type'       => 'VARCHAR',
-                'constraint' => '255',
-                'null'       => true,
-            ],
-            'author_name' => [
-                'type'       => 'VARCHAR',
-                'constraint' => '255',
-                'default'    => 'Nehemia Obati',
-            ],
-            'category_name' => [
-                'type'       => 'VARCHAR',
-                'constraint' => '100',
-                'null'       => true,
-            ],
-            'meta_description' => [
-                'type'       => 'VARCHAR',
-                'constraint' => '255',
-                'null'       => true,
-            ],
-            'status' => [
-                'type'       => 'VARCHAR',
-                'constraint' => '50',
-                'default'    => 'published',
-            ],
-            'published_at' => [
-                'type' => 'DATETIME',
-                'null' => true,
-            ],
-            'created_at' => [
-                'type' => 'DATETIME',
-                'null' => true,
-            ],
-            'updated_at' => [
-                'type' => 'DATETIME',
-                'null' => true,
-            ],
-        ]);
-        $this->forge->addKey('id', true);
-        $this->forge->createTable('posts');
-    }
+    /**
+     * The group the command is lumped under
+     * when listing commands.
+     *
+     * @var string
+     */
+    protected $group = 'Database';
 
-    public function down()
+    /**
+     * The Command's name
+     *
+     * @var string
+     */
+    protected $name = 'migrate:refresh';
+
+    /**
+     * the Command's short description
+     *
+     * @var string
+     */
+    protected $description = 'Does a rollback followed by a latest to refresh the current state of the database.';
+
+    /**
+     * the Command's usage
+     *
+     * @var string
+     */
+    protected $usage = 'migrate:refresh [options]';
+
+    /**
+     * the Command's Options
+     *
+     * @var array<string, string>
+     */
+    protected $options = [
+        '-n'    => 'Set migration namespace',
+        '-g'    => 'Set database group',
+        '--all' => 'Set latest for all namespace, will ignore (-n) option',
+        '-f'    => 'Force command - this option allows you to bypass the confirmation question when running this command in a production environment',
+    ];
+
+    /**
+     * Does a rollback followed by a latest to refresh the current state
+     * of the database.
+     */
+    public function run(array $params)
     {
-        $this->forge->dropTable('posts');
+        $params['b'] = 0;
+
+        if (ENVIRONMENT === 'production') {
+            // @codeCoverageIgnoreStart
+            $force = array_key_exists('f', $params) || CLI::getOption('f');
+
+            if (! $force && CLI::prompt(lang('Migrations.refreshConfirm'), ['y', 'n']) === 'n') {
+                return;
+            }
+
+            $params['f'] = null;
+            // @codeCoverageIgnoreEnd
+        }
+
+        $this->call('migrate:rollback', $params);
+        $this->call('migrate', $params);
     }
 }
