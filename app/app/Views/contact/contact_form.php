@@ -22,17 +22,17 @@
 
 <?= $this->section('content') ?>
 <script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "ContactPage",
-  "name": "Contact Us - Afrikenkid",
-  "description": "Get in touch with the Afrikenkid team for support, inquiries, or custom development projects.",
-  "url": "<?= url_to('contact.form') ?>",
-  "mainEntityOfPage": {
-    "@type": "WebPage",
-    "@id": "<?= url_to('contact.form') ?>"
-  }
-}
+    {
+        "@context": "https://schema.org",
+        "@type": "ContactPage",
+        "name": "Contact Us - Afrikenkid",
+        "description": "Get in touch with the Afrikenkid team for support, inquiries, or custom development projects.",
+        "url": "<?= url_to('contact.form') ?>",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "<?= url_to('contact.form') ?>"
+        }
+    }
 </script>
 <div class="container my-5">
     <div class="row justify-content-center">
@@ -46,28 +46,28 @@
                     </div>
 
                     <?= form_open(url_to('contact.send'), ['id' => 'contactForm']) ?>
-                        <div class="form-floating mb-3">
-                            <input type="text" class="form-control" id="name" name="name" placeholder="Your Name" value="<?= old('name') ?>" required>
-                            <label for="name">Name</label>
-                        </div>
-                        <div class="form-floating mb-3">
-                            <input type="email" class="form-control" id="email" name="email" placeholder="Your Email" value="<?= old('email') ?>" required>
-                            <label for="email">Email</label>
-                        </div>
-                        <div class="form-floating mb-3">
-                            <input type="text" class="form-control" id="subject" name="subject" placeholder="Subject" value="<?= old('subject') ?>" required>
-                            <label for="subject">Subject</label>
-                        </div>
-                        <div class="form-floating mb-4">
-                            <textarea class="form-control" id="message" name="message" placeholder="Your Message" style="height: 150px" required><?= old('message') ?></textarea>
-                            <label for="message">Message</label>
-                        </div>
-                        <div class="mb-3">
-                            <div class="g-recaptcha" data-sitekey="<?= config('Config\Custom\Recaptcha')->siteKey ?>"></div>
-                        </div>
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg fw-bold" id="sendMessageButton">Send Message</button>
-                        </div>
+                    <div class="form-floating mb-3">
+                        <input type="text" class="form-control" id="name" name="name" placeholder="Your Name" value="<?= old('name') ?>" required>
+                        <label for="name">Name</label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input type="email" class="form-control" id="email" name="email" placeholder="Your Email" value="<?= old('email') ?>" required>
+                        <label for="email">Email</label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input type="text" class="form-control" id="subject" name="subject" placeholder="Subject" value="<?= old('subject') ?>" required>
+                        <label for="subject">Subject</label>
+                    </div>
+                    <div class="form-floating mb-4">
+                        <textarea class="form-control" id="message" name="message" placeholder="Your Message" style="height: 150px" required><?= old('message') ?></textarea>
+                        <label for="message">Message</label>
+                    </div>
+                    <div class="mb-3">
+                        <div class="g-recaptcha" data-sitekey="<?= service('recaptchaService')->getSiteKey() ?>"></div>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg fw-bold" id="sendMessageButton">Send Message</button>
+                    </div>
                     <?= form_close() ?>
                 </div>
             </div>

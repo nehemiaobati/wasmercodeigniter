@@ -6,9 +6,14 @@ namespace App\Libraries;
 
 class RecaptchaService
 {
+    public function getSiteKey(): string
+    {
+        return (string) env('recaptcha_siteKey');
+    }
+
     public function verify(string $response): bool
     {
-        $secret = config('Config\Custom\Recaptcha')->secretKey;
+        $secret = (string) env('recaptcha_secretKey');
 
         try {
             $client = \Config\Services::curlrequest();

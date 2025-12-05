@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Controllers;
 
@@ -30,6 +32,14 @@ class PortfolioController extends BaseController
 
         if (! $this->validate($rules)) {
             return redirect()->back()->withInput()->with('error', $this->validator->getErrors());
+        }
+
+        // Get reCAPTCHA response from the form submission.
+        $recaptchaResponse = $this->request->getPost('g-recaptcha-response');
+
+        // Verify the reCAPTCHA response.
+        if (! service('recaptchaService')->verify($recaptchaResponse)) {
+            return redirect()->back()->withInput()->with('error', 'Please complete the reCAPTCHA.');
         }
 
         $name    = $this->request->getPost('name', FILTER_SANITIZE_SPECIAL_CHARS);
@@ -64,7 +74,7 @@ class PortfolioController extends BaseController
         if ($emailService->send()) {
             return redirect()->back()->with('success', 'Your message has been sent successfully!');
         }
-        
+
         $data = $emailService->printDebugger(['headers']);
         log_message('error', 'Portfolio email sending failed: ' . print_r($data, true));
         return redirect()->back()->with('error', 'Failed to send your message. Please try again later.');

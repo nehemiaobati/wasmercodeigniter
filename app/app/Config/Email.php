@@ -6,8 +6,8 @@ use CodeIgniter\Config\BaseConfig;
 
 class Email extends BaseConfig
 {
-    public string $fromEmail;
-    public string $fromName;
+    public string $fromEmail  = '';
+    public string $fromName   = '';
     public string $recipients = '';
 
     /**
@@ -18,7 +18,7 @@ class Email extends BaseConfig
     /**
      * The mail sending protocol: mail, sendmail, smtp
      */
-    public string $protocol = 'smtp';
+    public string $protocol = 'mail';
 
     /**
      * The server path to Sendmail.
@@ -28,22 +28,22 @@ class Email extends BaseConfig
     /**
      * SMTP Server Hostname
      */
-    public string $SMTPHost;
+    public string $SMTPHost = '';
 
     /**
      * SMTP Username
      */
-    public string $SMTPUser;
+    public string $SMTPUser = '';
 
     /**
      * SMTP Password
      */
-    public string $SMTPPass;
+    public string $SMTPPass = '';
 
     /**
      * SMTP Port
      */
-    public int $SMTPPort;
+    public int $SMTPPort = 25;
 
     /**
      * SMTP Timeout (in seconds)
@@ -62,7 +62,7 @@ class Email extends BaseConfig
      *             to the server. 'ssl' means implicit SSL. Connection on port
      *             465 should set this to ''.
      */
-    public string $SMTPCrypto;
+    public string $SMTPCrypto = 'tls';
 
     /**
      * Enable word-wrap
@@ -77,7 +77,7 @@ class Email extends BaseConfig
     /**
      * Type of mail, either 'text' or 'html'
      */
-    public string $mailType = 'html';
+    public string $mailType = 'text';
 
     /**
      * Character set (utf-8, iso-8859-1, etc.)
@@ -87,7 +87,7 @@ class Email extends BaseConfig
     /**
      * Whether to validate the email address
      */
-    public bool $validate = true;
+    public bool $validate = false;
 
     /**
      * Email Priority. 1 = highest. 5 = lowest. 3 = normal
@@ -118,17 +118,4 @@ class Email extends BaseConfig
      * Enable notify message from server
      */
     public bool $DSN = false;
-
-    public function __construct()
-    {
-        parent::__construct();
-
-        $this->fromEmail = env('email_fromEmail', 'afrikenkid@gmail.com');
-        $this->fromName = env('email_fromName', 'AFRIKENKID');
-        $this->SMTPHost = env('email_SMTPHost', 'smtp.gmail.com');
-        $this->SMTPUser = env('email_SMTPUser', 'afrikenkid@gmail.com');
-        $this->SMTPPass = env('email_SMTPPass');
-        $this->SMTPPort = (int) env('email_SMTPPort', 587);
-        $this->SMTPCrypto = env('email_SMTPCrypto', 'tls');
-    }
 }

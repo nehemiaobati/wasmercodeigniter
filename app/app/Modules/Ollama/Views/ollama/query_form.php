@@ -1,7 +1,7 @@
 <?= $this->extend('layouts/default') ?>
 
 <?= $this->section('styles') ?>
-<link rel="stylesheet" href="<?= base_url('public/assets/highlight/styles/atom-one-dark.min.css') ?>">
+<link rel="stylesheet" href="<?= base_url('assets/highlight/styles/atom-one-dark.min.css') ?>">
 <style>
     :root {
         --code-bg: #282c34;
@@ -267,8 +267,8 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
-<script src="<?= base_url('public/assets/highlight/highlight.js') ?>"></script>
-<script src="<?= base_url('public/assets/tinymce/tinymce.min.js') ?>"></script>
+<script src="<?= base_url('assets/highlight/highlight.js') ?>"></script>
+<script src="<?= base_url('assets/tinymce/tinymce.min.js') ?>"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         // --- 1. Config & State ---

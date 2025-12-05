@@ -22,15 +22,17 @@
         background-size: cover;
         color: var(--text-heading);
     }
-    
+
     .illustration-content h4 {
         font-weight: 700;
         font-size: 1.75rem;
     }
+
     .illustration-content p {
         font-size: 1.1rem;
         opacity: 0.9;
     }
+
     html[data-bs-theme="light"] .illustration-content p {
         color: white;
     }
@@ -45,7 +47,7 @@
                 <div class="row g-0">
                     <div class="col-lg-6 d-none d-lg-block auth-illustration">
                         <div class="illustration-content text-center">
-                             <i class="bi bi-box-arrow-in-right text-primary" style="font-size: 4rem; margin-bottom: 1rem;"></i>
+                            <i class="bi bi-box-arrow-in-right text-primary" style="font-size: 4rem; margin-bottom: 1rem;"></i>
                             <h4>Let's Get Back to It!</h4>
                             <p>Your AI assistant and crypto data dashboard are waiting. Log in to continue your work.</p>
                         </div>
@@ -69,7 +71,7 @@
                                     <label for="password">Password</label>
                                 </div>
                                 <div class="mb-3">
-                                    <div class="g-recaptcha" data-sitekey="<?= config('Config\Custom\Recaptcha')->siteKey ?>"></div>
+                                    <div class="g-recaptcha" data-sitekey="<?= service('recaptchaService')->getSiteKey() ?>"></div>
                                 </div>
                                 <div class="d-grid">
                                     <button type="submit" class="btn btn-primary btn-lg">Login</button>

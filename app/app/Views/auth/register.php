@@ -22,15 +22,17 @@
         background-size: cover;
         color: var(--text-heading);
     }
-    
+
     .illustration-content h4 {
         font-weight: 700;
         font-size: 1.75rem;
     }
+
     .illustration-content p {
         font-size: 1.1rem;
         opacity: 0.9;
     }
+
     html[data-bs-theme="light"] .illustration-content p {
         color: white;
     }
@@ -42,7 +44,7 @@
         if (form) {
             form.addEventListener('submit', function(event) {
                 if (form.checkValidity()) {
-                   // fbq('track', 'CompleteRegistration');
+                    // fbq('track', 'CompleteRegistration');
                 }
             });
         }
@@ -87,7 +89,7 @@
                                     <label class="form-check-label" for="terms">I agree to the <a href="<?= url_to('terms') ?>" target="_blank">Terms and Conditions</a></label>
                                 </div>
                                 <div class="mb-3">
-                                    <div class="g-recaptcha" data-sitekey="<?= config('Config\Custom\Recaptcha')->siteKey ?>"></div>
+                                    <div class="g-recaptcha" data-sitekey="<?= service('recaptchaService')->getSiteKey() ?>"></div>
                                 </div>
                                 <div class="d-grid">
                                     <button type="submit" id="submitButton" class="btn btn-primary btn-lg">Register</button>
@@ -96,9 +98,9 @@
                             </form>
                         </div>
                     </div>
-                     <div class="col-lg-6 d-none d-lg-block auth-illustration">
+                    <div class="col-lg-6 d-none d-lg-block auth-illustration">
                         <div class="illustration-content text-center">
-                             <i class="bi bi-gift-fill text-primary" style="font-size: 4rem; margin-bottom: 1rem;"></i>
+                            <i class="bi bi-gift-fill text-primary" style="font-size: 4rem; margin-bottom: 1rem;"></i>
                             <h4>Join Our Platform</h4>
                             <p>Your free account comes with <strong>Ksh. 30</strong> in starter credits to try our AI and Crypto tools right away.</p>
                         </div>
