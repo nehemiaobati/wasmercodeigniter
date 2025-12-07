@@ -56,8 +56,8 @@ class AdminController extends BaseController
         // Perform a search for users whose username or email contains the search query.
         // Use paginate(10) to retrieve paginated results.
         $data['users'] = $userModel->like('username', $searchQuery)
-                                   ->orLike('email', $searchQuery)
-                                   ->paginate(10);
+            ->orLike('email', $searchQuery)
+            ->paginate(10);
         // Pass the pager instance to the view for pagination controls.
         $data['pager'] = $userModel->pager;
         $data['search_query'] = $searchQuery;
@@ -103,7 +103,7 @@ class AdminController extends BaseController
     public function updateBalance($id)
     {
         $userModel = new UserModel();
-        
+
         /** @var User|null $user */
         $user = $userModel->find($id);
 
@@ -129,14 +129,14 @@ class AdminController extends BaseController
         // Re-fetch user within transaction to ensure we have the latest data and lock the row
         $userInTransaction = $userModel->find($id);
         if (!$userInTransaction) {
-             $db->transComplete();
-             return redirect()->back()->with('error', 'User not found during transaction.');
+            $db->transComplete();
+            return redirect()->back()->with('error', 'User not found during transaction.');
         }
 
         if ($action === 'deposit') {
             $userModel->addBalance($id, (string)$amount);
         } elseif ($action === 'withdraw') {
-            if (bccomp((string) $userInTransaction->getBalance(), (string) $amount, 2) < 0) {
+            if (bccomp((string) $userInTransaction->balance, (string) $amount, 2) < 0) {
                 // End transaction before redirecting
                 $db->transComplete();
                 return redirect()->back()->withInput()->with('error', 'Insufficient balance.');
@@ -150,7 +150,7 @@ class AdminController extends BaseController
             log_message('error', "Admin balance update transaction failed for user ID: {$id}");
             return redirect()->back()->withInput()->with('error', 'A database error occurred. Failed to update balance.');
         }
-        
+
         return redirect()->to(url_to('admin.users.show', $id))->with('success', 'Balance updated successfully.');
     }
 
@@ -201,7 +201,7 @@ class AdminController extends BaseController
 
         $logPath = WRITEPATH . 'logs/';
         $logFiles = get_filenames($logPath);
-        
+
         // Sort files by name to get the latest one (log-YYYY-MM-DD.log)
         if ($logFiles) {
             rsort($logFiles);
