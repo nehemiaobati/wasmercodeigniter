@@ -16,6 +16,7 @@ use App\Modules\Gemini\Models\UserSettingsModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 use App\Modules\Gemini\Libraries\DocumentService;
+use App\Modules\Gemini\Libraries\MediaGenerationService;
 use CodeIgniter\I18n\Time;
 use Parsedown;
 
@@ -97,8 +98,7 @@ class GeminiController extends BaseController
         $userSetting = $this->userSettingsModel->where('user_id', $userId)->first();
 
         // Fetch Media Configs for Dynamic Tabs
-        $mediaService = service('mediaGenerationService');
-        $mediaConfigs = $mediaService->getMediaConfig();
+        $mediaConfigs = MediaGenerationService::MEDIA_CONFIGS;
 
         $data = [
             'pageTitle'              => 'AI Workspace | Afrikenkid',
@@ -109,6 +109,7 @@ class GeminiController extends BaseController
             'prompts'                => $prompts,
             'assistant_mode_enabled' => $userSetting ? $userSetting->assistant_mode_enabled : true,
             'voice_output_enabled'   => $userSetting ? $userSetting->voice_output_enabled : false,
+            'stream_output_enabled'  => $userSetting ? $userSetting->stream_output_enabled : false,
             'audio_url'              => session()->getFlashdata('audio_url'),
             'maxFileSize'            => self::MAX_FILE_SIZE,
             'maxFiles'               => self::MAX_FILES,
@@ -216,93 +217,57 @@ class GeminiController extends BaseController
             return redirect()->back()->withInput()->with('error', 'Prompt is too long. Maximum 200,000 characters allowed.');
         }
 
+        // 1. Prepare Inputs
         $userSetting = $this->userSettingsModel->where('user_id', $userId)->first();
-        $isAssistantMode = $userSetting ? $userSetting->assistant_mode_enabled : true;
-        $isVoiceMode = $userSetting ? $userSetting->voice_output_enabled : false;
+        $options = [
+            'assistant_mode' => $userSetting ? $userSetting->assistant_mode_enabled : true,
+            'voice_mode' => $userSetting ? $userSetting->voice_output_enabled : false,
+        ];
 
         $inputText = (string) $this->request->getPost('prompt');
         $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
 
-        // 1. Prepare Context & Files
-        $contextData = $this->_prepareContext($userId, $inputText, $isAssistantMode);
+        // Handle File Parts
         $uploadResult = $this->_handlePreUploadedFiles($uploadedFileIds, $userId);
-
         if (isset($uploadResult['error'])) {
             $this->_cleanupTempFiles($uploadedFileIds, $userId);
             return redirect()->back()->withInput()->with('error', $uploadResult['error']);
         }
+        $fileParts = $uploadResult['parts'];
 
-        $parts = $uploadResult['parts'];
-        if ($contextData['finalPrompt']) {
-            array_unshift($parts, ['text' => $contextData['finalPrompt']]);
+        // 2. Process Interaction via Service
+        $result = $this->geminiService->processInteraction($userId, $inputText, $fileParts, $options);
+
+        $this->_cleanupTempFiles($uploadedFileIds, $userId); // Always cleanup
+
+        if (isset($result['error'])) {
+            return redirect()->back()->withInput()->with('error', $result['error']);
         }
 
-        if (empty($parts)) {
-            $this->_cleanupTempFiles($uploadedFileIds, $userId);
-            return redirect()->back()->withInput()->with('error', 'Please provide a prompt or file.');
-        }
-
-        // 2. Check Balance (Estimation via Service)
-        $estimate = $this->geminiService->estimateCost($parts);
-        if ($estimate['status'] && $user->balance < $estimate['costKSH']) {
-            $this->_cleanupTempFiles($uploadedFileIds, $userId);
-            return redirect()->back()->withInput()->with('error', "Insufficient balance. Estimated Input Cost: KSH " . number_format($estimate['costKSH'], 2));
-        } elseif (!$estimate['status']) {
-            // Log warning but allow to proceed if estimation fails
-            log_message('warning', 'Cost estimation failed: ' . $estimate['error']);
-        }
-
-        // 3. Call API
-        $apiResponse = $this->geminiService->generateContent($parts);
-        $this->_cleanupTempFiles($uploadedFileIds, $userId);
-
-        if (isset($apiResponse['error'])) {
-            return redirect()->back()->withInput()->with('error', $apiResponse['error']);
-        }
-
-        // 4. Handle Audio (Voice Mode)
+        // 3. Post-Process Audio (File Saving - Controller Responsibility)
         $audioUrl = null;
         $audioFilePath = null;
-        $audioUsage = null;
-
-        if ($isVoiceMode && !empty(trim($apiResponse['result']))) {
-            $speech = $this->geminiService->generateSpeech($apiResponse['result']);
-            if ($speech['status']) {
-                $audioUrl = $this->_processAudioData($speech['audioData']);
-                $audioUsage = $speech['usage'] ?? null;
+        if (!empty($result['audioData'])) {
+            $audioUrl = $this->_processAudioData($result['audioData']);
+            if ($audioUrl) {
                 // Store the absolute file path for the view to read
-                $userId = (int) session()->get('userId');
                 $audioFilePath = WRITEPATH . 'uploads/ttsaudio_secure/' . $userId . '/' . basename($audioUrl);
             }
         }
 
-        // 5. Update Memory (Assistant Mode)
-        if ($isAssistantMode && isset($contextData['memoryService'])) {
-            $contextData['memoryService']->updateMemory(
-                (string)$this->request->getPost('prompt'),
-                $apiResponse['result'],
-                $contextData['usedInteractionIds']
-            );
+        // Flash Message
+        if ($result['costKSH'] > 0) {
+            session()->setFlashdata('success', "KSH " . number_format($result['costKSH'], 2) . " deducted.");
         }
 
-        // 6. Deduct Cost & Flash Message
-        if (isset($apiResponse['usage']) || $audioUsage) {
-            $textUsage = $apiResponse['usage'] ?? [];
-            $costData = $this->geminiService->calculateCost($textUsage, $audioUsage);
-            $deduction = number_format($costData['costKSH'], 4, '.', '');
-
-            $this->userModel->deductBalance($userId, $deduction);
-            session()->setFlashdata('success', "KSH " . number_format($costData['costKSH'], 2) . " deducted.");
-        }
-
-        // 7. Output
+        // 4. Output
         $parsedown = new Parsedown();
         $parsedown->setSafeMode(true);
         $parsedown->setBreaksEnabled(true);
 
         $redirect = redirect()->back()->withInput()
-            ->with('result', $parsedown->text($apiResponse['result']))
-            ->with('raw_result', $apiResponse['result']);
+            ->with('result', $parsedown->text($result['result']))
+            ->with('raw_result', $result['result']);
 
         if ($audioUrl) {
             $redirect->with('audio_url', $audioUrl);
@@ -315,6 +280,123 @@ class GeminiController extends BaseController
     }
 
     /**
+     * Handles streaming text generation via Server-Sent Events (SSE).
+     *
+     * @return ResponseInterface
+     */
+    public function stream(): ResponseInterface
+    {
+        $userId = (int) session()->get('userId');
+        $user = $this->userModel->find($userId);
+
+        if (!$user) {
+            return $this->response->setStatusCode(401)->setJSON(['error' => 'User not found']);
+        }
+
+        // Set Headers for SSE
+        $this->response->setContentType('text/event-stream');
+        $this->response->setHeader('Cache-Control', 'no-cache');
+        $this->response->setHeader('Connection', 'keep-alive');
+        $this->response->setHeader('X-Accel-Buffering', 'no'); // Disable buffering for Nginx
+
+        // Input Validation (Reusing logic)
+        $inputText = (string) $this->request->getPost('prompt');
+        $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
+
+        if (empty(trim($inputText)) && empty($uploadedFileIds)) {
+            $this->response->setBody("data: " . json_encode(['error' => 'Please provide a prompt.']) . "\n\n");
+            return $this->response;
+        }
+
+        // 1. Prepare Context & Files
+        $userSetting = $this->userSettingsModel->where('user_id', $userId)->first();
+        $isAssistantMode = $userSetting ? $userSetting->assistant_mode_enabled : true;
+
+        $contextData = $this->_prepareContext($userId, $inputText, $isAssistantMode);
+        $uploadResult = $this->_handlePreUploadedFiles($uploadedFileIds, $userId);
+
+        if (isset($uploadResult['error'])) {
+            $this->_cleanupTempFiles($uploadedFileIds, $userId);
+            $this->response->setBody("data: " . json_encode(['error' => $uploadResult['error']]) . "\n\n");
+            return $this->response;
+        }
+
+        $parts = $uploadResult['parts'];
+        if ($contextData['finalPrompt']) {
+            array_unshift($parts, ['text' => $contextData['finalPrompt']]);
+        }
+
+        // 2. Estimate Cost & Check Balance
+        $estimate = $this->geminiService->estimateCost($parts);
+        if ($estimate['status'] && $user->balance < $estimate['costKSH']) {
+            $this->_cleanupTempFiles($uploadedFileIds, $userId);
+            $this->response->setBody("data: " . json_encode(['error' => "Insufficient balance. Estimated: KSH " . number_format($estimate['costKSH'], 2)]) . "\n\n");
+            return $this->response;
+        }
+
+        // Send headers now by sending a comment
+        // In CodeIgniter 4, returning response object is preferred, but for streaming we might need to flush manually.
+        // However, we are returning a ResponseInterface, so CI4 will try to send headers.
+        // But headers are sent when output starts. 
+        // We will force headers sending by echoing comments.
+
+        // Actually, let's use the standard output buffer flushing sequence.
+        // We return the response object at the end, but we echo content during execution.
+        $this->response->sendHeaders();
+        // Clear buffer
+        if (ob_get_level() > 0) ob_end_flush();
+        flush();
+
+        // 3. Call Stream Service
+        $this->geminiService->generateStream(
+            $parts,
+            function ($textChunk) {
+                echo "data: " . json_encode(['text' => $textChunk]) . "\n\n";
+                if (ob_get_level() > 0) ob_flush();
+                flush();
+            },
+            function ($fullText, $usageMetadata) use ($userId, $contextData, $inputText) {
+                // Final Completion Callback
+
+                // Update Balance
+                $costData = ['costKSH' => 0];
+                if ($usageMetadata) {
+                    $costData = $this->geminiService->calculateCost($usageMetadata);
+                    $deduction = number_format($costData['costKSH'], 4, '.', '');
+                    $this->userModel->deductBalance($userId, $deduction);
+                }
+
+                // Update Memory
+                if (isset($contextData['memoryService'])) {
+                    $contextData['memoryService']->updateMemory(
+                        $inputText,
+                        $fullText,
+                        $contextData['usedInteractionIds']
+                    );
+                }
+
+                // Send Close Event with final data
+                echo "event: close\n";
+                echo "data: " . json_encode([
+                    'csrf_token' => csrf_hash(),
+                    'cost' => $costData['costKSH']
+                ]) . "\n\n";
+
+                if (ob_get_level() > 0) ob_flush();
+                flush();
+            }
+        );
+
+        $this->_cleanupTempFiles($uploadedFileIds, $userId);
+
+        // We really shouldn't return anything else as we've been streaming, 
+        // but CI expects a return. We can return the response instance.
+        // However, since we've already outputted body content, we should suppress further output.
+        exit;
+    }
+
+
+    /**
      * Updates user settings (Assistant Mode, Voice Output).
      *
      * @return ResponseInterface JSON response with update status.
@@ -325,7 +407,7 @@ class GeminiController extends BaseController
         if ($userId <= 0) return $this->response->setStatusCode(403);
 
         if (!$this->validate([
-            'setting_key' => 'required|in_list[assistant_mode_enabled,voice_output_enabled]',
+            'setting_key' => 'required|in_list[assistant_mode_enabled,voice_output_enabled,stream_output_enabled]',
         ])) {
             return $this->response->setStatusCode(400)->setJSON(['status' => 'error', 'message' => 'Invalid setting']);
         }

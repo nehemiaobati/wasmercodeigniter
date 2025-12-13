@@ -45,7 +45,7 @@ class MediaGenerationService
      *
      * @var array<string, array>
      */
-    protected $mediaConfigs = [
+    public const MEDIA_CONFIGS = [
         'imagen-4.0-generate-preview-06-06' => [
             'type' => 'image',
             'cost' => 0.04,
@@ -111,11 +111,11 @@ class MediaGenerationService
      */
     public function generateMedia(int $userId, mixed $input, string $modelId): array
     {
-        if (!isset($this->mediaConfigs[$modelId])) {
+        if (!isset(self::MEDIA_CONFIGS[$modelId])) {
             return ['status' => 'error', 'message' => 'Invalid model ID.'];
         }
 
-        $config = $this->mediaConfigs[$modelId];
+        $config = self::MEDIA_CONFIGS[$modelId];
         $costUSD = $config['cost'];
 
         // 1. Check Balance
@@ -442,6 +442,6 @@ class MediaGenerationService
      */
     public function getMediaConfig(): array
     {
-        return $this->mediaConfigs;
+        return self::MEDIA_CONFIGS;
     }
 }

@@ -16,14 +16,15 @@ class ModelPayloadService
      * @param string $modelId The specific model ID.
      * @param string $apiKey The API Key.
      * @param array $parts The content parts (user input/images).
+     * @param bool $isStream Whether to use the streaming endpoint.
      * @return array|null ['url' => string, 'body' => string] or null if model not supported.
      */
-    public function getPayloadConfig(string $modelId, string $apiKey, array $parts): ?array
+    public function getPayloadConfig(string $modelId, string $apiKey, array $parts, bool $isStream = false): ?array
     {
         // Standard generation endpoint. 
         // Note: Your bash scripts used 'streamGenerateContent', but for standard PHP 
         // request/response cycles without stream handling, 'generateContent' is usually correct.
-        $apiMethod = 'generateContent';
+        $apiMethod = $isStream ? 'streamGenerateContent' : 'generateContent';
         $url = "https://generativelanguage.googleapis.com/v1beta/models/{$modelId}:{$apiMethod}?key=" . urlencode($apiKey);
 
         $payload = [];

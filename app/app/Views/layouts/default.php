@@ -19,7 +19,7 @@
     <!-- Canonical & Robots -->
     <link rel="canonical" href="<?= esc($canonicalUrl ?? current_url()) ?>">
     <meta name="robots" content="<?= esc($robotsTag ?? 'index, follow') ?>">
-    <link rel="icon" href="<?= base_url('public/assets/favicon.ico') ?>" type="image/x-icon">
+    <link rel="icon" href="<?= base_url('favicon.ico') ?>" type="image/x-icon">
 
     <!-- Social Media Meta -->
     <meta property="og:type" content="website">

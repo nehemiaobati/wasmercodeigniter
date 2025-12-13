@@ -85,7 +85,7 @@ class MediaController extends BaseController
         }
 
         // Validate that the requested model ID exists in the configuration
-        $configs = $this->mediaService->getMediaConfig();
+        $configs = MediaGenerationService::MEDIA_CONFIGS;
         if (!array_key_exists($modelId, $configs)) {
             return $this->fail('Invalid model ID selected.');
         }

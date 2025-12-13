@@ -277,6 +277,14 @@
                             Reads the AI response aloud using text-to-speech.
                         </div>
                     </div>
+                    <div class="form-check form-switch mb-4">
+                        <input class="form-check-input setting-toggle" type="checkbox" id="streamOutput"
+                            data-key="stream_output_enabled" <?= $stream_output_enabled ? 'checked' : '' ?>>
+                        <label class="form-check-label" for="streamOutput">Stream Responses</label>
+                        <div class="form-text text-muted small mt-1">
+                            Typewriter effect (faster perception).
+                        </div>
+                    </div>
 
                     <!-- Saved Prompts -->
                     <label class="form-label small fw-bold text-uppercase text-muted">Saved Prompts</label>
@@ -383,63 +391,67 @@
 <?= $this->section('scripts') ?>
 <script src="<?= base_url('public/assets/highlight/highlight.js') ?>"></script>
 <script src="<?= base_url('public/assets/tinymce/tinymce.min.js') ?>"></script>
+<script src="<?= base_url('public/assets/marked/marked.min.js') ?>"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // --- 1. Config & State ---
-        const appState = {
-            csrfName: '<?= csrf_token() ?>',
-            csrfHash: document.querySelector('input[name="<?= csrf_token() ?>"]').value,
-            maxFileSize: <?= $maxFileSize ?>,
-            maxFiles: <?= $maxFiles ?>,
-            endpoints: {
-                upload: '<?= url_to('gemini.upload_media') ?>',
-                deleteMedia: '<?= url_to('gemini.delete_media') ?>',
-                settings: '<?= url_to('gemini.settings.update') ?>',
-                deletePromptBase: '<?= url_to('gemini.prompts.delete', 0) ?>'.slice(0, -1) // Remove the '0'
+    /**
+     * Gemini Module - Frontend Application
+     * Refactored into modular classes for improved maintainability and scalability.
+     */
+
+    class GeminiApp {
+        constructor() {
+            this.config = {
+                csrfName: '<?= csrf_token() ?>',
+                csrfHash: document.querySelector('input[name="<?= csrf_token() ?>"]').value,
+                maxFileSize: <?= $maxFileSize ?>,
+                maxFiles: <?= $maxFiles ?>,
+                endpoints: {
+                    upload: '<?= url_to('gemini.upload_media') ?>',
+                    deleteMedia: '<?= url_to('gemini.delete_media') ?>',
+                    settings: '<?= url_to('gemini.settings.update') ?>',
+                    deletePromptBase: '<?= url_to('gemini.prompts.delete', 0) ?>'.slice(0, -1),
+                    stream: '<?= url_to('gemini.stream') ?>',
+                    generate: '<?= url_to('gemini.generate') ?>',
+                    generateMedia: '<?= url_to('gemini.media.generate') ?>',
+                    pollMedia: '<?= url_to('gemini.media.poll') ?>'
+                }
+            };
+
+            // Modules
+            this.ui = new UIManager(this);
+            this.uploader = new MediaUploader(this);
+            this.prompts = new PromptManager(this);
+            this.interaction = new InteractionHandler(this);
+        }
+
+        init() {
+            // Configure Marked.js to handle line breaks like PHP Parsedown
+            if (typeof marked !== 'undefined') {
+                marked.use({
+                    breaks: true, // Converts single \n to <br>
+                    gfm: true // Enables GitHub Flavored Markdown
+                });
             }
-        };
 
-        // Queue State
-        const uploadQueue = [];
-        let isUploading = false;
+            this.ui.init();
+            this.uploader.init();
+            this.prompts.init();
+            this.interaction.init();
 
-        // --- 2. Utils ---
-        const refreshCsrf = (hash) => {
+            // Expose for global access (e.g. onclick handlers)
+            window.geminiApp = this;
+        }
+
+        refreshCsrf(hash) {
             if (!hash) return;
-            appState.csrfHash = hash;
-            document.querySelectorAll(`input[name="${appState.csrfName}"]`).forEach(el => el.value = hash);
-        };
+            this.config.csrfHash = hash;
+            document.querySelectorAll(`input[name="${this.config.csrfName}"]`).forEach(el => el.value = hash);
+        }
 
-        const showToast = (msg) => {
-            const t = document.getElementById('liveToast');
-            t.querySelector('.toast-body').textContent = msg;
-            new bootstrap.Toast(t).show();
-        };
-
-        const updateUIState = (uiElement, type, message = '') => {
-            const pBar = uiElement.querySelector('.progress-bar');
-            const statusTxt = uiElement.querySelector('.status-text');
-            const rmBtn = uiElement.querySelector('.remove-btn');
-
-            pBar.classList.remove('progress-bar-striped', 'progress-bar-animated');
-            rmBtn.classList.remove('disabled'); // Always enable remove button on completion
-
-            if (type === 'success') {
-                pBar.classList.add('bg-success');
-                statusTxt.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
-            } else {
-                pBar.classList.add('bg-danger');
-                pBar.style.width = '100%';
-                // Show a short error in UI, full error in tooltip/toast
-                statusTxt.innerHTML = `<span class="text-danger small" title="${message}">${message}</span>`;
-            }
-        };
-
-        const sendAjaxRequest = async (url, data = null) => {
+        async sendAjax(url, data = null) {
             const formData = data instanceof FormData ? data : new FormData();
-            // Ensure CSRF token is present and up-to-date
-            if (!formData.has(appState.csrfName)) {
-                formData.append(appState.csrfName, appState.csrfHash);
+            if (!formData.has(this.config.csrfName)) {
+                formData.append(this.config.csrfName, this.config.csrfHash);
             }
 
             try {
@@ -450,774 +462,692 @@
                         'X-Requested-With': 'XMLHttpRequest'
                     }
                 });
-
                 const responseData = await res.json();
 
-                // Handle CSRF refresh automatically
                 const newToken = responseData.token || responseData.csrf_token;
-                if (newToken) refreshCsrf(newToken);
+                if (newToken) this.refreshCsrf(newToken);
 
                 return responseData;
             } catch (err) {
-                console.error(err);
-                showToast('Network error occurred.');
+                console.error('AJAX Error:', err);
+                this.ui.showToast('Network error occurred.');
                 throw err;
             }
-        };
+        }
+    }
 
-        // --- 3. TinyMCE ---
-        tinymce.init({
-            selector: '#prompt',
-            height: '100%',
-            menubar: false,
-            statusbar: false,
-            plugins: 'autolink lists',
-            toolbar: 'blocks | bold italic strikethrough | bullist numlist | link | alignleft aligncenter alignright | clean',
-            block_formats: 'Text=p; Heading 1=h1; Heading 2=h2; Heading 3=h3',
-            placeholder: 'Enter your prompt here...',
-            license_key: 'gpl',
-            mobile: {
-                menubar: false,
-                toolbar: 'bold italic | bullist numlist | link',
-                height: 300
-            },
-            setup: (ed) => {
-                ed.on('change', () => ed.save());
+    class UIManager {
+        constructor(app) {
+            this.app = app;
+            this.generateBtn = document.getElementById('generateBtn');
+        }
+
+        init() {
+            this.setupTabs();
+            this.setupSettings();
+            this.setupCodeHighlighting();
+            this.setupAutoScroll();
+            this.setupDownloads();
+
+            // Tinymce
+            this.initEditor();
+        }
+
+        showToast(msg) {
+            const t = document.getElementById('liveToast');
+            if (t) {
+                t.querySelector('.toast-body').textContent = msg;
+                new bootstrap.Toast(t).show();
             }
-        });
+        }
 
-        // --- 4. Settings Toggles ---
-        document.querySelectorAll('.setting-toggle').forEach(toggle => {
-            toggle.addEventListener('change', async (e) => {
-                const formData = new FormData();
-                formData.append('setting_key', e.target.dataset.key);
-                formData.append('enabled', e.target.checked);
-
-                try {
-                    const data = await sendAjaxRequest(appState.endpoints.settings, formData);
-                    showToast(data.status === 'success' ? 'Setting saved.' : 'Failed to save.');
-                } catch (err) {
-                    // Error handled in helper
+        initEditor() {
+            tinymce.init({
+                selector: '#prompt',
+                height: '100%',
+                menubar: false,
+                statusbar: false,
+                plugins: 'autolink lists',
+                toolbar: 'blocks | bold italic strikethrough | bullist numlist | link | alignleft aligncenter alignright | clean',
+                block_formats: 'Text=p; Heading 1=h1; Heading 2=h2; Heading 3=h3',
+                placeholder: 'Enter your prompt here...',
+                license_key: 'gpl',
+                mobile: {
+                    menubar: false,
+                    toolbar: 'bold italic | bullist numlist | link',
+                    height: 300
+                },
+                setup: (ed) => {
+                    ed.on('change', () => ed.save());
                 }
             });
-        });
+        }
 
-        // --- 5. File Upload Logic ---
-        const uploadArea = document.getElementById('mediaUploadArea');
-        const fileInput = document.getElementById('media-input-trigger');
-        const listWrapper = document.getElementById('upload-list-wrapper');
+        setupTabs() {
+            const tabButtons = document.querySelectorAll('#generationTabs button[data-bs-toggle="tab"]');
+            const modelInput = document.getElementById('selectedModelId');
+            const typeInput = document.getElementById('generationType');
+            const modelCards = document.querySelectorAll('.model-card');
 
-        ['dragenter', 'dragover'].forEach(evt => {
-            uploadArea.addEventListener(evt, (e) => {
-                e.preventDefault();
-                uploadArea.classList.add('dragover');
+            tabButtons.forEach(btn => {
+                btn.addEventListener('shown.bs.tab', (e) => {
+                    const type = e.target.dataset.type;
+                    typeInput.value = type;
+                    this.updateModelSelectionUI(type);
+                });
             });
-        });
-        ['dragleave', 'drop'].forEach(evt => {
-            uploadArea.addEventListener(evt, (e) => {
-                e.preventDefault();
-                uploadArea.classList.remove('dragover');
-            });
-        });
 
-        const createProgressBar = (file, id) => {
+            modelCards.forEach(card => {
+                card.addEventListener('click', () => {
+                    modelCards.forEach(c => c.classList.remove('active'));
+                    card.classList.add('active');
+                    modelInput.value = card.dataset.model;
+                });
+            });
+        }
+
+        updateModelSelectionUI(type) {
+            const area = document.getElementById('model-selection-area');
+            const imgGrid = document.getElementById('image-models-grid');
+            const vidGrid = document.getElementById('video-models-grid');
+            const editor = tinymce.get('prompt');
+            const modelInput = document.getElementById('selectedModelId');
+
+            area.classList.add('d-none');
+            imgGrid.classList.add('d-none');
+            vidGrid.classList.add('d-none');
+
+            if (type === 'text') {
+                modelInput.value = 'gemini-2.0-flash';
+                editor?.getBody().setAttribute('data-placeholder', 'Enter your prompt here...');
+            } else {
+                area.classList.remove('d-none');
+                if (type === 'image') {
+                    imgGrid.classList.remove('d-none');
+                    editor?.getBody().setAttribute('data-placeholder', 'Describe the image you want to generate...');
+                    // Auto-select first
+                    const first = imgGrid.querySelector('.model-card');
+                    if (first) first.click();
+                } else if (type === 'video') {
+                    vidGrid.classList.remove('d-none');
+                    editor?.getBody().setAttribute('data-placeholder', 'Describe the video you want to create...');
+                    const first = vidGrid.querySelector('.model-card');
+                    if (first) first.click();
+                }
+            }
+        }
+
+        setupSettings() {
+            document.querySelectorAll('.setting-toggle').forEach(toggle => {
+                toggle.addEventListener('change', async (e) => {
+                    const fd = new FormData();
+                    fd.append('setting_key', e.target.dataset.key);
+                    fd.append('enabled', e.target.checked);
+                    try {
+                        const data = await this.app.sendAjax(this.app.config.endpoints.settings, fd);
+                        this.showToast(data.status === 'success' ? 'Setting saved.' : 'Failed to save.');
+                    } catch (e) {}
+                });
+            });
+        }
+
+        setupCodeHighlighting() {
+            if (typeof hljs !== 'undefined') hljs.highlightAll();
+
+            document.querySelectorAll('pre code').forEach((block) => {
+                if (block.parentElement.querySelector('.copy-code-btn')) return; // Avoid duplicates
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-sm btn-dark copy-code-btn';
+                btn.innerHTML = '<i class="bi bi-clipboard"></i>';
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    navigator.clipboard.writeText(block.innerText).then(() => {
+                        btn.innerHTML = '<i class="bi bi-check-lg text-success"></i>';
+                        setTimeout(() => btn.innerHTML = '<i class="bi bi-clipboard"></i>', 2000);
+                    });
+                });
+                block.parentElement.appendChild(btn);
+            });
+        }
+
+        ensureResultCardExists() {
+            if (document.getElementById('results-card')) return;
+
+            const container = document.querySelector('.gemini-view-container');
+            const cardHtml = `
+            <div class="card blueprint-card mt-5 shadow-lg border-primary" id="results-card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">Studio Output</span>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-light" id="copyFullResponseBtn" title="Copy Full Text">
+                            <i class="bi bi-clipboard"></i> Copy
+                        </button>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">Export</button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item download-action" href="#" data-format="pdf">PDF</a></li>
+                                <li><a class="dropdown-item download-action" href="#" data-format="docx">Word</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body response-content" id="ai-response-body"></div>
+                <textarea id="raw-response" class="d-none"></textarea>
+                <div class="card-footer bg-transparent border-0 text-center">
+                    <small class="text-muted fst-italic"><i class="bi bi-info-circle me-1"></i> AI can make mistakes. Please verify important information.</small>
+                </div>
+            </div>`;
+
+            const row = container.querySelector('.row.g-4');
+            row.insertAdjacentHTML('afterend', cardHtml);
+
+            this.setupDownloads();
+        }
+
+        setupAutoScroll() {
+            const resultsCard = document.getElementById('results-card');
+            if (resultsCard) {
+                setTimeout(() => resultsCard.scrollIntoView({
+                    behavior: 'smooth'
+                }), 100);
+            }
+        }
+
+        setupDownloads() {
+            document.querySelectorAll('.download-action').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    document.getElementById('dl_raw').value = document.getElementById('raw-response').value;
+                    document.getElementById('dl_format').value = e.target.dataset.format;
+                    document.getElementById('downloadForm').submit();
+                });
+            });
+            const copyFull = document.getElementById('copyFullResponseBtn');
+            if (copyFull) {
+                copyFull.addEventListener('click', () => {
+                    navigator.clipboard.writeText(document.getElementById('raw-response').value)
+                        .then(() => this.showToast('Copied!'));
+                });
+            }
+        }
+
+        setLoading(isLoading, text = 'Processing...') {
+            if (isLoading) {
+                this.generateBtn.disabled = true;
+                this.generateBtn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> ${text}`;
+            } else {
+                this.generateBtn.disabled = false;
+                this.generateBtn.innerHTML = '<i class="bi bi-sparkles"></i> Generate';
+            }
+        }
+
+        showMediaResult(url, type) {
+            let container = document.getElementById('media-result-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'media-result-container';
+                container.className = 'card blueprint-card mt-5 shadow-lg border-primary';
+                document.querySelector('.container.my-3.my-lg-5').appendChild(container);
+            }
+
+            // Internal logic for download check
+            const isInternal = url.includes('gemini/media/serve');
+            const downloadAttr = isInternal ? `onclick="window.location.href='${url}${url.includes('?') ? '&' : '?'}download=1'"` : `onclick="geminiApp.interaction.mockDownload('${url}', '${type}')"`;
+
+            container.innerHTML = `
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">Studio Output</span>
+                    <div>
+                        <button ${downloadAttr} class="btn btn-sm btn-light" id="mediaDownloadBtn">
+                            <i class="bi bi-download me-1"></i> Download
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body text-center p-4">
+                    ${type === 'image' 
+                        ? `<img src="${url}" class="img-fluid rounded shadow-sm" alt="Generated Image">` 
+                        : `<video controls autoplay loop class="w-100 rounded shadow-sm"><source src="${url}" type="video/mp4"></video>`
+                    }
+                </div>
+            `;
+            container.scrollIntoView({
+                behavior: 'smooth'
+            });
+        }
+    }
+
+    class MediaUploader {
+        constructor(app) {
+            this.app = app;
+            this.queue = [];
+            this.isUploading = false;
+        }
+
+        init() {
+            const area = document.getElementById('mediaUploadArea');
+            const input = document.getElementById('media-input-trigger');
+
+            if (area && input) {
+                ['dragenter', 'dragover'].forEach(e => area.addEventListener(e, (ev) => {
+                    ev.preventDefault();
+                    area.classList.add('dragover');
+                }));
+                ['dragleave', 'drop'].forEach(e => area.addEventListener(e, (ev) => {
+                    ev.preventDefault();
+                    area.classList.remove('dragover');
+                }));
+
+                area.addEventListener('drop', (e) => this.handleFiles(e.dataTransfer.files));
+                input.addEventListener('change', (e) => this.handleFiles(e.target.files));
+
+                const listWrapper = document.getElementById('upload-list-wrapper');
+                if (listWrapper) {
+                    listWrapper.addEventListener('click', (e) => {
+                        if (e.target.closest('.remove-btn')) this.removeFile(e.target.closest('.remove-btn'));
+                    });
+                }
+            }
+        }
+
+        handleFiles(files) {
+            const currentCount = document.querySelectorAll('input[name="uploaded_media[]"]').length + this.queue.length;
+            if (currentCount + files.length > this.app.config.maxFiles) {
+                this.app.ui.showToast(`Max ${this.app.config.maxFiles} files allowed.`);
+                return;
+            }
+
+            Array.from(files).forEach(file => {
+                if (file.size > this.app.config.maxFileSize) {
+                    this.app.ui.showToast(`${file.name} too large.`);
+                    return;
+                }
+                const id = Math.random().toString(36).substr(2, 9);
+                const ui = this.createProgressBar(file, id);
+                this.queue.push({
+                    file,
+                    ui,
+                    id
+                });
+            });
+
+            this.processQueue();
+        }
+
+        createProgressBar(file, id) {
             const div = document.createElement('div');
             div.id = `file-item-${id}`;
             div.className = 'file-item d-flex align-items-center gap-3 rounded p-2 mb-2';
             div.innerHTML = `
-            <div class="flex-grow-1" style="min-width: 0;">
-                <div class="d-flex justify-content-between small mb-1">
-                    <span class="fw-bold text-truncate">${file.name}</span>
-                    <span class="status-text text-muted">Waiting...</span>
+                <div class="flex-grow-1" style="min-width: 0;">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span class="fw-bold text-truncate">${file.name}</span>
+                        <span class="status-text text-muted">Waiting...</span>
+                    </div>
+                    <div class="progress"><div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div></div>
                 </div>
-                <div class="progress">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
-                </div>
-            </div>
-            <button type="button" class="btn btn-sm btn-outline-danger border-0 remove-btn disabled" data-id="${id}">
-                <i class="bi bi-x-lg"></i>
-            </button>
-        `;
-            listWrapper.appendChild(div);
+                <button type="button" class="btn btn-sm btn-outline-danger border-0 remove-btn disabled" data-id="${id}"><i class="bi bi-x-lg"></i></button>
+            `;
+            document.getElementById('upload-list-wrapper').appendChild(div);
             return div;
-        };
+        }
 
-        const processQueue = () => {
-            // If uploading or empty, stop
-            if (isUploading || uploadQueue.length === 0) return;
+        processQueue() {
+            if (this.isUploading || this.queue.length === 0) return;
+            this.isUploading = true;
+            this.performUpload(this.queue.shift());
+        }
 
-            isUploading = true;
-            const job = uploadQueue.shift(); // Get first item
-            performUpload(job);
-        };
-
-        const performUpload = (job) => {
-            const {
-                file,
-                uiElement,
-                uniqueId
-            } = job;
-
-            // Update UI to "Uploading"
-            uiElement.querySelector('.status-text').textContent = "Uploading...";
+        performUpload(job) {
+            job.ui.querySelector('.status-text').textContent = "Uploading...";
+            const fd = new FormData();
+            fd.append(this.app.config.csrfName, this.app.config.csrfHash);
+            fd.append('file', job.file);
 
             const xhr = new XMLHttpRequest();
-            const formData = new FormData();
-            formData.append(appState.csrfName, appState.csrfHash);
-            formData.append('file', file);
+            xhr.open('POST', this.app.config.endpoints.upload, true);
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
 
             xhr.upload.addEventListener('progress', (e) => {
                 if (e.lengthComputable) {
-                    const percent = Math.round((e.loaded / e.total) * 100);
-                    uiElement.querySelector('.progress-bar').style.width = percent + '%';
-                    uiElement.querySelector('.status-text').innerText = percent + '%';
+                    const pct = Math.round((e.loaded / e.total) * 100);
+                    job.ui.querySelector('.progress-bar').style.width = pct + '%';
                 }
             });
 
             xhr.onreadystatechange = () => {
                 if (xhr.readyState === 4) {
-                    let response = {};
                     try {
-                        response = JSON.parse(xhr.responseText);
-                        // Always try to refresh CSRF if provided, even on error
-                        if (response.csrf_token) refreshCsrf(response.csrf_token);
+                        const res = JSON.parse(xhr.responseText);
+                        if (res.csrf_token) this.app.refreshCsrf(res.csrf_token);
+
+                        if (xhr.status === 200 && res.status === 'success') {
+                            this.updateUI(job.ui, 'success');
+                            job.ui.querySelector('.remove-btn').dataset.serverFileId = res.file_id;
+
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = 'uploaded_media[]';
+                            input.value = res.file_id;
+                            input.id = `input-${job.id}`;
+                            document.getElementById('uploaded-files-container').appendChild(input);
+                        } else {
+                            this.updateUI(job.ui, 'error', res.message);
+                        }
                     } catch (e) {
-                        console.error('Invalid JSON response');
+                        this.updateUI(job.ui, 'error', 'JSON Error');
                     }
 
-                    if (xhr.status === 200 && response.status === 'success') {
-                        updateUIState(uiElement, 'success');
-
-                        // Attach Server File ID
-                        const rmBtn = uiElement.querySelector('.remove-btn');
-                        rmBtn.dataset.serverFileId = response.file_id;
-
-                        // Add Hidden Input
-                        const input = document.createElement('input');
-                        input.type = 'hidden';
-                        input.name = 'uploaded_media[]';
-                        input.value = response.file_id;
-                        input.id = `input-${uniqueId}`;
-                        document.getElementById('uploaded-files-container').appendChild(input);
-
-                    } else {
-                        const errorMsg = response.message || 'Upload failed';
-                        updateUIState(uiElement, 'error', errorMsg);
-                    }
-
-                    // Trigger Next
-                    isUploading = false;
-                    processQueue();
+                    this.isUploading = false;
+                    this.processQueue();
                 }
             };
+            xhr.send(fd);
+        }
 
-            xhr.open('POST', appState.endpoints.upload, true);
-            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-            xhr.send(formData);
-        };
+        updateUI(ui, status, msg = '') {
+            const bar = ui.querySelector('.progress-bar');
+            const txt = ui.querySelector('.status-text');
+            bar.classList.remove('progress-bar-striped', 'progress-bar-animated');
+            ui.querySelector('.remove-btn').classList.remove('disabled');
 
-        const handleFiles = (files) => {
-            const currentUploadedCount = document.querySelectorAll('input[name="uploaded_media[]"]').length;
-            const currentQueueCount = uploadQueue.length;
-
-            if (currentUploadedCount + currentQueueCount + files.length > appState.maxFiles) {
-                showToast(`You can only upload a maximum of ${appState.maxFiles} files.`);
-                return;
+            if (status === 'success') {
+                bar.classList.add('bg-success');
+                txt.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+            } else {
+                bar.classList.add('bg-danger');
+                bar.style.width = '100%';
+                txt.innerHTML = `<span class="text-danger small" title="${msg}">${msg || 'Failed'}</span>`;
             }
+        }
 
-            Array.from(files).forEach(file => {
-                const uniqueId = Math.random().toString(36).substr(2, 9);
-                const uiElement = createProgressBar(file, uniqueId);
-
-                // 1. Client-Side Validation
-                const supportedTypes = [
-                    'image/png', 'image/jpeg', 'image/webp', 'audio/mpeg', 'audio/mp3',
-                    'audio/wav', 'video/mov', 'video/mpeg', 'video/mp4', 'video/mpg',
-                    'video/avi', 'video/wmv', 'video/mpegps', 'video/flv',
-                    'application/pdf', 'text/plain'
-                ];
-
-                if (file.size > appState.maxFileSize) {
-                    const maxMB = Math.floor(appState.maxFileSize / (1024 * 1024));
-                    updateUIState(uiElement, 'error', `File too large (Max ${maxMB}MB)`);
-                    return; // Don't queue
-                }
-
-                if (!supportedTypes.includes(file.type)) {
-                    updateUIState(uiElement, 'error', 'Unsupported file type');
-                    return; // Don't queue
-                }
-
-                // 2. Add to Queue
-                uploadQueue.push({
-                    file,
-                    uiElement,
-                    uniqueId
-                });
-            });
-
-            // Reset input
-            fileInput.value = '';
-
-            // Start processing if idle
-            processQueue();
-        };
-
-        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
-        uploadArea.addEventListener('drop', (e) => handleFiles(e.dataTransfer.files));
-
-        // --- 6. Remove File Logic ---
-        listWrapper.addEventListener('click', async (e) => {
-            const btn = e.target.closest('.remove-btn');
-            if (!btn || btn.classList.contains('disabled')) return;
-
-            const uiId = btn.dataset.id;
+        async removeFile(btn) {
+            if (btn.classList.contains('disabled')) return;
+            const ui = btn.closest('.file-item');
             const serverId = btn.dataset.serverFileId;
-            const uiItem = document.getElementById(`file-item-${uiId}`);
 
-            // Optimistically remove from UI
-            uiItem.style.opacity = '0.5';
-
+            ui.style.opacity = '0.5';
             if (serverId) {
-                // If it was uploaded successfully, delete from server
-                const formData = new FormData();
-                formData.append('file_id', serverId);
-
+                const fd = new FormData();
+                fd.append('file_id', serverId);
                 try {
-                    const data = await sendAjaxRequest(appState.endpoints.deleteMedia, formData);
-
-                    if (data.status === 'success') {
-                        uiItem.remove();
-                        document.getElementById(`input-${uiId}`)?.remove();
-                    } else {
-                        alert('Failed to delete file from server.');
-                        uiItem.style.opacity = '1';
-                    }
-                } catch (err) {
-                    alert('Network error while deleting file.');
-                    uiItem.style.opacity = '1';
+                    const res = await this.app.sendAjax(this.app.config.endpoints.deleteMedia, fd);
+                    if (res.status === 'success') {
+                        ui.remove();
+                        document.getElementById(`input-${btn.dataset.id}`)?.remove();
+                    } else ui.style.opacity = '1';
+                } catch (e) {
+                    ui.style.opacity = '1';
                 }
             } else {
-                // If it failed upload or client validation, just remove UI
-                uiItem.remove();
+                ui.remove();
             }
-        });
+        }
+    }
 
-        // --- 7. Downloads & Copy ---
-        document.querySelectorAll('.download-action').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                document.getElementById('dl_raw').value = document.getElementById('raw-response').value;
-                document.getElementById('dl_format').value = e.target.dataset.format;
-                document.getElementById('downloadForm').submit();
-            });
-        });
-
-        // Copy Full Response
-        const copyFullBtn = document.getElementById('copyFullResponseBtn');
-        if (copyFullBtn) {
-            copyFullBtn.addEventListener('click', () => {
-                const rawText = document.getElementById('raw-response').value;
-                navigator.clipboard.writeText(rawText).then(() => {
-                    const original = copyFullBtn.innerHTML;
-                    copyFullBtn.innerHTML = '<i class="bi bi-check-lg"></i> Copied';
-                    setTimeout(() => copyFullBtn.innerHTML = original, 2000);
-                });
-            });
+    class PromptManager {
+        constructor(app) {
+            this.app = app;
         }
 
-        // --- 8. Saved Prompts Logic (Load & Delete) ---
-        const savedPromptsWrapper = document.getElementById('saved-prompts-wrapper');
+        init() {
+            const select = document.getElementById('savedPrompts');
+            const loadBtn = document.getElementById('usePromptBtn');
+            const deleteBtn = document.getElementById('deletePromptBtn');
 
-        // Helper to attach listeners to dynamic elements
-        const attachSavedPromptsListeners = () => {
-            const savedSelect = document.getElementById('savedPrompts');
-            const deletePromptBtn = document.getElementById('deletePromptBtn');
-            const usePromptBtn = document.getElementById('usePromptBtn');
+            if (loadBtn) loadBtn.addEventListener('click', () => {
+                if (select && select.value) tinymce.get('prompt').setContent(select.value);
+            });
 
-            if (savedSelect) {
-                // Enable/Disable delete button based on selection
-                savedSelect.addEventListener('change', () => {
-                    const hasValue = !!savedSelect.value;
-                    if (deletePromptBtn) deletePromptBtn.disabled = !hasValue;
+            if (select) select.addEventListener('change', () => {
+                if (deleteBtn) deleteBtn.disabled = !select.value;
+            });
+
+            if (deleteBtn) deleteBtn.addEventListener('click', () => this.deletePrompt());
+
+            // Save Prompt Modal
+            const form = document.querySelector('#savePromptModal form');
+            if (form) {
+                document.getElementById('savePromptModal').addEventListener('show.bs.modal', () => {
+                    document.getElementById('modalPromptText').value = tinymce.get('prompt').getContent({
+                        format: 'text'
+                    });
                 });
 
-                // Load Prompt
-                if (usePromptBtn) {
-                    usePromptBtn.addEventListener('click', () => {
-                        const val = savedSelect.value;
-                        if (val) tinymce.get('prompt').setContent(val);
-                    });
-                }
-
-                // Delete Prompt
-                if (deletePromptBtn) {
-                    deletePromptBtn.addEventListener('click', async () => {
-                        const selectedOption = savedSelect.options[savedSelect.selectedIndex];
-                        const promptId = selectedOption.dataset.id;
-
-                        if (promptId && confirm('Are you sure you want to delete this saved prompt?')) {
-                            const originalText = deletePromptBtn.innerHTML;
-                            deletePromptBtn.disabled = true;
-                            deletePromptBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-
-                            try {
-                                const data = await sendAjaxRequest(appState.endpoints.deletePromptBase + promptId);
-
-                                if (data.status === 'success') {
-                                    showToast('Prompt deleted.');
-                                    selectedOption.remove();
-                                    savedSelect.value = ""; // Reset selection
-                                    deletePromptBtn.disabled = true; // Disable delete button
-
-                                    // If no prompts left, show alert
-                                    if (savedSelect.options.length <= 1) { // 1 because of "Select..." placeholder
-                                        savedPromptsWrapper.innerHTML = `
-                                            <div class="alert alert-light border mb-3 small text-muted">
-                                                <i class="bi bi-info-circle me-1"></i> No saved prompts yet. Save one after generating!
-                                            </div>
-                                        `;
-                                    }
-                                } else {
-                                    showToast(data.message || 'Failed to delete prompt.');
-                                }
-                            } catch (err) {
-                                // Error handled in helper
-                            } finally {
-                                // Check if button still exists (it might be gone if we switched to alert)
-                                const currentBtn = document.getElementById('deletePromptBtn');
-                                if (currentBtn) {
-                                    currentBtn.disabled = !savedSelect.value;
-                                    currentBtn.innerHTML = originalText;
-                                }
-                            }
-                        }
-                    });
-                }
+                form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.savePrompt(new FormData(form));
+                });
             }
-        };
+        }
 
-        // Initial attachment
-        attachSavedPromptsListeners();
+        async savePrompt(formData) {
+            const modalEl = document.getElementById('savePromptModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
 
-        // --- 9. Code Highlighting & Copy Snippets ---
-        hljs.highlightAll();
+            try {
+                const data = await this.app.sendAjax(formData.get('action') || modalEl.querySelector('form').action, formData);
+                if (data.status === 'success') {
+                    this.app.ui.showToast('Saved!');
+                    modal.hide();
+                    location.reload();
+                } else {
+                    this.app.ui.showToast(data.message || 'Failed');
+                }
+            } catch (e) {}
+        }
 
-        // Inject Copy Buttons into Code Blocks
-        document.querySelectorAll('pre code').forEach((block) => {
-            const pre = block.parentElement;
-
-            // Create Button
-            const btn = document.createElement('button');
-            btn.className = 'btn btn-sm btn-dark copy-code-btn';
-            btn.innerHTML = '<i class="bi bi-clipboard"></i>';
-            btn.title = 'Copy code';
-
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                navigator.clipboard.writeText(block.innerText).then(() => {
-                    btn.innerHTML = '<i class="bi bi-check-lg text-success"></i>';
-                    setTimeout(() => btn.innerHTML = '<i class="bi bi-clipboard"></i>', 2000);
-                });
-            });
-
-            pre.appendChild(btn);
-        });
-
-        // --- 10. Modal & Loading ---
-        document.getElementById('savePromptModal').addEventListener('show.bs.modal', () => {
-            document.getElementById('modalPromptText').value = tinymce.get('prompt').getContent({
-                format: 'text'
-            });
-        });
-
-        // AJAX Save Prompt
-        const savePromptForm = document.querySelector('#savePromptModal form');
-        if (savePromptForm) {
-            savePromptForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const btn = savePromptForm.querySelector('button[type="submit"]');
-                const originalText = btn.innerHTML;
-                btn.disabled = true;
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving...';
-
-                const formData = new FormData(savePromptForm);
-
+        async deletePrompt() {
+            const select = document.getElementById('savedPrompts');
+            const id = select.options[select.selectedIndex].dataset.id;
+            if (confirm('Delete this prompt?')) {
                 try {
-                    const data = await sendAjaxRequest(savePromptForm.action, formData);
-
+                    const data = await this.app.sendAjax(this.app.config.endpoints.deletePromptBase + id);
                     if (data.status === 'success') {
-                        showToast('Prompt saved successfully!');
-
-                        // Close Modal
-                        const modal = bootstrap.Modal.getInstance(document.getElementById('savePromptModal'));
-                        modal.hide();
-
-                        // Check if we need to switch from Alert to Dropdown
-                        let savedSelect = document.getElementById('savedPrompts');
-                        if (!savedSelect) {
-                            savedPromptsWrapper.innerHTML = `
-                                <div class="input-group mb-3">
-                                    <select class="form-select" id="savedPrompts">
-                                        <option value="" disabled>Select...</option>
-                                    </select>
-                                    <button class="btn btn-outline-secondary" type="button" id="usePromptBtn">Load</button>
-                                    <button class="btn btn-outline-danger" type="button" id="deletePromptBtn" disabled title="Delete Saved Prompt">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </div>
-                            `;
-                            // Re-attach listeners since we created new elements
-                            attachSavedPromptsListeners();
-                            savedSelect = document.getElementById('savedPrompts');
-                        }
-
-                        // Add to Dropdown
-                        const option = document.createElement('option');
-                        option.value = data.prompt.prompt_text;
-                        option.dataset.id = data.prompt.id;
-                        option.textContent = data.prompt.title;
-                        savedSelect.appendChild(option);
-
-                        // Auto-select and trigger change
-                        savedSelect.value = data.prompt.prompt_text;
-                        savedSelect.dispatchEvent(new Event('change'));
-
-                        savePromptForm.reset();
-                    } else {
-                        showToast(data.message || 'Failed to save prompt.');
+                        this.app.ui.showToast('Deleted');
+                        select.options[select.selectedIndex].remove();
+                        select.value = '';
+                        select.dispatchEvent(new Event('change'));
                     }
-                } catch (err) {
-                    // Error handled in helper
-                } finally {
-                    btn.disabled = false;
-                    btn.innerHTML = originalText;
-                }
-            });
+                } catch (e) {}
+            }
+        }
+    }
+
+    class InteractionHandler {
+        constructor(app) {
+            this.app = app;
         }
 
-        document.getElementById('geminiForm').addEventListener('submit', function() {
-            const btn = document.getElementById('generateBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Thinking...';
-        });
-
-        // --- 11. Auto Scroll to Results (Sticky Header Fix) ---
-        const resultsCard = document.getElementById('results-card');
-        if (resultsCard) {
-            setTimeout(() => {
-                resultsCard.scrollIntoView({
-                    behavior: 'smooth'
-                });
-            }, 100);
+        init() {
+            const form = document.getElementById('geminiForm');
+            if (form) form.addEventListener('submit', (e) => this.handleSubmit(e));
         }
 
-        // --- 12. Generative Media Logic (Tabs & Polling) ---
-        const tabButtons = document.querySelectorAll('#generationTabs button[data-bs-toggle="tab"]');
-        const modelInput = document.getElementById('selectedModelId');
-        const typeInput = document.getElementById('generationType');
-        const form = document.getElementById('geminiForm');
-        const generateBtn = document.getElementById('generateBtn');
+        async handleSubmit(e) {
+            const type = document.getElementById('generationType').value;
+            const useStreaming = document.getElementById('streamOutput')?.checked;
 
-        const modelSelectionArea = document.getElementById('model-selection-area');
-        const imageModelsGrid = document.getElementById('image-models-grid');
-        const videoModelsGrid = document.getElementById('video-models-grid');
-        const modelCards = document.querySelectorAll('.model-card');
-
-        // Helper to select a model card
-        const selectModelCard = (modelId) => {
-            modelCards.forEach(card => {
-                if (card.dataset.model === modelId) {
-                    card.classList.add('active');
-                    modelInput.value = modelId;
-                } else {
-                    card.classList.remove('active');
-                }
-            });
-        };
-
-        // Tab Switching
-        tabButtons.forEach(btn => {
-            btn.addEventListener('shown.bs.tab', (e) => {
-                const type = e.target.dataset.type;
-                typeInput.value = type;
-
-                // Reset UI
-                modelSelectionArea.classList.add('d-none');
-                imageModelsGrid.classList.add('d-none');
-                videoModelsGrid.classList.add('d-none');
-
-                const editor = tinymce.get('prompt');
-
-                if (type === 'text') {
-                    modelInput.value = 'gemini-2.0-flash'; // Default text model
-                    editor.getBody().setAttribute('data-placeholder', 'Enter your prompt here...');
-                } else {
-                    // Show Selection Area
-                    modelSelectionArea.classList.remove('d-none');
-
-                    if (type === 'image') {
-                        imageModelsGrid.classList.remove('d-none');
-                        editor.getBody().setAttribute('data-placeholder', 'Describe the image you want to generate...');
-
-                        // Auto-select first image model if none active
-                        const firstImage = imageModelsGrid.querySelector('.model-card');
-                        if (firstImage) selectModelCard(firstImage.dataset.model);
-
-                    } else if (type === 'video') {
-                        videoModelsGrid.classList.remove('d-none');
-                        editor.getBody().setAttribute('data-placeholder', 'Describe the video you want to create...');
-
-                        // Auto-select first video model
-                        const firstVideo = videoModelsGrid.querySelector('.model-card');
-                        if (firstVideo) selectModelCard(firstVideo.dataset.model);
-                    }
-                }
-            });
-        });
-
-        // Model Card Click Event
-        modelCards.forEach(card => {
-            card.addEventListener('click', () => {
-                selectModelCard(card.dataset.model);
-            });
-        });
-
-        // Form Submission Intercept
-        form.addEventListener('submit', async (e) => {
-            const type = typeInput.value;
-
-            // Allow normal submission for Text (handled by existing logic or backend)
-            // BUT if we want to handle Media via AJAX, we must intercept.
-            if (type === 'text') return;
+            // Text + Standard POST -> Let browser handle it
+            if (type === 'text' && !useStreaming) {
+                this.app.ui.setLoading(true, 'Thinking...');
+                return;
+            }
 
             e.preventDefault();
 
-            const promptVal = tinymce.get('prompt').getContent({
+            const prompt = tinymce.get('prompt').getContent({
                 format: 'text'
             }).trim();
-            if (!promptVal) {
-                showToast('Please enter a prompt.');
+            if (!prompt && type === 'text') {
+                this.app.ui.showToast('Please enter a prompt.');
                 return;
             }
 
-            // UI Loading State
-            generateBtn.disabled = true;
-            generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generating...';
+            this.app.ui.setLoading(true);
+            const fd = new FormData(document.getElementById('geminiForm'));
+            // Tinymce not syncing automatically sometimes on manual submit intercept
+            fd.set('prompt', prompt);
 
-            const formData = new FormData();
-            formData.append(appState.csrfName, appState.csrfHash);
-            formData.append('prompt', promptVal);
-            formData.append('model_id', modelInput.value);
+            if (type === 'text' && useStreaming) {
+                await this.handleStreaming(fd);
+            } else {
+                // Media (Image/Video) or Mock
+                if (this.handleMock(prompt, type)) return;
+                await this.handleMedia(fd);
+            }
+        }
 
-            // --- MOCK TESTING INTERCEPT (Start) ---
-            // To remove mock functionality, delete this block.
-            if (handleMockGeneration(promptVal, type)) return;
-            // --- MOCK TESTING INTERCEPT (End) ---
+        async handleStreaming(formData) {
+            this.app.ui.ensureResultCardExists();
+
+            const resBody = document.getElementById('ai-response-body');
+            const rawRes = document.getElementById('raw-response');
+            resBody.innerHTML = '';
+            rawRes.value = '';
+            this.app.ui.setupAutoScroll();
+
+            let streamAccumulator = '';
 
             try {
-                const res = await fetch('<?= url_to('gemini.media.generate') ?>', {
+                const response = await fetch(this.app.config.endpoints.stream, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const {
+                        value,
+                        done
+                    } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, {
+                        stream: true
+                    });
+                    const parts = buffer.split('\n\n');
+                    buffer = parts.pop();
+
+                    for (const part of parts) {
+                        if (part.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(part.substring(6));
+                                if (data.text) {
+                                    streamAccumulator += data.text;
+                                    resBody.innerHTML = marked.parse(streamAccumulator);
+                                    rawRes.value += data.text;
+                                } else if (data.error) {
+                                    this.app.ui.showToast(data.error);
+                                } else if (data.csrf_token) {
+                                    this.app.refreshCsrf(data.csrf_token);
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                }
+
+                this.app.ui.setupCodeHighlighting();
+
+            } catch (e) {
+                this.app.ui.showToast('Stream error');
+            } finally {
+                this.app.ui.setLoading(false);
+            }
+        }
+
+        async handleMedia(formData) {
+            try {
+                const res = await fetch(this.app.config.endpoints.generateMedia, {
                     method: 'POST',
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest'
                     },
                     body: formData
                 });
-
                 const data = await res.json();
-
-                // CRITICAL: Always refresh CSRF token if returned, regardless of success/error
-                if (data.token) {
-                    refreshCsrf(data.token);
-                }
+                if (data.token) this.app.refreshCsrf(data.token);
 
                 if (data.status === 'error') {
-                    showToast(data.message || 'Generation failed.');
-                    resetBtn();
-                    return;
-                }
-
-                if (data.type === 'image') {
-                    // Show Image Result
-                    showMediaResult(data.url, 'image');
-                    resetBtn();
+                    this.app.ui.showToast(data.message);
+                } else if (data.type === 'image') {
+                    this.app.ui.showMediaResult(data.url, 'image');
                 } else if (data.type === 'video') {
-                    // Start Polling
-                    pollVideo(data.op_id);
+                    this.pollVideo(data.op_id);
+                    return; // Don't reset loading yet
                 }
-
-            } catch (err) {
-                console.error(err);
-                showToast('Network error.');
-                resetBtn();
+            } catch (e) {
+                console.error(e);
+                this.app.ui.showToast('Media generation failed.');
             }
-        });
+            this.app.ui.setLoading(false);
+        }
 
-        // --- MOCK GENERATION LOGIC (Start) ---
-        // Returns true if a mock request was handled, false otherwise.
-        const handleMockGeneration = (prompt, type) => {
-            const lowerPrompt = prompt.toLowerCase();
+        pollVideo(opId) {
+            this.app.ui.generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Compositing Video...';
+            const timer = setInterval(async () => {
+                const fd = new FormData();
+                fd.append('op_id', opId);
+                try {
+                    const res = await this.app.sendAjax(this.app.config.endpoints.pollMedia, fd);
+                    if (res.status === 'completed') {
+                        clearInterval(timer);
+                        this.app.ui.showMediaResult(res.url, 'video');
+                        this.app.ui.setLoading(false);
+                    } else if (res.status === 'failed') {
+                        clearInterval(timer);
+                        this.app.ui.showToast(res.message);
+                        this.app.ui.setLoading(false);
+                    }
+                } catch (e) {}
+            }, 5000);
+        }
 
-            if (lowerPrompt === 'test image' && type === 'image') {
+        handleMock(prompt, type) {
+            const p = prompt.toLowerCase();
+            if (p === 'test image' && type === 'image') {
                 setTimeout(() => {
-                    showMediaResult('https://picsum.photos/200/300?random=' + new Date().getTime(), 'image');
-                    resetBtn();
-                    showToast('Mock image generated successfully.');
+                    this.app.ui.showMediaResult('https://picsum.photos/200/300?random=' + Date.now(), 'image');
+                    this.app.ui.setLoading(false);
+                }, 1000);
+                return true;
+            }
+            if (p === 'test video' && type === 'video') {
+                setTimeout(() => {
+                    this.app.ui.showMediaResult('http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', 'video');
+                    this.app.ui.setLoading(false);
                 }, 1500);
                 return true;
             }
-
-            if (lowerPrompt === 'test video' && type === 'video') {
-                setTimeout(() => {
-                    // Using a sample video for testing
-                    showMediaResult('http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', 'video');
-                    resetBtn();
-                    showToast('Mock video generated successfully.');
-                }, 2000);
-                return true;
-            }
-
             return false;
-        };
-        // --- MOCK GENERATION LOGIC (End) ---
+        }
 
-        const resetBtn = () => {
-            generateBtn.disabled = false;
-            generateBtn.innerHTML = '<i class="bi bi-sparkles"></i> Generate';
-        };
+        async mockDownload(url, type) {
+            const btn = document.getElementById('mediaDownloadBtn');
+            if (!btn) return;
+            const original = btn.innerHTML;
+            btn.innerHTML = 'Downloading...';
 
-        const showMediaResult = (url, type) => {
-            // Prepare Download Function Call
-            const downloadFn = `downloadMedia('${url}', '${type}')`;
-
-            // Create or Update Result Card
-            let resultContainer = document.getElementById('media-result-container');
-            if (!resultContainer) {
-                resultContainer = document.createElement('div');
-                resultContainer.id = 'media-result-container';
-                resultContainer.className = 'card blueprint-card mt-5 shadow-lg border-primary';
-                // Append to the main container (parent of the row) to span full width
-                document.querySelector('.container.my-3.my-lg-5').appendChild(resultContainer);
-            }
-
-            // Update Header with Download Button
-            resultContainer.innerHTML = `
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <span class="fw-bold">Studio Output</span>
-                    <div>
-                        <button onclick="${downloadFn}" class="btn btn-sm btn-light" id="mediaDownloadBtn">
-                            <i class="bi bi-download me-1"></i> Download
-                        </button>
-                    </div>
-                </div>
-                <div class="card-body text-center p-4" id="media-content-area"></div>
-            `;
-
-            const contentArea = document.getElementById('media-content-area');
-            let mediaHtml = '';
-
-            if (type === 'image') {
-                mediaHtml = `<img src="${url}" class="img-fluid rounded shadow-sm" alt="Generated Image">`;
-            } else if (type === 'video') {
-                mediaHtml = `
-                    <video controls autoplay loop class="w-100 rounded shadow-sm">
-                        <source src="${url}" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>`;
-            }
-
-            contentArea.innerHTML = mediaHtml;
-
-            resultContainer.scrollIntoView({
-                behavior: 'smooth'
-            });
-        };
-
-        // Global function for downloading media
-        window.downloadMedia = async (url, type) => {
-            // 1. Internal URL (Real API): Use backend forced download
-            if (url.includes('gemini/media/serve')) {
-                const downloadUrl = url + (url.includes('?') ? '&' : '?') + 'download=1';
-                window.location.href = downloadUrl;
-                return;
-            }
-
-            // --- MOCK DOWNLOAD LOGIC (Start) ---
-            // To remove mock functionality, delete this block.
-            await handleMockDownload(url, type);
-            // --- MOCK DOWNLOAD LOGIC (End) ---
-        };
-
-        // --- MOCK DOWNLOAD HANDLER (Start) ---
-        const handleMockDownload = async (url, type) => {
             try {
-                const btn = document.getElementById('mediaDownloadBtn');
-                const originalText = btn.innerHTML;
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Downloading...';
-                btn.disabled = true;
-
-                const response = await fetch(url);
-                const blob = await response.blob();
-                const blobUrl = window.URL.createObjectURL(blob);
-
+                const resp = await fetch(url);
+                const blob = await resp.blob();
+                const u = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
-                a.href = blobUrl;
-                // Generate filename: mock_image_123.jpg
-                const ext = type === 'video' ? 'mp4' : 'jpg';
-                a.download = `mock_${type}_${new Date().getTime()}.${ext}`;
+                a.href = u;
+                a.download = `mock_${type}_${Date.now()}.${type==='video'?'mp4':'jpg'}`;
                 document.body.appendChild(a);
                 a.click();
-
-                window.URL.revokeObjectURL(blobUrl);
-                document.body.removeChild(a);
-
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            } catch (err) {
-                console.error('Download failed:', err);
-                alert('Failed to download media.');
+                a.remove();
+            } catch (e) {
+                this.app.ui.showToast('Download failed');
             }
-        };
-        // --- MOCK DOWNLOAD HANDLER (End) ---
+            btn.innerHTML = original;
+        }
+    }
 
-        const pollVideo = async (opId) => {
-            generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing Video...';
-
-            const pollInterval = setInterval(async () => {
-                try {
-                    const formData = new FormData();
-                    formData.append(appState.csrfName, appState.csrfHash);
-                    formData.append('op_id', opId);
-
-                    const res = await fetch('<?= url_to('gemini.media.poll') ?>', {
-                        method: 'POST',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        body: formData
-                    });
-
-                    const data = await res.json();
-                    if (data.token) refreshCsrf(data.token);
-
-                    if (data.status === 'completed') {
-                        clearInterval(pollInterval);
-                        showMediaResult(data.url, 'video');
-                        resetBtn();
-                    } else if (data.status === 'failed') {
-                        clearInterval(pollInterval);
-                        showToast(data.message || 'Video generation failed.');
-                        resetBtn();
-                    }
-                    // If pending, continue polling
-
-                } catch (err) {
-                    console.error(err);
-                    // Don't stop polling immediately on network glitch, but maybe count errors?
-                    // For now, let's just log.
-                }
-            }, 5000); // Poll every 5 seconds
-        };
+    document.addEventListener('DOMContentLoaded', () => {
+        new GeminiApp().init();
     });
 </script>
 <?= $this->endSection() ?>

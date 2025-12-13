@@ -255,151 +255,155 @@ class DocumentService
      */
     private function getStyledHtml(string $htmlContent, string $title = 'Document'): string
     {
-        return '<!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="utf-8"/>
-                <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-                <title>' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</title>
-                <style>
-                    /* Professional Typography Hierarchy */
-                    body {
-                        font-family: Calibri, Arial, sans-serif;
-                        font-size: 11pt;
-                        line-height: 1.6;
-                        color: #2c3e50;
-                        margin: 1in;
-                        max-width: 100%;
-                    }
+        $safeTitle = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
 
-                    h1 {
-                        font-family: Calibri, Arial, sans-serif;
-                        font-size: 22pt;
-                        font-weight: 700;
-                        color: #1a1a1a;
-                        margin: 24pt 0 12pt 0;
-                        padding-bottom: 8pt;
-                        border-bottom: 2px solid #3498db;
-                    }
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>{$safeTitle}</title>
+    <style>
+        /* Professional Typography Hierarchy */
+        body {
+            font-family: Calibri, Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.6;
+            color: #2c3e50;
+            margin: 1in;
+            max-width: 100%;
+        }
 
-                    h2 {
-                        font-family: Calibri, Arial, sans-serif;
-                        font-size: 16pt;
-                        font-weight: 600;
-                        color: #2c3e50;
-                        margin: 18pt 0 10pt 0;
-                    }
+        h1 {
+            font-family: Calibri, Arial, sans-serif;
+            font-size: 22pt;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin: 24pt 0 12pt 0;
+            padding-bottom: 8pt;
+            border-bottom: 2px solid #3498db;
+        }
 
-                    h3 {
-                        font-family: Calibri, Arial, sans-serif;
-                        font-size: 13pt;
-                        font-weight: 600;
-                        color: #34495e;
-                        margin: 14pt 0 8pt 0;
-                    }
+        h2 {
+            font-family: Calibri, Arial, sans-serif;
+            font-size: 16pt;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 18pt 0 10pt 0;
+        }
 
-                    /* Professional Paragraph Spacing */
-                    p {
-                        margin: 0 0 10pt 0;
-                        text-align: left;
-                    }
+        h3 {
+            font-family: Calibri, Arial, sans-serif;
+            font-size: 13pt;
+            font-weight: 600;
+            color: #34495e;
+            margin: 14pt 0 8pt 0;
+        }
 
-                    /* Enhanced Tables */
-                    table {
-                        width: 100%;
-                        border-collapse: collapse;
-                        margin: 16pt 0;
-                        font-size: 10pt;
-                    }
+        /* Professional Paragraph Spacing */
+        p {
+            margin: 0 0 10pt 0;
+            text-align: left;
+        }
 
-                    thead {
-                        background-color: #34495e;
-                        color: white;
-                        font-weight: 600;
-                    }
+        /* Enhanced Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16pt 0;
+            font-size: 10pt;
+        }
 
-                    th, td {
-                        border: 1px solid #bdc3c7;
-                        padding: 8pt 10pt;
-                        text-align: left;
-                    }
+        thead {
+            background-color: #34495e;
+            color: white;
+            font-weight: 600;
+        }
 
-                    tbody tr:nth-child(even) {
-                        background-color: #f8f9fa;
-                    }
+        th, td {
+            border: 1px solid #bdc3c7;
+            padding: 8pt 10pt;
+            text-align: left;
+        }
 
-                    /* Professional Code Blocks */
-                    pre {
-                        background: #f4f4f4;
-                        border-left: 4px solid #3498db;
-                        padding: 12pt;
-                        margin: 12pt 0;
-                        font-family: "Courier New", monospace;
-                        font-size: 9pt;
-                        overflow-x: auto;
-                        white-space: pre-wrap;
-                        word-wrap: break-word;
-                    }
+        tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
 
-                    code {
-                        background: #ecf0f1;
-                        padding: 2pt 4pt;
-                        border-radius: 3px;
-                        font-family: "Courier New", monospace;
-                        font-size: 9pt;
-                    }
+        /* Professional Code Blocks */
+        pre {
+            background: #f4f4f4;
+            border-left: 4px solid #3498db;
+            padding: 12pt;
+            margin: 12pt 0;
+            font-family: "Courier New", monospace;
+            font-size: 9pt;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
 
-                    pre code {
-                        background: none;
-                        padding: 0;
-                    }
+        code {
+            background: #ecf0f1;
+            padding: 2pt 4pt;
+            border-radius: 3px;
+            font-family: "Courier New", monospace;
+            font-size: 9pt;
+        }
 
-                    /* Enhanced Blockquotes */
-                    blockquote {
-                        border-left: 4px solid #95a5a6;
-                        margin: 12pt 0;
-                        padding: 8pt 12pt;
-                        background: #f8f9fa;
-                        font-style: italic;
-                        color: #555;
-                    }
+        pre code {
+            background: none;
+            padding: 0;
+        }
 
-                    /* Lists */
-                    ul, ol {
-                        margin: 10pt 0;
-                        padding-left: 30pt;
-                    }
+        /* Enhanced Blockquotes */
+        blockquote {
+            border-left: 4px solid #95a5a6;
+            margin: 12pt 0;
+            padding: 8pt 12pt;
+            background: #f8f9fa;
+            font-style: italic;
+            color: #555;
+        }
 
-                    li {
-                        margin: 4pt 0;
-                    }
+        /* Lists */
+        ul, ol {
+            margin: 10pt 0;
+            padding-left: 30pt;
+        }
 
-                    /* Links */
-                    a {
-                        color: #3498db;
-                        text-decoration: none;
-                    }
+        li {
+            margin: 4pt 0;
+        }
 
-                    a:hover {
-                        text-decoration: underline;
-                    }
+        /* Links */
+        a {
+            color: #3498db;
+            text-decoration: none;
+        }
 
-                    /* Horizontal Rules */
-                    hr {
-                        border: none;
-                        border-top: 1px solid #bdc3c7;
-                        margin: 16pt 0;
-                    }
+        a:hover {
+            text-decoration: underline;
+        }
 
-                    /* Print-specific adjustments */
-                    @media print {
-                        body {
-                            margin: 0.5in;
-                        }
-                    }
-                </style>
-            </head>
-            <body>' . $htmlContent . '</body>
-            </html>';
+        /* Horizontal Rules */
+        hr {
+            border: none;
+            border-top: 1px solid #bdc3c7;
+            margin: 16pt 0;
+        }
+
+        /* Print-specific adjustments */
+        @media print {
+            body {
+                margin: 0.5in;
+            }
+        }
+    </style>
+</head>
+<body>{$htmlContent}</body>
+</html>
+HTML;
     }
 }

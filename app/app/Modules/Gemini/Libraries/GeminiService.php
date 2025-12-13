@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Gemini\Libraries;
 
 use App\Modules\Gemini\Libraries\ModelPayloadService;
+use CodeIgniter\I18n\Time;
+use App\Models\UserModel;
 
 /**
  * Service layer for interacting with the Google Gemini API.
@@ -36,7 +38,7 @@ class GeminiService
      *
      * @var array<string>
      */
-    protected array $modelPriorities = [
+    public const MODEL_PRIORITIES = [
         "gemini-3-pro-preview", // Multimodal, Thinking Level High
         "gemini-2.5-pro",       // Multimodal, Thinking Budget
         "gemini-flash-latest",      // Primary: Latest Flash model for speed and efficiency
@@ -54,6 +56,12 @@ class GeminiService
     protected $userModel;
 
     /**
+     * Database connection.
+     * @var \CodeIgniter\Database\BaseConnection
+     */
+    protected $db;
+
+    /**
      * Pricing configuration for text and audio models (per 1 Million tokens).
      *
      * Text Pricing:
@@ -63,7 +71,7 @@ class GeminiService
      * Audio Pricing:
      * - Fixed rate for input and output audio tokens.
      */
-    protected array $pricingConfig = [
+    public const PRICING_CONFIG = [
         'default' => [
             'tier1' => ['input' => 2.00, 'output' => 12.00],
             'tier2' => ['input' => 4.00, 'output' => 18.00],
@@ -83,7 +91,114 @@ class GeminiService
     {
         $this->apiKey = env('GEMINI_API_KEY') ?? getenv('GEMINI_API_KEY');
         $this->payloadService = service('modelPayloadService');
-        $this->userModel = new \App\Models\UserModel();
+        $this->userModel = new UserModel();
+        $this->db = \Config\Database::connect();
+    }
+
+    /**
+     * Encapsulates the entire interaction logic: Context, Cost, Generation, TTS, and Transactions.
+     * 
+     * @param int $userId
+     * @param string $prompt
+     * @param array $fileParts
+     * @param array $options ['assistant_mode' => bool, 'voice_mode' => bool]
+     * @return array
+     */
+    public function processInteraction(int $userId, string $prompt, array $fileParts, array $options): array
+    {
+        $isAssistantMode = $options['assistant_mode'] ?? true;
+        $isVoiceMode = $options['voice_mode'] ?? false;
+
+        $contextData = ['finalPrompt' => $prompt, 'memoryService' => null, 'usedInteractionIds' => []];
+
+        // 1. Context Preparation
+        if ($isAssistantMode && !empty(trim($prompt))) {
+            $memoryService = service('memory', $userId);
+            $recalled = $memoryService->getRelevantContext($prompt);
+
+            $template = $memoryService->getTimeAwareSystemPrompt();
+            $template = str_replace('{{CURRENT_TIME}}', Time::now()->format('Y-m-d H:i:s T'), $template);
+            $template = str_replace('{{CONTEXT_FROM_MEMORY_SERVICE}}', $recalled['context'], $template);
+            $template = str_replace('{{USER_QUERY}}', htmlspecialchars($prompt), $template);
+            $template = str_replace('{{TONE_INSTRUCTION}}', "Maintain default persona: dry, witty, concise.", $template);
+
+            $contextData['finalPrompt'] = $template;
+            $contextData['memoryService'] = $memoryService;
+            $contextData['usedInteractionIds'] = $recalled['used_interaction_ids'];
+        }
+
+        $allParts = $fileParts;
+        if ($contextData['finalPrompt']) {
+            array_unshift($allParts, ['text' => $contextData['finalPrompt']]);
+        }
+
+        if (empty($allParts)) {
+            return ['error' => 'Please provide a prompt or file.'];
+        }
+
+        // 2. Cost Estimation & Balance Check
+        $user = $this->userModel->find($userId);
+        $estimate = $this->estimateCost($allParts);
+
+        if ($estimate['status'] && $user->balance < $estimate['costKSH']) {
+            return ['error' => "Insufficient balance. Estimated Input Cost: KSH " . number_format($estimate['costKSH'], 2)];
+        }
+
+        // 3. API Execution
+        $apiResponse = $this->generateContent($allParts);
+
+        if (isset($apiResponse['error'])) {
+            return ['error' => $apiResponse['error']];
+        }
+
+        // 4. TTS Execution
+        $audioResult = null;
+        if ($isVoiceMode && !empty(trim($apiResponse['result']))) {
+            $speech = $this->generateSpeech($apiResponse['result']);
+            if ($speech['status']) {
+                $audioResult = $speech; // Contains audioData and usage
+            }
+        }
+
+        // 5. Transactional Write (Balance + Memory)
+        $costKSH = 0.0;
+        $this->db->transStart();
+
+        // Calculate & Deduct Cost
+        if (isset($apiResponse['usage']) || ($audioResult['usage'] ?? null)) {
+            $textUsage = $apiResponse['usage'] ?? [];
+            $audioUsage = $audioResult['usage'] ?? null;
+
+            $costData = $this->calculateCost($textUsage, $audioUsage);
+            $costKSH = $costData['costKSH'];
+            $deduction = number_format($costKSH, 4, '.', '');
+
+            $this->userModel->deductBalance($userId, $deduction);
+        }
+
+        // Update Memory
+        // Update Memory
+        $memoryService = $contextData['memoryService'] ?? null;
+        if ($isAssistantMode && $memoryService) {
+            $memoryService->updateMemory(
+                $prompt,
+                $apiResponse['result'],
+                $contextData['usedInteractionIds']
+            );
+        }
+
+        $this->db->transComplete();
+
+        if ($this->db->transStatus() === false) {
+            return ['error' => 'Transaction failed. Please try again.'];
+        }
+
+        return [
+            'result' => $apiResponse['result'],
+            'costKSH' => $costKSH,
+            'audioData' => $audioResult['audioData'] ?? null,
+            'success' => true
+        ];
     }
 
     /**
@@ -108,11 +223,11 @@ class GeminiService
         $apiKey = trim($this->apiKey);
         $lastError = ['error' => 'An unexpected error occurred after multiple retries.'];
 
-        if (empty($this->modelPriorities)) {
+        if (empty(self::MODEL_PRIORITIES)) {
             return ['error' => 'No Gemini models configured in modelPriorities.'];
         }
 
-        foreach ($this->modelPriorities as $model) {
+        foreach (self::MODEL_PRIORITIES as $model) {
             $currentModel = $model;
 
             // Retrieve the specific payload configuration for the current model
@@ -376,7 +491,7 @@ class GeminiService
         $estimatedTokens = $response['totalTokens'];
 
         // Use Tier 1 pricing for estimation (conservative approach)
-        $pricing = $this->pricingConfig['default']['tier1'];
+        $pricing = self::PRICING_CONFIG['default']['tier1'];
 
         $estimatedCostUSD = ($estimatedTokens / 1000000) * $pricing['input'];
         $usdToKsh = 129; // Fixed exchange rate
@@ -411,7 +526,7 @@ class GeminiService
         $candidatesTokens = $textUsage['candidatesTokenCount'] ?? 0;
         $totalTextTokens = $textUsage['totalTokenCount'] ?? ($promptTokens + $candidatesTokens);
 
-        $pricing = $this->pricingConfig['default'];
+        $pricing = self::PRICING_CONFIG['default'];
         // Determine pricing tier based on total text tokens
         $tier = ($totalTextTokens > $pricing['tier_threshold']) ? 'tier2' : 'tier1';
         $rates = $pricing[$tier];
@@ -429,7 +544,7 @@ class GeminiService
             $audioOutputTokens = $audioUsage['candidatesTokenCount'] ?? 0;
             $audioTokens = $audioUsage['totalTokenCount'] ?? ($audioInputTokens + $audioOutputTokens);
 
-            $audioPricing = $this->pricingConfig['audio'];
+            $audioPricing = self::PRICING_CONFIG['audio'];
             $audioInputCost = ($audioInputTokens / 1000000) * $audioPricing['input'];
             $audioOutputCost = ($audioOutputTokens / 1000000) * $audioPricing['output'];
             $totalAudioCostUSD = $audioInputCost + $audioOutputCost;
@@ -448,5 +563,176 @@ class GeminiService
             'promptTokens' => $promptTokens,
             'candidatesTokens' => $candidatesTokens
         ];
+    }
+    /**
+     * Streams text generation from the Gemini API using Server-Sent Events (SSE).
+     *
+     * @param array $parts An array of content parts.
+     * @param callable $chunkCallback Function to call with each text chunk: function(string $text)
+     * @param callable $completeCallback Function to call on completion: function(string $fullText, ?array $metadata)
+     * @return void
+     */
+    public function generateStream(array $parts, callable $chunkCallback, callable $completeCallback): void
+    {
+        if (!$this->apiKey) {
+            $chunkCallback("Error: GEMINI_API_KEY not set.");
+            return;
+        }
+
+        $apiKey = trim($this->apiKey);
+        $fullGeneratedText = '';
+        $finalUsageMetadata = null;
+
+        if (empty(self::MODEL_PRIORITIES)) {
+            $chunkCallback("Error: No models configured.");
+            return;
+        }
+
+        foreach (self::MODEL_PRIORITIES as $model) {
+            $currentModel = $model;
+            // Get Stream Config (note true for isStream)
+            $config = $this->payloadService->getPayloadConfig($currentModel, $apiKey, $parts, true);
+
+            // Skip if no payload config found ensuring we dont send bad requests
+            if (empty($config)) continue;
+
+            $apiUrl = $config['url'];
+            $requestBody = $config['body'];
+
+            // State for the write function
+            $buffer = '';
+
+            // We need a custom cURL handle to use CURLOPT_WRITEFUNCTION properly with keeping state
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $apiUrl);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $requestBody);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, false); // Important: We handle output manually
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 120); // Longer timeout for streaming
+
+            // The Write Function
+            curl_setopt($ch, CURLOPT_WRITEFUNCTION, function ($ch, $chunk) use (&$buffer, &$fullGeneratedText, &$finalUsageMetadata, $chunkCallback) {
+                $buffer .= $chunk;
+
+                // Google sends a JSON array stream: [{...}, \n {...}]
+                // We need to parse valid objects out of this stream.
+                // This is a simple parser that looks for balanced braces.
+
+                // Continue parsing while we can find a potential JSON object
+                while (true) {
+                    $buffer = trim($buffer);
+                    if (empty($buffer)) break;
+
+                    // Strip leading comma or array bracket if present from previous chunk remnants
+                    if (str_starts_with($buffer, ',') || str_starts_with($buffer, '[')) {
+                        $buffer = trim(substr($buffer, 1));
+                        continue;
+                    }
+
+                    if (str_starts_with($buffer, ']')) {
+                        // End of stream array
+                        $buffer = trim(substr($buffer, 1));
+                        continue;
+                    }
+
+                    // Check if we have a full object via brace counting
+                    if (str_starts_with($buffer, '{')) {
+                        $openBraces = 0;
+                        $endPos = -1;
+                        $inString = false;
+                        $escaped = false;
+
+                        $len = strlen($buffer);
+                        for ($i = 0; $i < $len; $i++) {
+                            $char = $buffer[$i];
+
+                            if (!$inString) {
+                                if ($char === '{') $openBraces++;
+                                elseif ($char === '}') {
+                                    $openBraces--;
+                                    if ($openBraces === 0) {
+                                        $endPos = $i;
+                                        break;
+                                    }
+                                } elseif ($char === '"') $inString = true;
+                            } else {
+                                if ($char === '\\' && !$escaped) {
+                                    $escaped = true;
+                                } elseif ($char === '"' && !$escaped) {
+                                    $inString = false;
+                                } else {
+                                    $escaped = false;
+                                }
+                            }
+                        }
+
+                        if ($endPos !== -1) {
+                            // We found a complete object
+                            $jsonStr = substr($buffer, 0, $endPos + 1);
+                            $remaining = substr($buffer, $endPos + 1);
+
+                            $data = json_decode($jsonStr, true);
+
+                            if (json_last_error() === JSON_ERROR_NONE) {
+                                // Process Valid Object
+                                if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
+                                    $textChunk = $data['candidates'][0]['content']['parts'][0]['text'];
+                                    $fullGeneratedText .= $textChunk;
+                                    $chunkCallback($textChunk);
+                                }
+
+                                if (isset($data['usageMetadata'])) {
+                                    $finalUsageMetadata = $data['usageMetadata'];
+                                }
+
+                                // Advance buffer
+                                $buffer = $remaining;
+                                continue;
+                            } else {
+                                // Logic error or malformed JSON, strip it to avoid infinite loop
+                                $buffer = $remaining;
+                            }
+                        } else {
+                            // Incomplete object, wait for more data
+                            break;
+                        }
+                    } else {
+                        // Garbage or unhandled format, skip one char
+                        if (strlen($buffer) > 0) {
+                            $buffer = substr($buffer, 1);
+                        } else {
+                            break;
+                        }
+                    }
+                }
+
+                return strlen($chunk);
+            });
+
+            $result = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            // curl_close($ch); // Deprecated/Not needed in PHP 8+, auto-closed
+
+            if ($httpCode === 200) { // Success even if result is bool(true) content was handled by writefunction
+                $completeCallback($fullGeneratedText, $finalUsageMetadata);
+                return;
+            }
+
+            // If we are here, it failed.
+            if ($httpCode === 429) {
+                log_message('warning', "Gemini Streaming Quota Exceeded (429) for model '{$currentModel}'");
+                // Continue to next model
+            } else {
+                log_message('error', "Gemini Streaming Error: Status {$httpCode} - {$curlError}");
+            }
+        }
+
+        // If we reach here, all models failed
+        $chunkCallback("Error: Unable to generate stream. Please try again later.");
     }
 }

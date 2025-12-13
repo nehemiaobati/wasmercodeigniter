@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Gemini\Entities;
 
@@ -9,6 +11,7 @@ use CodeIgniter\Entity\Entity;
  * @property int $user_id
  * @property bool $assistant_mode_enabled
  * @property bool $voice_output_enabled
+ * @property bool $stream_output_enabled
  * @property string|null $created_at
  * @property string|null $updated_at
  */
@@ -20,5 +23,6 @@ class UserSetting extends Entity
         'user_id'                => 'integer',
         'assistant_mode_enabled' => 'boolean',
         'voice_output_enabled'   => 'boolean',
+        'stream_output_enabled'  => 'boolean',
     ];
 }
