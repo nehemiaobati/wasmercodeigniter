@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Gemini\Libraries;
 
+use stdClass;
+
 /**
  * Service responsible for generating model-specific configurations and payloads.
- * Decouples configuration complexity from the execution service.
+ * Implements the "Standalone" pattern for infinite model scalability.
  */
 class ModelPayloadService
 {
@@ -21,49 +23,39 @@ class ModelPayloadService
      */
     public function getPayloadConfig(string $modelId, string $apiKey, array $parts, bool $isStream = false): ?array
     {
-        // Standard generation endpoint. 
-        // Note: Your bash scripts used 'streamGenerateContent', but for standard PHP 
-        // request/response cycles without stream handling, 'generateContent' is usually correct.
+        $payload = null;
+        // Default method is generateContent, overridden in specific cases (Imagen/Veo)
         $apiMethod = $isStream ? 'streamGenerateContent' : 'generateContent';
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$modelId}:{$apiMethod}?key=" . urlencode($apiKey);
-
-        $payload = [];
 
         switch ($modelId) {
+            // ----------------------------------------------------------------
+            // 1. ADVANCED THINKING MODELS (Pro)
+            // ----------------------------------------------------------------
             case 'gemini-3-pro-preview':
                 $payload = [
                     "contents" => [["role" => "user", "parts" => $parts]],
-                    "generationConfig" => [
-                        "thinkingConfig" => ["thinkingLevel" => "HIGH"],
-                    ],
-                    "tools" => [
-                        ["googleSearch" => new \stdClass()]
-                    ],
+                    "generationConfig" => ["thinkingConfig" => ["thinkingLevel" => "HIGH"]],
+                    "tools" => [["googleSearch" => new stdClass()]],
                 ];
                 break;
 
             case 'gemini-2.5-pro':
                 $payload = [
                     "contents" => [["role" => "user", "parts" => $parts]],
-                    "generationConfig" => [
-                        "thinkingConfig" => ["thinkingBudget" => 32768],
-                    ],
-                    "tools" => [
-                        ["googleSearch" => new \stdClass()]
-                    ],
+                    "generationConfig" => ["thinkingConfig" => ["thinkingBudget" => 32768]],
+                    "tools" => [["googleSearch" => new stdClass()]],
                 ];
                 break;
 
+            // ----------------------------------------------------------------
+            // 2. STANDARD FLASH MODELS (Thinking Disabled/Low)
+            // ----------------------------------------------------------------
             case 'gemini-flash-latest':
             case 'gemini-2.5-flash':
                 $payload = [
                     "contents" => [["role" => "user", "parts" => $parts]],
-                    "generationConfig" => [
-                        "thinkingConfig" => ["thinkingBudget" => -1],
-                    ],
-                    "tools" => [
-                        ["googleSearch" => new \stdClass()]
-                    ],
+                    "generationConfig" => ["thinkingConfig" => ["thinkingBudget" => -1]],
+                    "tools" => [["googleSearch" => new stdClass()]],
                 ];
                 break;
 
@@ -71,138 +63,82 @@ class ModelPayloadService
             case 'gemini-2.5-flash-lite':
                 $payload = [
                     "contents" => [["role" => "user", "parts" => $parts]],
-                    "generationConfig" => [
-                        "thinkingConfig" => ["thinkingBudget" => 0],
-                    ],
-                    "tools" => [
-                        ["googleSearch" => new \stdClass()]
-                    ],
+                    "generationConfig" => ["thinkingConfig" => ["thinkingBudget" => 0]],
+                    "tools" => [["googleSearch" => new stdClass()]],
                 ];
                 break;
 
-            // -------------------------------------------------------
-            // FIX APPLIED HERE
-            // -------------------------------------------------------
+            // ----------------------------------------------------------------
+            // 3. LEGACY FLASH MODELS (2.0)
+            // ----------------------------------------------------------------
             case 'gemini-2.0-flash':
-                // Matches Bash Script: Has googleSearch tools, Empty Object generationConfig
                 $payload = [
-                    "contents" => [
-                        [
-                            "role" => "user",
-                            "parts" => $parts
-                        ]
-                    ],
-                    // Use stdClass to force JSON "{}" instead of "[]"
-                    "generationConfig" => new \stdClass(),
-                    "tools" => [
-                        [
-                            "googleSearch" => new \stdClass()
-                        ]
-                    ],
+                    "contents" => [["role" => "user", "parts" => $parts]],
+                    "generationConfig" => new stdClass(), // Force {}
+                    "tools" => [["googleSearch" => new stdClass()]],
                 ];
                 break;
 
             case 'gemini-2.0-flash-lite':
-                // Matches Bash Script: NO tools, Empty Object generationConfig
                 $payload = [
-                    "contents" => [
-                        [
-                            "role" => "user",
-                            "parts" => $parts
-                        ]
-                    ],
-                    // Use stdClass to force JSON "{}" instead of "[]"
-                    "generationConfig" => new \stdClass(),
+                    "contents" => [["role" => "user", "parts" => $parts]],
+                    "generationConfig" => new stdClass(),
+                    // No tools for 2.0 Flash Lite
                 ];
                 break;
 
-            // -------------------------------------------------------
-            // IMAGEN 4.0 (Standard/Ultra/Fast)
-            // -------------------------------------------------------
-            // -------------------------------------------------------
-            // GEMINI IMAGE GENERATION (Multimodal)
-            // -------------------------------------------------------
+            // ----------------------------------------------------------------
+            // 4. MULTIMODAL GENERATION (Image + Text Output)
+            // ----------------------------------------------------------------
             case 'gemini-3-pro-image-preview':
                 $payload = [
-                    "contents" => [
-                        ["role" => "user", "parts" => $parts]
-                    ],
+                    "contents" => [["role" => "user", "parts" => $parts]],
                     "generationConfig" => [
                         "responseModalities" => ["IMAGE", "TEXT"],
-                        "imageConfig" => [
-                            "image_size" => "1K"
-                        ],
+                        "imageConfig" => ["image_size" => "1K"],
                     ],
-                    "tools" => [
-                        ["googleSearch" => new \stdClass()]
-                    ],
+                    "tools" => [["googleSearch" => new stdClass()]],
                 ];
                 break;
 
             case 'gemini-2.5-flash-image':
             case 'gemini-2.5-flash-image-preview':
                 $payload = [
-                    "contents" => [
-                        ["role" => "user", "parts" => $parts]
-                    ],
+                    "contents" => [["role" => "user", "parts" => $parts]],
                     "generationConfig" => [
                         "responseModalities" => ["IMAGE", "TEXT"],
                     ],
                 ];
                 break;
 
-            // -------------------------------------------------------
-            // IMAGEN 4.0 (Standard/Ultra)
-            // -------------------------------------------------------
-            // -------------------------------------------------------
-            // IMAGEN 4.0 (Standard/Ultra/Fast)
-            // -------------------------------------------------------
+            // ----------------------------------------------------------------
+            // 5. IMAGEN 4.0 (Text-to-Image / Predict Endpoint)
+            // ----------------------------------------------------------------
             case 'imagen-4.0-generate-preview-06-06':
             case 'imagen-4.0-ultra-generate-preview-06-06':
             case 'imagen-4.0-ultra-generate-001':
             case 'imagen-4.0-fast-generate-001':
             case 'imagen-4.0-generate-001':
-                // Extract prompt (Text ONLY)
-                // Worst-case handling: If user sends image+text, we MUST strip the image 
-                // because Imagen 'predict' endpoint will 400 Error on unknown fields or complex structures.
-                $promptText = '';
-                foreach ($parts as $part) {
-                    if (isset($part['text'])) $promptText .= $part['text'] . ' ';
-                }
-                $promptText = trim($promptText);
-
+                $apiMethod = 'predict';
                 $payload = [
-                    "instances" => [
-                        ["prompt" => $promptText]
-                    ],
+                    "instances" => [["prompt" => $this->_extractTextPrompt($parts)]],
                     "parameters" => [
                         "outputMimeType" => "image/jpeg",
                         "sampleCount" => 1,
                         "personGeneration" => "ALLOW_ALL",
                         "aspectRatio" => "1:1",
-                        "imageSize" => "1K",
+                        "imageSize" => "1K", // Defaulting to 1K for consistency
                     ]
                 ];
-                $apiMethod = 'predict';
-                $url = "https://generativelanguage.googleapis.com/v1beta/models/{$modelId}:{$apiMethod}?key=" . urlencode($apiKey);
                 break;
 
-            // -------------------------------------------------------
-            // VEO 2.0 (Video Generation)
-            // -------------------------------------------------------
+            // ----------------------------------------------------------------
+            // 6. VEO 2.0 (Text-to-Video / Async Endpoint)
+            // ----------------------------------------------------------------
             case 'veo-2.0-generate-001':
-                // Extract prompt (Text ONLY)
-                // Veo currently only supports text-to-video via this specific endpoint structure.
-                $promptText = '';
-                foreach ($parts as $part) {
-                    if (isset($part['text'])) $promptText .= $part['text'] . ' ';
-                }
-                $promptText = trim($promptText);
-
+                $apiMethod = 'predictLongRunning';
                 $payload = [
-                    "instances" => [
-                        ["prompt" => $promptText]
-                    ],
+                    "instances" => [["prompt" => $this->_extractTextPrompt($parts)]],
                     "parameters" => [
                         "aspectRatio" => "16:9",
                         "sampleCount" => 1,
@@ -210,21 +146,39 @@ class ModelPayloadService
                         "personGeneration" => "ALLOW_ALL",
                     ]
                 ];
-                $apiMethod = 'predictLongRunning';
-                $url = "https://generativelanguage.googleapis.com/v1beta/models/{$modelId}:{$apiMethod}?key=" . urlencode($apiKey);
                 break;
 
             default:
-                // RETURN NULL if the model is not explicitly configured.
-                // This prevents 'generic' payloads from failing on specialized models.
+                // Strict: Return null for unknown models to ensure explicit configuration
                 return null;
         }
 
-        // This return is only reached if a specific model case is matched.
-        // If default is hit, the function exits with null.
         return [
-            'url' => $url,
+            'url' => $this->_buildEndpoint($modelId, $apiMethod, $apiKey),
             'body' => json_encode($payload)
         ];
+    }
+
+    /**
+     * Extracts plain text from a parts array, ignoring images/files.
+     * Essential for models (Imagen/Veo) that crash if sent multimodal input arrays.
+     */
+    private function _extractTextPrompt(array $parts): string
+    {
+        $text = '';
+        foreach ($parts as $part) {
+            if (isset($part['text'])) {
+                $text .= $part['text'] . ' ';
+            }
+        }
+        return trim($text);
+    }
+
+    /**
+     * Standardizes the API endpoint construction.
+     */
+    private function _buildEndpoint(string $modelId, string $method, string $apiKey): string
+    {
+        return "https://generativelanguage.googleapis.com/v1beta/models/{$modelId}:{$method}?key=" . urlencode($apiKey);
     }
 }

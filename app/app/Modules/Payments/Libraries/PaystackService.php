@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Payments\Libraries;
 
@@ -76,7 +78,7 @@ class PaystackService
             'currency'     => $currency ?? $this->currency,
         ];
 
-        return $this->sendRequest('POST', $url, $fields);
+        return $this->_sendRequest('POST', $url, $fields);
     }
 
     /**
@@ -93,7 +95,7 @@ class PaystackService
 
         $url = $this->baseUrl . '/transaction/verify/' . rawurlencode($reference);
 
-        return $this->sendRequest('GET', $url);
+        return $this->_sendRequest('GET', $url);
     }
 
     /**
@@ -105,7 +107,7 @@ class PaystackService
      * @return array The decoded JSON response from the API.
      * @throws \Exception If an error occurs during the API request.
      */
-    private function sendRequest(string $method, string $url, array $fields = []): array
+    private function _sendRequest(string $method, string $url, array $fields = []): array
     {
         $client = \Config\Services::curlrequest();
 

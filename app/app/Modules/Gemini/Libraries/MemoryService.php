@@ -24,6 +24,7 @@ class MemoryService
     private EmbeddingService $embeddingService;
     private TokenService $tokenService;
     private AGI $config;
+    private $db;
 
     /**
      * Constructor.
@@ -37,13 +38,14 @@ class MemoryService
         $this->embeddingService = service('embedding');
         $this->tokenService = service('tokenService');
         $this->config = config(AGI::class);
+        $this->db = \Config\Database::connect();
     }
 
     /**
      * Calculates the cosine similarity between two vectors.
      * @return float A value between -1 and 1. Higher is more similar.
      */
-    private function cosineSimilarity(array $vecA, array $vecB): float
+    private function _cosineSimilarity(array $vecA, array $vecB): float
     {
         $dotProduct = 0.0;
         $magA = 0.0;
@@ -79,7 +81,7 @@ class MemoryService
             $similarities = [];
             foreach ($interactions as $interaction) {
                 if (is_array($interaction->embedding)) {
-                    $similarity = $this->cosineSimilarity($inputVector, $interaction->embedding);
+                    $similarity = $this->_cosineSimilarity($inputVector, $interaction->embedding);
                     $similarities[$interaction->unique_id] = $similarity;
                 }
             }
@@ -88,7 +90,7 @@ class MemoryService
         }
 
         // Keyword Search (Lexical)
-        $inputEntities = $this->extractEntities($userInput);
+        $inputEntities = $this->_extractEntities($userInput);
         $keywordResults = [];
         if (!empty($inputEntities)) {
             $entities = $this->entityModel->where('user_id', $this->userId)->whereIn('entity_key', $inputEntities)->findAll();
@@ -240,7 +242,7 @@ class MemoryService
 
         // 3. Create new interaction
         $newId = 'int_' . uniqid('', true);
-        $keywords = $this->extractEntities($userInput);
+        $keywords = $this->_extractEntities($userInput);
         $fullText = "User: {$userInput} | AI: {$aiOutput}";
         $embedding = $this->embeddingService->getEmbedding($fullText);
 
@@ -258,8 +260,8 @@ class MemoryService
         ]);
         $this->interactionModel->insert($newInteraction);
 
-        $this->updateEntitiesFromInteraction($keywords, $newId);
-        $this->pruneMemory();
+        $this->_updateEntitiesFromInteraction($keywords, $newId);
+        $this->_pruneMemory();
         return $newId;
     }
 
@@ -269,7 +271,7 @@ class MemoryService
      * @param array $keywords Extracted keywords from the interaction.
      * @param string $interactionId The ID of the current interaction.
      */
-    private function updateEntitiesFromInteraction(array $keywords, string $interactionId): void
+    private function _updateEntitiesFromInteraction(array $keywords, string $interactionId): void
     {
         // --- REFACTOR START: Implement noveltyBonus and relationshipStrengthIncrement ---
         $isNovel = false;
@@ -329,21 +331,36 @@ class MemoryService
     /**
      * Removes old or irrelevant memories to keep the database size manageable.
      */
-    private function pruneMemory(): void
+    private function _pruneMemory(): void
     {
         $count = $this->interactionModel->where('user_id', $this->userId)->countAllResults();
+
         if ($count > $this->config->pruningThreshold) {
-            $limit = $count - $this->config->pruningThreshold;
-            $interactionsToDelete = $this->interactionModel
+            $toDelete = $count - $this->config->pruningThreshold;
+            $this->interactionModel
                 ->where('user_id', $this->userId)
                 ->orderBy('relevance_score', 'ASC')
-                ->limit($limit)
-                ->findColumn('id');
-
-            if (!empty($interactionsToDelete)) {
-                $this->interactionModel->delete($interactionsToDelete);
-            }
+                ->orderBy('last_accessed', 'ASC')
+                ->limit($toDelete)
+                ->delete();
         }
+    }
+
+    /**
+     * Clears all memory (interactions and entities) for the user.
+     *
+     * @return bool True on success, false on failure.
+     */
+    public function clearAll(): bool
+    {
+        $this->db->transStart();
+
+        $this->interactionModel->where('user_id', $this->userId)->delete();
+        $this->entityModel->where('user_id', $this->userId)->delete();
+
+        $this->db->transComplete();
+
+        return $this->db->transStatus();
     }
 
     /**
@@ -415,7 +432,7 @@ XML;
      * @param string $text The text to analyze.
      * @return array An array of extracted entities.
      */
-    private function extractEntities(string $text): array
+    private function _extractEntities(string $text): array
     {
         return $this->tokenService->processText($text);
     }

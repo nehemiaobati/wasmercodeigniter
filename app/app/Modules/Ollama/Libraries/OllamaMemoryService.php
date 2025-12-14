@@ -39,10 +39,10 @@ class OllamaMemoryService
     public function processChat(string $prompt, ?string $model = null): array
     {
         // 1. Build Context (Gemini Style)
-        $contextData = $this->getRelevantContext($prompt);
+        $contextData = $this->_getRelevantContext($prompt);
 
         // 2. Construct System Prompt
-        $systemPrompt = $this->constructSystemPrompt($contextData['context']);
+        $systemPrompt = $this->_constructSystemPrompt($contextData['context']);
 
         // 3. Assemble Messages (System + User only, as history is in context)
         $messages = [
@@ -58,7 +58,7 @@ class OllamaMemoryService
         }
 
         // 5. Save Memory
-        $this->saveInteraction($prompt, $result['response'], $result['model'], $contextData['used_interaction_ids']);
+        $this->_saveInteraction($prompt, $result['response'], $result['model'], $contextData['used_interaction_ids']);
 
         return $result;
     }
@@ -67,7 +67,7 @@ class OllamaMemoryService
      * Retrieves relevant context from memory based on user input.
      * Replicates Gemini's MemoryService workflow.
      */
-    private function getRelevantContext(string $userInput): array
+    private function _getRelevantContext(string $userInput): array
     {
         // 1. Vector Search (Semantic)
         $semanticResults = [];
@@ -80,8 +80,8 @@ class OllamaMemoryService
 
             foreach ($candidates as $c) {
                 if (empty($c->embedding)) continue;
-                $sim = $this->cosineSimilarity($inputVector, $c->embedding);
-                $semanticResults[$c->id] = $sim;
+                $similarity = $this->_cosineSimilarity($inputVector, $c->embedding);
+                $semanticResults[$c->id] = $similarity;
             }
             arsort($semanticResults);
             $semanticResults = array_slice($semanticResults, 0, 50, true);
@@ -188,7 +188,7 @@ class OllamaMemoryService
         ];
     }
 
-    private function constructSystemPrompt(string $contextText): string
+    private function _constructSystemPrompt(string $contextText): string
     {
         return "You are DeepSeek R1, a helpful AI assistant. " .
             "CONTEXT FROM MEMORY:\n" . $contextText . "\n\n" .
@@ -198,7 +198,7 @@ class OllamaMemoryService
             "3. Do not explicitly say 'According to my memory'.";
     }
 
-    private function saveInteraction(string $input, string $response, string $modelName, array $usedIds): void
+    private function _saveInteraction(string $input, string $response, string $modelName, array $usedIds): void
     {
         $keywords  = $this->tokenizer->processText($input);
 
@@ -228,14 +228,14 @@ class OllamaMemoryService
 
         if ($interactionId) {
             log_message('info', 'Ollama Memory: Interaction saved. ID: ' . $interactionId);
-            $this->updateKnowledgeGraph($keywords, (int)$interactionId);
-            $this->applyDecay($usedIds); // Reward used, decay others
+            $this->_updateKnowledgeGraph($keywords, (int)$interactionId);
+            $this->_applyDecay($usedIds); // Reward used, decay others
         } else {
             log_message('error', 'Ollama Memory: Failed to save interaction. Errors: ' . json_encode($this->interactionModel->errors()));
         }
     }
 
-    private function updateKnowledgeGraph(array $keywords, int $interactionId): void
+    private function _updateKnowledgeGraph(array $keywords, int $interactionId): void
     {
         foreach ($keywords as $word) {
             $entity = $this->entityModel
@@ -268,7 +268,7 @@ class OllamaMemoryService
         }
     }
 
-    private function applyDecay(array $usedIds): void
+    private function _applyDecay(array $usedIds): void
     {
         // 1. Reward Used Interactions
         if (!empty($usedIds)) {
@@ -287,7 +287,7 @@ class OllamaMemoryService
             ->update();
     }
 
-    private function cosineSimilarity(array $vecA, array $vecB): float
+    private function _cosineSimilarity(array $vecA, array $vecB): float
     {
         $dot = 0.0;
         $magA = 0.0;

@@ -130,7 +130,7 @@ class BlogController extends BaseController
         if (!session()->get('is_admin')) {
             return redirect()->to(url_to('home'));
         }
-        return $this->processPost();
+        return $this->_processPost();
     }
 
     public function update(int $id)
@@ -138,10 +138,10 @@ class BlogController extends BaseController
         if (!session()->get('is_admin')) {
             return redirect()->to(url_to('home'));
         }
-        return $this->processPost($id);
+        return $this->_processPost($id);
     }
 
-    private function processPost(?int $id = null)
+    private function _processPost(?int $id = null)
     {
         $contentBlocks = [];
 

@@ -397,7 +397,7 @@
             div.innerHTML = `
             <div class="flex-grow-1" style="min-width: 0;">
                 <div class="d-flex justify-content-between small mb-1">
-                    <span class="fw-bold text-truncate">${file.name}</span>
+                    <span class="fw-bold text-truncate file-name"></span>
                     <span class="status-text text-muted">Waiting...</span>
                 </div>
                 <div class="progress">
@@ -408,6 +408,7 @@
                 <i class="bi bi-x-lg"></i>
             </button>
         `;
+            div.querySelector('.file-name').textContent = file.name;
             listWrapper.appendChild(div);
             return div;
         };

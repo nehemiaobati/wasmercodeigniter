@@ -133,19 +133,6 @@ class DocumentService
     private function _generateWithPHPWord(string $markdownContent, array $metadata): array
     {
         try {
-            // --------------------------------------------------------------------------
-            // WORKAROUND 3: Fix "Table in ListItemRun" Crash
-            // --------------------------------------------------------------------------
-            // PHPWord crashes if a table is nested inside a list item.
-            // To prevent this, we pre-process the Markdown to "un-indent" all tables, 
-            // effectively moving them out of the list structure and making them top-level elements.
-
-            // A. Remove indentation from all table rows (lines starting with whitespace + pipe)
-            $markdownContent = preg_replace('/^[\t ]+\|/m', '|', $markdownContent);
-
-            // B. Ensure there is a blank line before the table starts to separate it from the previous element
-            $markdownContent = preg_replace('/^(?!\|)(.*)\n\|/m', "$1\n\n|", $markdownContent);
-
             // Convert Markdown to HTML locally for PHPWord
             $parsedown = new Parsedown();
             $parsedown->setBreaksEnabled(true);
@@ -182,46 +169,7 @@ class DocumentService
             );
 
             // Use PHPWord's HTML parser to add content
-            // Note: This requires the HTML to be well-formed.
-            // --------------------------------------------------------------------------
-            // WORKAROUND 1: Fix XML Corruption (The "Ampersand" Bug)
-            // --------------------------------------------------------------------------
-            // PHPWord's addHtml method has a quirk where it unescapes entities before writing XML.
-            // If the content contains a raw '&' (e.g. "R&D"), it writes a raw '&' to the XML,
-            // which is illegal and corrupts the .docx file.
-            // SOLUTION: We pre-escape '&' to '&amp;'. PHPWord unescapes it to '&amp;', 
-            // which is the correct XML entity for an ampersand.
-            $fixedHtml = str_replace('&', '&amp;', $htmlContent);
-
-            // --------------------------------------------------------------------------
-            // WORKAROUND 2: Fix Code Block Formatting
-            // --------------------------------------------------------------------------
-            // PHPWord treats HTML whitespace as insignificant, meaning it strips all newlines
-            // and indentation from <pre><code> blocks, rendering them as a single line.
-            // SOLUTION: We manually convert whitespace inside code blocks into HTML tags 
-            // that PHPWord respects (<br/> for newlines, &nbsp; for spaces).
-            $fixedHtml = preg_replace_callback('/<pre><code(.*?)>(.*?)<\/code><\/pre>/s', function ($matches) {
-                $codeContent = $matches[2];
-
-                // 1. Normalize line endings to \n. 
-                // This prevents mixed line endings (like \r\n) from creating double-spaced lines
-                // when we convert them to <br/>.
-                $codeContent = str_replace(["\r\n", "\r"], "\n", $codeContent);
-
-                // 2. Convert newlines to <br/> tags to force line breaks in Word.
-                $codeContent = str_replace("\n", '<br/>', $codeContent);
-
-                // 3. Convert spaces to non-breaking spaces (&nbsp;) to preserve indentation.
-                // Standard spaces are collapsed by HTML parsers; &nbsp; is not.
-                $codeContent = str_replace(' ', '&nbsp;', $codeContent);
-
-                // 4. Apply Inline Styling
-                // We force 'Courier New' and a smaller font size to ensure the code looks 
-                // distinct from normal text.
-                return '<pre><code' . $matches[1] . ' style="font-family: \'Courier New\'; font-size: 9pt;">' . $codeContent . '</code></pre>';
-            }, $fixedHtml);
-
-            \PhpOffice\PhpWord\Shared\Html::addHtml($section, $fixedHtml, false, false);
+            \PhpOffice\PhpWord\Shared\Html::addHtml($section, $htmlContent, false, false);
 
             // Generate to memory
             $tempFile = tempnam(sys_get_temp_dir(), 'phpword_');

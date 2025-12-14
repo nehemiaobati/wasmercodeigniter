@@ -88,21 +88,21 @@ class MakeModule extends BaseCommand
         }
 
         // 2. Generate Files
-        $this->createRoutesFile($modulePath, $moduleName);
-        $this->createControllerFile($modulePath, $moduleName);
-        $this->createEntityFile($modulePath, $moduleName);
-        $this->createServiceFile($modulePath, $moduleName);
-        $this->createModelFile($modulePath, $moduleName);
-        $this->createViewFile($modulePath, $moduleName);
+        $this->_createRoutesFile($modulePath, $moduleName);
+        $this->_createControllerFile($modulePath, $moduleName);
+        $this->_createEntityFile($modulePath, $moduleName);
+        $this->_createServiceFile($modulePath, $moduleName);
+        $this->_createModelFile($modulePath, $moduleName);
+        $this->_createViewFile($modulePath, $moduleName);
 
         // 3. Update Autoload.php
-        $this->updateAutoload($moduleName);
+        $this->_updateAutoload($moduleName);
 
         CLI::write("Module '$moduleName' created successfully!", 'green');
         CLI::write("Don't forget to run 'php spark optimize' if you are in production.", 'yellow');
     }
 
-    private function createRoutesFile($path, $name)
+    private function _createRoutesFile($path, $name)
     {
         $lowerName = strtolower($name);
         $content = <<<PHP
@@ -121,7 +121,7 @@ PHP;
         file_put_contents($path . '/Config/Routes.php', $content);
     }
 
-    private function createControllerFile($path, $name)
+    private function _createControllerFile($path, $name)
     {
         $content = <<<PHP
 <?php
@@ -143,7 +143,7 @@ PHP;
         file_put_contents($path . '/Controllers/' . $name . 'Controller.php', $content);
     }
 
-    private function createEntityFile($path, $name)
+    private function _createEntityFile($path, $name)
     {
         $content = <<<PHP
 <?php
@@ -162,7 +162,7 @@ PHP;
         file_put_contents($path . '/Entities/' . $name . '.php', $content);
     }
 
-    private function createServiceFile($path, $name)
+    private function _createServiceFile($path, $name)
     {
         $content = <<<PHP
 <?php
@@ -180,7 +180,7 @@ PHP;
         file_put_contents($path . '/Libraries/' . $name . 'Service.php', $content);
     }
 
-    private function createModelFile($path, $name)
+    private function _createModelFile($path, $name)
     {
         $lowerName = strtolower($name);
         $content = <<<PHP
@@ -212,7 +212,7 @@ PHP;
         file_put_contents($path . '/Models/' . $name . 'Model.php', $content);
     }
 
-    private function createViewFile($path, $name)
+    private function _createViewFile($path, $name)
     {
         $content = <<<PHP
 <?= \$this->extend('layouts/default') ?>
@@ -235,7 +235,7 @@ PHP;
         file_put_contents($path . '/Views/index.php', $content);
     }
 
-    private function updateAutoload($name)
+    private function _updateAutoload($name)
     {
         $autoloadPath = APPPATH . 'Config/Autoload.php';
         $content = file_get_contents($autoloadPath);

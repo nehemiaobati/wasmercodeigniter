@@ -49,12 +49,12 @@ class OllamaDocumentService
         $parsedown = new Parsedown();
         $parsedown->setBreaksEnabled(true);
         $htmlContent = $parsedown->text($markdownContent);
-        $fullHtml = $this->getStyledHtml($htmlContent, $meta['title']);
+        $styledHtml = $this->_getStyledHtml($htmlContent, $metadata['title'] ?? 'Document');
 
         // 3. Strategy A: Pandoc (Preferred)
         // Checks availability inside the service to keep controller clean
         if ($this->pandocService->isAvailable()) {
-            $pandocResult = $this->pandocService->generate($fullHtml, $format, 'ollama_temp_' . bin2hex(random_bytes(8)));
+            $pandocResult = $this->pandocService->generate($styledHtml, $format, 'ollama_temp_' . bin2hex(random_bytes(8)));
 
             if ($pandocResult['status'] === 'success' && file_exists($pandocResult['filePath'])) {
                 // READ -> DELETE -> RETURN
@@ -75,11 +75,11 @@ class OllamaDocumentService
         // 4. Strategy B: Fallbacks
         if ($format === 'pdf') {
             // Dompdf fallback for PDF
-            return $this->generateWithDompdf($fullHtml, $meta);
+            return $this->_generateWithDompdf($htmlContent, $metadata);
         } elseif ($format === 'docx') {
             // PHPWord fallback for DOCX
             // Pass raw markdown because we need to pre-process it specifically for PHPWord
-            return $this->generateWithPHPWord($markdownContent, $meta);
+            return $this->_generateWithPHPWord($markdownContent, $metadata);
         }
 
         // 5. Failure
@@ -96,7 +96,7 @@ class OllamaDocumentService
      * @param array $metadata Document metadata.
      * @return array Result array with status and fileData or message.
      */
-    private function generateWithDompdf(string $htmlContent, array $metadata): array
+    private function _generateWithDompdf(string $htmlContent, array $metadata): array
     {
         try {
             $options = new Options();
@@ -137,7 +137,7 @@ class OllamaDocumentService
         }
     }
 
-    private function generateWithPHPWord(string $markdownContent, array $metadata): array
+    private function _generateWithPHPWord(string $markdownContent, array $metadata): array
     {
         try {
             // --------------------------------------------------------------------------
@@ -260,7 +260,7 @@ class OllamaDocumentService
      * @param string $title The document title.
      * @return string The full HTML string.
      */
-    private function getStyledHtml(string $htmlContent, string $title = 'Document'): string
+    private function _getStyledHtml(string $htmlContent, string $title = 'Document'): string
     {
         return '<!DOCTYPE html>
             <html lang="en">

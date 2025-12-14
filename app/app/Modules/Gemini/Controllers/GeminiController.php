@@ -37,6 +37,8 @@ class GeminiController extends BaseController
     protected PromptModel $promptModel;
     protected UserSettingsModel $userSettingsModel;
 
+    private $cachedUserSettings = null;
+
     private const SUPPORTED_MIME_TYPES = [
         'image/png',
         'image/jpeg',
@@ -67,6 +69,74 @@ class GeminiController extends BaseController
         $this->userSettingsModel = new UserSettingsModel();
     }
 
+    // --- Core Helper Methods ---
+
+    /**
+     * Retrieves user settings with memoization to prevent redundant queries.
+     *
+     * @param int $userId The user ID.
+     * @return object|null UserSetting entity or null.
+     */
+    private function _getUserSettings(int $userId)
+    {
+        if ($this->cachedUserSettings === null) {
+            $this->cachedUserSettings = $this->userSettingsModel->where('user_id', $userId)->first();
+        }
+        return $this->cachedUserSettings;
+    }
+
+    /**
+     * Returns success response (AJAX JSON or redirect).
+     *
+     * @param string $message Success message.
+     * @param array $data Additional data for JSON response.
+     * @return ResponseInterface|RedirectResponse
+     */
+    private function _respondSuccess(string $message, array $data = [])
+    {
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON(array_merge([
+                'status' => 'success',
+                'message' => $message,
+                'token' => csrf_hash()
+            ], $data));
+        }
+        return redirect()->back()->with('success', $message);
+    }
+
+    /**
+     * Returns error response (AJAX JSON or redirect).
+     *
+     * @param string $message Error message.
+     * @param array $errors Validation errors for JSON response.
+     * @return ResponseInterface|RedirectResponse
+     */
+    private function _respondError(string $message, array $errors = [])
+    {
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON([
+                'status' => 'error',
+                'message' => $message,
+                'errors' => $errors,
+                'token' => csrf_hash()
+            ]);
+        }
+        return redirect()->back()->withInput()->with('error', $message);
+    }
+
+    /**
+     * Configures response headers for Server-Sent Events (SSE).
+     *
+     * @return void
+     */
+    private function _setupSSEHeaders(): void
+    {
+        $this->response->setContentType('text/event-stream');
+        $this->response->setHeader('Cache-Control', 'no-cache');
+        $this->response->setHeader('Connection', 'keep-alive');
+        $this->response->setHeader('X-Accel-Buffering', 'no'); // Disable buffering for Nginx
+    }
+
     /**
      * Displays the public landing page.
      *
@@ -95,7 +165,7 @@ class GeminiController extends BaseController
     {
         $userId = (int) session()->get('userId');
         $prompts = $this->promptModel->where('user_id', $userId)->findAll();
-        $userSetting = $this->userSettingsModel->where('user_id', $userId)->first();
+        $userSetting = $this->_getUserSettings($userId);
 
         // Fetch Media Configs for Dynamic Tabs
         $mediaConfigs = MediaGenerationService::MEDIA_CONFIGS;
@@ -190,35 +260,28 @@ class GeminiController extends BaseController
 
     /**
      * Generates content using the Gemini API based on user input and context.
+     * Supports AJAX for non-blocking UI updates.
      *
-     * This is the core method that handles the generation workflow:
-     * 1. Validates input and user balance.
-     * 2. Prepares context (memory) and files.
-     * 3. Estimates cost and checks balance again.
-     * 4. Calls the Gemini API for text generation.
-     * 5. Optionally calls the TTS API for audio generation.
-     * 6. Updates user memory with the interaction.
-     * 7. Calculates final cost and deducts balance.
-     * 8. Returns the result to the view.
-     *
-     * @return RedirectResponse Redirects back with results or errors.
+     * @return RedirectResponse|ResponseInterface
      */
-    public function generate(): RedirectResponse
+    public function generate()
     {
         $userId = (int) session()->get('userId');
         $user = $this->userModel->find($userId);
 
-        if (!$user) return redirect()->back()->with('error', 'User not found.');
+        if (!$user) {
+            return $this->_respondError('User not found.');
+        }
 
         // Input Validation
         if (!$this->validate([
             'prompt' => 'max_length[200000]'
         ])) {
-            return redirect()->back()->withInput()->with('error', 'Prompt is too long. Maximum 200,000 characters allowed.');
+            return $this->_respondError('Prompt is too long. Maximum 200,000 characters allowed.');
         }
 
         // 1. Prepare Inputs
-        $userSetting = $this->userSettingsModel->where('user_id', $userId)->first();
+        $userSetting = $this->_getUserSettings($userId);
         $options = [
             'assistant_mode' => $userSetting ? $userSetting->assistant_mode_enabled : true,
             'voice_mode' => $userSetting ? $userSetting->voice_output_enabled : false,
@@ -228,12 +291,11 @@ class GeminiController extends BaseController
         $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
 
         // Handle File Parts
-        $uploadResult = $this->_handlePreUploadedFiles($uploadedFileIds, $userId);
-        if (isset($uploadResult['error'])) {
-            $this->_cleanupTempFiles($uploadedFileIds, $userId);
-            return redirect()->back()->withInput()->with('error', $uploadResult['error']);
+        $filesResult = $this->_prepareFilesAndContext($uploadedFileIds, $userId);
+        if (isset($filesResult['error'])) {
+            return $this->_respondError($filesResult['error']);
         }
-        $fileParts = $uploadResult['parts'];
+        $fileParts = $filesResult['parts'];
 
         // 2. Process Interaction via Service
         $result = $this->geminiService->processInteraction($userId, $inputText, $fileParts, $options);
@@ -241,42 +303,11 @@ class GeminiController extends BaseController
         $this->_cleanupTempFiles($uploadedFileIds, $userId); // Always cleanup
 
         if (isset($result['error'])) {
-            return redirect()->back()->withInput()->with('error', $result['error']);
+            return $this->_respondError($result['error']);
         }
 
-        // 3. Post-Process Audio (File Saving - Controller Responsibility)
-        $audioUrl = null;
-        $audioFilePath = null;
-        if (!empty($result['audioData'])) {
-            $audioUrl = $this->_processAudioData($result['audioData']);
-            if ($audioUrl) {
-                // Store the absolute file path for the view to read
-                $audioFilePath = WRITEPATH . 'uploads/ttsaudio_secure/' . $userId . '/' . basename($audioUrl);
-            }
-        }
-
-        // Flash Message
-        if ($result['costKSH'] > 0) {
-            session()->setFlashdata('success', "KSH " . number_format($result['costKSH'], 2) . " deducted.");
-        }
-
-        // 4. Output
-        $parsedown = new Parsedown();
-        $parsedown->setSafeMode(true);
-        $parsedown->setBreaksEnabled(true);
-
-        $redirect = redirect()->back()->withInput()
-            ->with('result', $parsedown->text($result['result']))
-            ->with('raw_result', $result['result']);
-
-        if ($audioUrl) {
-            $redirect->with('audio_url', $audioUrl);
-        }
-        if ($audioFilePath && file_exists($audioFilePath)) {
-            $redirect->with('audio_file_path', $audioFilePath);
-        }
-
-        return $redirect;
+        // 3. Build and Return Response
+        return $this->_buildGenerationResponse($result, $userId);
     }
 
     /**
@@ -293,13 +324,10 @@ class GeminiController extends BaseController
             return $this->response->setStatusCode(401)->setJSON(['error' => 'User not found']);
         }
 
-        // Set Headers for SSE
-        $this->response->setContentType('text/event-stream');
-        $this->response->setHeader('Cache-Control', 'no-cache');
-        $this->response->setHeader('Connection', 'keep-alive');
-        $this->response->setHeader('X-Accel-Buffering', 'no'); // Disable buffering for Nginx
+        // Setup SSE Headers
+        $this->_setupSSEHeaders();
 
-        // Input Validation (Reusing logic)
+        // Input Validation
         $inputText = (string) $this->request->getPost('prompt');
         $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
 
@@ -309,19 +337,18 @@ class GeminiController extends BaseController
         }
 
         // 1. Prepare Context & Files
-        $userSetting = $this->userSettingsModel->where('user_id', $userId)->first();
+        $userSetting = $this->_getUserSettings($userId);
         $isAssistantMode = $userSetting ? $userSetting->assistant_mode_enabled : true;
 
         $contextData = $this->_prepareContext($userId, $inputText, $isAssistantMode);
-        $uploadResult = $this->_handlePreUploadedFiles($uploadedFileIds, $userId);
 
-        if (isset($uploadResult['error'])) {
-            $this->_cleanupTempFiles($uploadedFileIds, $userId);
-            $this->response->setBody("data: " . json_encode(['error' => $uploadResult['error']]) . "\n\n");
+        $filesResult = $this->_prepareFilesAndContext($uploadedFileIds, $userId);
+        if (isset($filesResult['error'])) {
+            $this->response->setBody("data: " . json_encode(['error' => $filesResult['error']]) . "\n\n");
             return $this->response;
         }
 
-        $parts = $uploadResult['parts'];
+        $parts = $filesResult['parts'];
         if ($contextData['finalPrompt']) {
             array_unshift($parts, ['text' => $contextData['finalPrompt']]);
         }
@@ -334,31 +361,25 @@ class GeminiController extends BaseController
             return $this->response;
         }
 
-        // Send headers now by sending a comment
-        // In CodeIgniter 4, returning response object is preferred, but for streaming we might need to flush manually.
-        // However, we are returning a ResponseInterface, so CI4 will try to send headers.
-        // But headers are sent when output starts. 
-        // We will force headers sending by echoing comments.
-
-        // Actually, let's use the standard output buffer flushing sequence.
-        // We return the response object at the end, but we echo content during execution.
         $this->response->sendHeaders();
-        // Clear buffer
         if (ob_get_level() > 0) ob_end_flush();
         flush();
 
         // 3. Call Stream Service
         $this->geminiService->generateStream(
             $parts,
-            function ($textChunk) {
-                echo "data: " . json_encode(['text' => $textChunk]) . "\n\n";
+            function ($chunk) {
+                if (is_array($chunk) && isset($chunk['error'])) {
+                    echo "data: " . json_encode(['error' => $chunk['error']]) . "\n\n";
+                } else {
+                    echo "data: " . json_encode(['text' => $chunk]) . "\n\n";
+                }
                 if (ob_get_level() > 0) ob_flush();
                 flush();
             },
             function ($fullText, $usageMetadata) use ($userId, $contextData, $inputText) {
-                // Final Completion Callback
-
-                // Update Balance
+                // 1. Calculate and Deduct Cost
+                // We do this at the end of the stream to ensure accuracy based on actual token usage.
                 $costData = ['costKSH' => 0];
                 if ($usageMetadata) {
                     $costData = $this->geminiService->calculateCost($usageMetadata);
@@ -366,32 +387,28 @@ class GeminiController extends BaseController
                     $this->userModel->deductBalance($userId, $deduction);
                 }
 
-                // Update Memory
+                // 2. Update Context Memory
+                // Store the interaction so the Assistant Mode can recall it in future queries.
                 if (isset($contextData['memoryService'])) {
-                    $contextData['memoryService']->updateMemory(
-                        $inputText,
-                        $fullText,
-                        $contextData['usedInteractionIds']
-                    );
+                    $contextData['memoryService']->updateMemory($inputText, $fullText, $contextData['usedInteractionIds']);
                 }
 
-                // Send Close Event with final data
+                // 3. Send Final Status Event
+                // We explicitly send 'event: close' separately to ensure the client parser handles it cleanly,
+                // even if it arrives in the same TCP packet as the last text chunk.
                 echo "event: close\n";
                 echo "data: " . json_encode([
-                    'csrf_token' => csrf_hash(),
+                    'csrf_token' => csrf_hash(), // Refresh CSRF for next request
                     'cost' => $costData['costKSH']
                 ]) . "\n\n";
 
+                // Force flush the buffer to ensure the client receives the close event immediately.
                 if (ob_get_level() > 0) ob_flush();
                 flush();
             }
         );
 
         $this->_cleanupTempFiles($uploadedFileIds, $userId);
-
-        // We really shouldn't return anything else as we've been streaming, 
-        // but CI expects a return. We can return the response instance.
-        // However, since we've already outputted body content, we should suppress further output.
         exit;
     }
 
@@ -432,11 +449,6 @@ class GeminiController extends BaseController
     /**
      * Adds a new saved prompt for the user.
      *
-     * @return RedirectResponse Redirects back with success or error message.
-     */
-    /**
-     * Adds a new saved prompt for the user.
-     *
      * @return ResponseInterface|RedirectResponse JSON response for AJAX, Redirect for standard.
      */
     public function addPrompt()
@@ -449,15 +461,7 @@ class GeminiController extends BaseController
         ];
 
         if (!$this->validate($rules)) {
-            if ($this->request->isAJAX()) {
-                return $this->response->setJSON([
-                    'status' => 'error',
-                    'message' => 'Invalid input.',
-                    'errors' => $this->validator->getErrors(),
-                    'token' => csrf_hash()
-                ]);
-            }
-            return redirect()->back()->withInput()->with('error', 'Invalid input.');
+            return $this->_respondError('Invalid input.', $this->validator->getErrors());
         }
 
         $id = $this->promptModel->insert([
@@ -466,28 +470,15 @@ class GeminiController extends BaseController
             'prompt_text' => $this->request->getPost('prompt_text')
         ]);
 
-        if ($this->request->isAJAX()) {
-            return $this->response->setJSON([
-                'status' => 'success',
-                'message' => 'Prompt saved successfully.',
-                'token' => csrf_hash(),
-                'prompt' => [
-                    'id' => $id,
-                    'title' => $this->request->getPost('title'),
-                    'prompt_text' => $this->request->getPost('prompt_text')
-                ]
-            ]);
-        }
-
-        return redirect()->back()->with('success', 'Prompt saved.');
+        return $this->_respondSuccess('Prompt saved successfully.', [
+            'prompt' => [
+                'id' => $id,
+                'title' => $this->request->getPost('title'),
+                'prompt_text' => $this->request->getPost('prompt_text')
+            ]
+        ]);
     }
 
-    /**
-     * Deletes a saved prompt.
-     *
-     * @param int $id The ID of the prompt to delete.
-     * @return RedirectResponse Redirects back with success or error message.
-     */
     /**
      * Deletes a saved prompt.
      *
@@ -501,27 +492,10 @@ class GeminiController extends BaseController
 
         if ($prompt && $prompt->user_id == $userId) {
             $this->promptModel->delete($id);
-
-            if ($this->request->isAJAX()) {
-                return $this->response->setJSON([
-                    'status' => 'success',
-                    'message' => 'Prompt deleted.',
-                    'token' => csrf_hash()
-                ]);
-            }
-
-            return redirect()->back()->with('success', 'Prompt deleted.');
+            return $this->_respondSuccess('Prompt deleted.');
         }
 
-        if ($this->request->isAJAX()) {
-            return $this->response->setJSON([
-                'status' => 'error',
-                'message' => 'Unauthorized or not found.',
-                'token' => csrf_hash()
-            ]);
-        }
-
-        return redirect()->back()->with('error', 'Unauthorized.');
+        return $this->_respondError('Unauthorized or not found.');
     }
 
     /**
@@ -532,28 +506,18 @@ class GeminiController extends BaseController
     public function clearMemory(): RedirectResponse
     {
         $userId = (int) session()->get('userId');
+        $success = service('memory', $userId)->clearAll();
 
-        // Ensure transaction handling is robust
-        $db = \Config\Database::connect();
-        $db->transStart();
-
-        (new InteractionModel())->where('user_id', $userId)->delete();
-        (new EntityModel())->where('user_id', $userId)->delete();
-
-        $db->transComplete();
-
-        if ($db->transStatus() === false) {
-            return redirect()->back()->with('error', 'Failed to clear memory.');
-        }
-
-        return redirect()->back()->with('success', 'Memory cleared.');
+        return redirect()->back()->with(
+            $success ? 'success' : 'error',
+            $success ? 'Memory cleared.' : 'Failed to clear memory.'
+        );
     }
 
     /**
-     * Serves the file with correct headers for inline playback.
+     * Ensures strict unlink pattern for serverless environments.
      *
-     * This method ensures secure access to generated audio files by validating
-     * the user ID and serving the file through PHP rather than direct public access.
+     * This method serves audio files and immediately deletes them for serverless compliance.
      *
      * @param string $fileName The name of the file to serve.
      * @return ResponseInterface The file response.
@@ -562,27 +526,20 @@ class GeminiController extends BaseController
     public function serveAudio(string $fileName)
     {
         $userId = (int) session()->get('userId');
-
-        // Security: Basename prevents directory traversal attacks
         $path = WRITEPATH . 'uploads/ttsaudio_secure/' . $userId . '/' . basename($fileName);
 
         if (!file_exists($path)) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
 
-        // Detect MIME type dynamically based on the actual file extension
-        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
-        $mime = ($ext === 'wav') ? 'audio/wav' : 'audio/mpeg';
+        $mime = str_ends_with($path, '.wav') ? 'audio/wav' : 'audio/mpeg';
 
-        // 'inline' disposition allows the <audio> tag to play it immediately
         $this->response
             ->setHeader('Content-Type', $mime)
-            ->setHeader('Content-Length', (string)filesize($path))
-            ->setHeader('Content-Disposition', 'inline; filename="' . $fileName . '"');
+            ->setHeader('Content-Length', (string)filesize($path));
 
-        // Efficiently output file content without loading into memory
+        // Serve and delete in one go for serverless compliance (ephemeral storage)
         if (readfile($path) !== false) {
-            // Auto-delete the file after serving (Serverless/Privacy optimization)
             @unlink($path);
         }
         return $this->response;
@@ -665,6 +622,25 @@ class GeminiController extends BaseController
     }
 
     /**
+     * Prepares files and assembles file parts array for API request.
+     *
+     * @param array $uploadedFileIds Array of uploaded file IDs.
+     * @param int $userId User ID for file path resolution.
+     * @return array Returns ['error' => string] on failure, or ['parts' => array] on success.
+     */
+    private function _prepareFilesAndContext(array $uploadedFileIds, int $userId): array
+    {
+        $uploadResult = $this->_handlePreUploadedFiles($uploadedFileIds, $userId);
+
+        if (isset($uploadResult['error'])) {
+            $this->_cleanupTempFiles($uploadedFileIds, $userId);
+            return ['error' => $uploadResult['error']];
+        }
+
+        return ['parts' => $uploadResult['parts']];
+    }
+
+    /**
      * Processes files that were uploaded asynchronously.
      *
      * Reads the temporary files, validates their MIME types, and converts them
@@ -710,6 +686,79 @@ class GeminiController extends BaseController
         foreach ($fileIds as $fileId) {
             @unlink(WRITEPATH . 'uploads/gemini_temp/' . $userId . '/' . basename($fileId));
         }
+    }
+
+    /**
+     * Builds the final response with parsed markdown and optional audio.
+     * Refactored to support AJAX with rendered partials.
+     *
+     * @param array $result Result array from GeminiService.
+     * @param int $userId User ID for audio file path resolution.
+     * @return RedirectResponse|ResponseInterface
+     */
+    private function _buildGenerationResponse(array $result, int $userId)
+    {
+        // Process Audio if present
+        $audioUrl = null;
+        if (!empty($result['audioData'])) {
+            // Returns filename only, e.g. "speech_123.mp3"
+            $audioFilename = $this->_processAudioData($result['audioData']);
+            if ($audioFilename) {
+                // Construct full URL for Frontend
+                $audioUrl = url_to('gemini.serve_audio', $audioFilename);
+            }
+        }
+
+        // Set Flash Message
+        if ($result['costKSH'] > 0) {
+            session()->setFlashdata('success', "KSH " . number_format($result['costKSH'], 2) . " deducted.");
+        }
+
+        // Parse markdown
+        $parsedown = new Parsedown();
+        $parsedown->setSafeMode(true);
+        $parsedown->setBreaksEnabled(true);
+        $parsedHtml = $parsedown->text($result['result']);
+
+        // Handle AJAX
+        if ($this->request->isAJAX()) {
+            // Render the flash messages partial to a string to ensure consistency
+            $flashHtml = view('App\Views\partials\flash_messages');
+
+            $responsePayload = [
+                'status' => 'success',
+                'result' => $parsedHtml,
+                'raw_result' => $result['result'],
+                'flash_html' => $flashHtml,
+                'token' => csrf_hash()
+            ];
+
+            if ($audioUrl) {
+                // Return the generated URL so the frontend can create the <audio> tag
+                $responsePayload['audio_url'] = $audioUrl;
+            }
+
+            return $this->response->setJSON($responsePayload);
+        }
+
+        // Handle Fallback Standard Post
+        $redirect = redirect()->back()->withInput()
+            ->with('result', $parsedHtml)
+            ->with('raw_result', $result['result']);
+
+        if ($audioUrl) {
+            // Pass the URL for the view to use in the <audio> tag
+            $redirect->with('audio_url', basename($audioUrl)); // passing filename for route consistency in view logic
+        }
+
+        // For non-AJAX, we rely on the session flashdata to display the file.
+        // In serverless, if the file is deleted after the first read (by serveAudio logic),
+        // we might prefer to embed it directly if not using AJAX. 
+        // However, the existing view logic handles audio_file_path checks. 
+        // For strict serverless compliance, AJAX + Blob or ephemeral URL is preferred.
+        // We will stick to the URL pattern which works if served immediately.
+
+        return $redirect;
     }
 
     /**

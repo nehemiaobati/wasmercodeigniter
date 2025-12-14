@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Gemini\Models;
 
 use CodeIgniter\Model;
-use App\Entities\UserSetting;
+use App\Modules\Gemini\Entities\UserSetting;
 
 /**
  * Manages user settings data and database interactions.

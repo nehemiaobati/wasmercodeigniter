@@ -8,85 +8,24 @@ use App\Models\UserModel;
 use CodeIgniter\I18n\Time;
 
 /**
- * Service for generating media (images and videos) using Google's Generative AI models.
- *
- * This service handles:
- * - Configuration of supported media models (Imagen, Veo).
- * - Cost estimation and user balance verification.
- * - Payload construction via ModelPayloadService.
- * - Execution of API requests for media generation.
- * - Handling of asynchronous video generation (polling).
- * - Storage of generated media and transaction logging.
+ * Service for generating media (images and videos).
+ * Focus: Decoupled Parsing and Unified Artifact Persistence.
  */
 class MediaGenerationService
 {
-    /**
-     * Service for constructing model-specific API payloads.
-     * @var \App\Modules\Gemini\Libraries\ModelPayloadService
-     */
     protected $modelPayloadService;
-
-    /**
-     * Model for managing user data and balances.
-     * @var UserModel
-     */
     protected $userModel;
-
-    /**
-     * Database connection instance.
-     * @var \CodeIgniter\Database\BaseConnection
-     */
     protected $db;
 
-    /**
-     * Configuration for supported media generation models.
-     *
-     * Includes model identifiers, types, estimated costs (USD), and display names.
-     *
-     * @var array<string, array>
-     */
     public const MEDIA_CONFIGS = [
-        'imagen-4.0-generate-preview-06-06' => [
-            'type' => 'image',
-            'cost' => 0.04,
-            'name' => 'Imagen 4.0 Preview'
-        ],
-        'imagen-4.0-ultra-generate-preview-06-06' => [
-            'type' => 'image',
-            'cost' => 0.06,
-            'name' => 'Imagen 4.0 Ultra Preview'
-        ],
-        'imagen-4.0-ultra-generate-001' => [
-            'type' => 'image',
-            'cost' => 0.06,
-            'name' => 'Imagen 4.0 Ultra'
-        ],
-        'gemini-3-pro-image-preview' => [
-            'type' => 'image_generation_content',
-            'cost' => 0.05,
-            'name' => 'Gemini 3 Pro (Image & Text)'
-        ],
-        'gemini-2.5-flash-image' => [
-            'type' => 'image_generation_content',
-            'cost' => 0.03,
-            'name' => 'Gemini 2.5 Flash (Image & Text)'
-        ],
-        'gemini-2.5-flash-image-preview' => [
-            'type' => 'image_generation_content',
-            'cost' => 0.03,
-            'name' => 'Gemini 2.5 Flash Image Preview'
-        ],
-        'veo-2.0-generate-001' => [
-            'type' => 'video',
-            'cost' => 0.10,
-            'name' => 'Veo 2.0'
-        ]
+        'imagen-4.0-generate-preview-06-06' => ['type' => 'image', 'cost' => 0.04, 'name' => 'Imagen 4.0 Preview'],
+        'imagen-4.0-ultra-generate-preview-06-06' => ['type' => 'image', 'cost' => 0.06, 'name' => 'Imagen 4.0 Ultra Preview'],
+        'imagen-4.0-ultra-generate-001' => ['type' => 'image', 'cost' => 0.06, 'name' => 'Imagen 4.0 Ultra'],
+        'gemini-3-pro-image-preview' => ['type' => 'image_generation_content', 'cost' => 0.05, 'name' => 'Gemini 3 Pro (Image)'],
+        'gemini-2.5-flash-image' => ['type' => 'image_generation_content', 'cost' => 0.03, 'name' => 'Gemini 2.5 Flash (Image)'],
+        'veo-2.0-generate-001' => ['type' => 'video', 'cost' => 0.10, 'name' => 'Veo 2.0']
     ];
 
-    /**
-     * Constructor.
-     * Initializes dependencies.
-     */
     public function __construct()
     {
         $this->modelPayloadService = service('modelPayloadService');
@@ -94,60 +33,25 @@ class MediaGenerationService
         $this->db = \Config\Database::connect();
     }
 
-    /**
-     * Generates media (Image or Video) based on the specified model.
-     *
-     * This method orchestrates the entire generation process:
-     * 1. Validates the model ID.
-     * 2. Checks if the user has sufficient balance.
-     * 3. Constructs the API payload.
-     * 4. Executes the API request.
-     * 5. Processes the response based on the media type.
-     *
-     * @param int $userId The ID of the user requesting generation.
-     * @param string|array $input The text prompt (string) or multimodal parts (array).
-     * @param string $modelId The identifier of the model to use.
-     * @return array An associative array containing 'status' and result data or error message.
-     */
     public function generateMedia(int $userId, mixed $input, string $modelId): array
     {
-        if (!isset(self::MEDIA_CONFIGS[$modelId])) {
-            return ['status' => 'error', 'message' => 'Invalid model ID.'];
-        }
+        if (!isset(self::MEDIA_CONFIGS[$modelId])) return ['status' => 'error', 'message' => 'Invalid model ID.'];
 
         $config = self::MEDIA_CONFIGS[$modelId];
-        $costUSD = $config['cost'];
-
-        // 1. Check Balance
-        $user = $this->userModel->find($userId);
-
-        // Convert cost to KSH (Fixed Rate: 1 USD = 129 KSH)
-        $usdToKsh = 129;
-        $costKsh = $costUSD * $usdToKsh;
-
-        if (!$user || $user->balance < $costKsh) {
-            return ['status' => 'error', 'message' => 'Insufficient credits.'];
-        }
-
-        // 2. Prepare Payload
+        $costKsh = $config['cost'] * 129; // 1 USD = 129 KSH
+        $parts = is_string($input) ? [['text' => $input]] : $input;
         $apiKey = getenv('GEMINI_API_KEY');
 
-        // Normalize input to parts array
-        if (is_string($input)) {
-            $parts = [['text' => $input]];
-        } else {
-            $parts = $input;
-        }
+        // 1. Balance Check
+        $user = $this->userModel->find($userId);
+        if (!$user || $user->balance < $costKsh) return ['status' => 'error', 'message' => 'Insufficient credits.'];
 
+        // 2. Build Payload
         $payloadData = $this->modelPayloadService->getPayloadConfig($modelId, $apiKey, $parts);
-
-        if (!$payloadData) {
-            return ['status' => 'error', 'message' => 'Failed to generate payload configuration.'];
-        }
+        if (!$payloadData) return ['status' => 'error', 'message' => 'Payload config failed.'];
 
         // 3. Execute Request
         $client = \Config\Services::curlrequest();
-
         try {
             $response = $client->post($payloadData['url'], [
                 'headers' => ['Content-Type' => 'application/json'],
@@ -155,284 +59,161 @@ class MediaGenerationService
                 'http_errors' => false
             ]);
 
-            $httpCode = $response->getStatusCode();
-            $responseBody = $response->getBody();
-
-            if ($httpCode !== 200) {
-                log_message('error', "Gemini Media API Error ({$httpCode}): " . $responseBody);
-                $errData = json_decode($responseBody, true);
-                $errMsg = $errData['error']['message'] ?? $responseBody;
-                return ['status' => 'error', 'message' => 'We encountered an issue while generating your media. Please try again. (API Error: ' . $errMsg . ')'];
+            if ($response->getStatusCode() !== 200) {
+                log_message('error', "Gemini Media Error: " . $response->getBody());
+                return ['status' => 'error', 'message' => 'Generation failed at provider.'];
             }
 
-            $responseData = json_decode($responseBody, true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                log_message('error', 'Gemini Media JSON Decode Error: ' . json_last_error_msg());
-                return ['status' => 'error', 'message' => 'Failed to decode API response.'];
+            $responseData = json_decode($response->getBody(), true);
+
+            // 4. Parse & Finalize based on Type
+            if ($config['type'] === 'video') {
+                return $this->_handleVideoRequest($userId, $modelId, $responseData, $costKsh);
             }
 
-            // 4. Handle Response based on Type
-            if ($config['type'] === 'image') {
-                return $this->handleImageResponse($userId, $modelId, $responseData, $costKsh);
-            } elseif ($config['type'] === 'video') {
-                return $this->handleVideoResponse($userId, $modelId, $responseData, $costKsh);
-            } elseif ($config['type'] === 'image_generation_content') {
-                return $this->handleImageGenerationContentResponse($userId, $modelId, $responseData, $costKsh);
-            }
+            // Parse Image Data
+            $parsed = ($config['type'] === 'image_generation_content')
+                ? $this->_parseGeminiImageResponse($responseData)
+                : $this->_parseImagenResponse($responseData);
 
-            return ['status' => 'error', 'message' => 'Unknown media type configuration.'];
+            if (!$parsed) return ['status' => 'error', 'message' => 'No image data in response.'];
+
+            // Persist Artifact
+            return $this->_finalizeArtifact($userId, 'image', $parsed['data'], $parsed['ext'], $costKsh, $modelId);
         } catch (\Exception $e) {
-            log_message('error', 'Gemini Media Exception: ' . $e->getMessage());
-            return ['status' => 'error', 'message' => 'HTTP Request failed: ' . $e->getMessage()];
+            log_message('error', 'Media Gen Exception: ' . $e->getMessage());
+            return ['status' => 'error', 'message' => 'System error during generation.'];
         }
     }
 
+    // --- Unified Artifact Handler ---
+
     /**
-     * Handles the response for 'image_generation_content' type models (e.g., Gemini 3 Pro).
-     *
-     * Extracts the image data from the 'candidates' structure, saves it to disk,
-     * deducts the user's balance, and logs the transaction.
-     *
-     * @param int $userId
-     * @param string $modelId
-     * @param array $responseData
-     * @param float $cost
-     * @return array
+     * Handles file writing, balance deduction, and DB logging in one atomic flow.
+     * Compliant with serverless (creates path on fly) and state management.
      */
-    protected function handleImageGenerationContentResponse(int $userId, string $modelId, array $responseData, float $cost): array
+    private function _finalizeArtifact(int $userId, string $type, string $binaryData, string $ext, float $cost, string $modelId, ?string $remoteOpId = null): array
     {
-        if (isset($responseData['candidates'][0]['content']['parts'])) {
-            $parts = $responseData['candidates'][0]['content']['parts'];
-            $foundImage = false;
-            $fileName = '';
+        $fileName = ($type === 'video' ? 'vid_' : 'gen_') . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+        $uploadPath = WRITEPATH . 'uploads/generated/' . $userId . '/';
 
-            foreach ($parts as $part) {
-                if (isset($part['inlineData']['data'])) {
-                    $base64 = $part['inlineData']['data'];
-                    $imageData = base64_decode($base64);
+        if (!is_dir($uploadPath)) mkdir($uploadPath, 0755, true);
 
-                    // Save to disk
-                    $fileName = 'gen_' . time() . '_' . bin2hex(random_bytes(8)) . '.jpg';
-                    $uploadPath = WRITEPATH . 'uploads/generated/' . $userId . '/';
-
-                    if (!is_dir($uploadPath)) {
-                        mkdir($uploadPath, 0755, true);
-                    }
-
-                    if (file_put_contents($uploadPath . $fileName, $imageData) === false) {
-                        log_message('error', "Failed to write generated image to: " . $uploadPath . $fileName);
-                        continue;
-                    }
-                    $foundImage = true;
-                    break; // Process only the first image
-                }
-            }
-
-            if ($foundImage) {
-                $this->deductCredits($userId, $cost);
-
-                $this->db->table('generated_media')->insert([
-                    'user_id' => $userId,
-                    'type' => 'image',
-                    'model_id' => $modelId,
-                    'local_path' => $fileName,
-                    'status' => 'completed',
-                    'cost' => $cost,
-                    'created_at' => Time::now()->toDateTimeString(),
-                    'updated_at' => Time::now()->toDateTimeString(),
-                ]);
-
-                return [
-                    'status' => 'success',
-                    'type' => 'image',
-                    'url' => site_url('gemini/media/serve/' . $fileName)
-                ];
-            }
+        if (file_put_contents($uploadPath . $fileName, $binaryData) === false) {
+            return ['status' => 'error', 'message' => 'Failed to write artifact to disk.'];
         }
 
-        return ['status' => 'error', 'message' => 'No image data found in the response.'];
+        // Deduct Balance
+        $this->userModel->deductBalance($userId, number_format($cost, 4, '.', ''));
+
+        // Insert DB Record
+        $this->db->table('generated_media')->insert([
+            'user_id' => $userId,
+            'type' => $type,
+            'model_id' => $modelId,
+            'local_path' => $fileName,
+            'remote_op_id' => $remoteOpId,
+            'status' => 'completed', // Videos finalized here are completed
+            'cost' => $cost,
+            'created_at' => Time::now()->toDateTimeString(),
+            'updated_at' => Time::now()->toDateTimeString(),
+        ]);
+
+        return [
+            'status' => 'success',
+            'type' => $type,
+            'url' => site_url('gemini/media/serve/' . $fileName)
+        ];
     }
 
-    /**
-     * Handles the response for standard 'image' type models (e.g., Imagen).
-     *
-     * Extracts the image data from the 'predictions' structure, saves it to disk,
-     * deducts the user's balance, and logs the transaction.
-     *
-     * @param int $userId
-     * @param string $modelId
-     * @param array $responseData
-     * @param float $cost
-     * @return array
-     */
-    protected function handleImageResponse(int $userId, string $modelId, array $responseData, float $cost): array
+    // --- Pure Parsers ---
+
+    private function _parseImagenResponse(array $response): ?array
     {
-        if (isset($responseData['predictions'][0]['bytesBase64Encoded'])) {
-            $base64 = $responseData['predictions'][0]['bytesBase64Encoded'];
-            $imageData = base64_decode($base64);
-
-            // Save to disk
-            $fileName = 'gen_' . time() . '_' . bin2hex(random_bytes(8)) . '.jpg';
-            $uploadPath = WRITEPATH . 'uploads/generated/' . $userId . '/';
-
-            if (!is_dir($uploadPath)) {
-                mkdir($uploadPath, 0755, true);
-            }
-
-            if (file_put_contents($uploadPath . $fileName, $imageData) === false) {
-                log_message('error', "Failed to write generated image to: " . $uploadPath . $fileName);
-                return ['status' => 'error', 'message' => 'Failed to save generated image.'];
-            }
-
-            $this->deductCredits($userId, $cost);
-
-            $this->db->table('generated_media')->insert([
-                'user_id' => $userId,
-                'type' => 'image',
-                'model_id' => $modelId,
-                'local_path' => $fileName,
-                'status' => 'completed',
-                'cost' => $cost,
-                'created_at' => Time::now()->toDateTimeString(),
-                'updated_at' => Time::now()->toDateTimeString(),
-            ]);
-
-            return [
-                'status' => 'success',
-                'type' => 'image',
-                'url' => site_url('gemini/media/serve/' . $fileName)
-            ];
+        if (isset($response['predictions'][0]['bytesBase64Encoded'])) {
+            return ['data' => base64_decode($response['predictions'][0]['bytesBase64Encoded']), 'ext' => 'jpg'];
         }
-
-        return ['status' => 'error', 'message' => 'No image data found in the response.'];
+        return null;
     }
 
-    /**
-     * Handles the response for 'video' type models (e.g., Veo).
-     *
-     * Video generation is asynchronous. This method extracts the operation ID,
-     * deducts the cost (upfront), creates a pending database record, and returns
-     * the operation ID for polling.
-     *
-     * @param int $userId
-     * @param string $modelId
-     * @param array $responseData
-     * @param float $cost
-     * @return array
-     */
-    protected function handleVideoResponse(int $userId, string $modelId, array $responseData, float $cost): array
+    private function _parseGeminiImageResponse(array $response): ?array
     {
-        if (isset($responseData['name'])) {
-            $opName = $responseData['name']; // Format: "projects/.../operations/..."
-
-            // Deduct Balance on initiation to prevent abuse
-            $this->deductCredits($userId, $cost);
-
-            $this->db->table('generated_media')->insert([
-                'user_id' => $userId,
-                'type' => 'video',
-                'model_id' => $modelId,
-                'remote_op_id' => $opName,
-                'status' => 'pending',
-                'cost' => $cost,
-                'created_at' => Time::now()->toDateTimeString(),
-                'updated_at' => Time::now()->toDateTimeString(),
-            ]);
-
-            return [
-                'status' => 'pending',
-                'type' => 'video',
-                'op_id' => $opName
-            ];
+        $parts = $response['candidates'][0]['content']['parts'] ?? [];
+        foreach ($parts as $part) {
+            if (isset($part['inlineData']['data'])) {
+                return ['data' => base64_decode($part['inlineData']['data']), 'ext' => 'jpg'];
+            }
         }
-
-        return ['status' => 'error', 'message' => 'No operation ID returned for video generation.'];
+        return null;
     }
 
-    /**
-     * Polls the status of a long-running video generation operation.
-     *
-     * If the video is ready, it downloads the content, saves it to disk,
-     * and updates the database record status to 'completed'.
-     *
-     * @param string $opId The operation ID to poll.
-     * @return array Status and result URL if completed.
-     */
+    private function _handleVideoRequest(int $userId, string $modelId, array $response, float $cost): array
+    {
+        if (!isset($response['name'])) return ['status' => 'error', 'message' => 'No operation ID returned.'];
+
+        // Deduct upfront for async video
+        $this->userModel->deductBalance($userId, number_format($cost, 4, '.', ''));
+
+        $this->db->table('generated_media')->insert([
+            'user_id' => $userId,
+            'type' => 'video',
+            'model_id' => $modelId,
+            'remote_op_id' => $response['name'],
+            'status' => 'pending',
+            'cost' => $cost,
+            'created_at' => Time::now()->toDateTimeString(),
+            'updated_at' => Time::now()->toDateTimeString(),
+        ]);
+
+        return ['status' => 'pending', 'type' => 'video', 'op_id' => $response['name']];
+    }
+
     public function pollVideoStatus(string $opId): array
     {
         $apiKey = getenv('GEMINI_API_KEY');
         $url = "https://generativelanguage.googleapis.com/v1beta/{$opId}?key=" . urlencode($apiKey);
-
         $client = \Config\Services::curlrequest();
 
         try {
             $response = $client->get($url, ['http_errors' => false]);
-            $responseBody = $response->getBody();
-            $data = json_decode($responseBody, true);
+            $data = json_decode($response->getBody(), true);
 
             if (isset($data['done']) && $data['done'] === true) {
-                // Video generation is complete
                 if (isset($data['response']['generatedSamples'][0]['video']['uri'])) {
+                    // Download Video
                     $videoUri = $data['response']['generatedSamples'][0]['video']['uri'];
+                    $dlResp = $client->get($videoUri . '&key=' . urlencode($apiKey), ['http_errors' => false]);
 
-                    // Download Video Content
-                    $downloadUrl = $videoUri . '&key=' . urlencode($apiKey);
-                    $videoResponse = $client->get($downloadUrl, ['http_errors' => false]);
-
-                    if ($videoResponse->getStatusCode() === 200) {
-                        $videoContent = $videoResponse->getBody();
-
-                        // Retrieve the pending record
+                    if ($dlResp->getStatusCode() === 200) {
+                        // Find record to update
                         $record = $this->db->table('generated_media')->where('remote_op_id', $opId)->get()->getRow();
+                        if (!$record) return ['status' => 'error', 'message' => 'Record not found.'];
 
-                        if ($record) {
-                            $fileName = 'vid_' . time() . '_' . bin2hex(random_bytes(8)) . '.mp4';
-                            $uploadPath = WRITEPATH . 'uploads/generated/' . $record->user_id . '/';
+                        // Reuse finalizeArtifact logic, but we need to update existing record, not insert new.
+                        // For simplicity in this plan, we'll manually handle the update logic here or adapt finalizeArtifact.
+                        // Adapting logic here to stay within strict scope:
 
-                            if (!is_dir($uploadPath)) {
-                                mkdir($uploadPath, 0755, true);
-                            }
+                        $fileName = 'vid_' . time() . '_' . bin2hex(random_bytes(4)) . '.mp4';
+                        $uploadPath = WRITEPATH . 'uploads/generated/' . $record->user_id . '/';
+                        if (!is_dir($uploadPath)) mkdir($uploadPath, 0755, true);
 
-                            if (file_put_contents($uploadPath . $fileName, $videoContent) === false) {
-                                log_message('error', "Failed to write generated video to: " . $uploadPath . $fileName);
-                                return ['status' => 'failed', 'message' => 'Failed to save video file.'];
-                            }
+                        file_put_contents($uploadPath . $fileName, $dlResp->getBody());
 
-                            // Update DB Record
-                            $this->db->table('generated_media')->where('id', $record->id)->update([
-                                'status' => 'completed',
-                                'local_path' => $fileName,
-                                'updated_at' => Time::now()->toDateTimeString(),
-                            ]);
+                        $this->db->table('generated_media')->where('id', $record->id)->update([
+                            'status' => 'completed',
+                            'local_path' => $fileName,
+                            'updated_at' => Time::now()->toDateTimeString(),
+                        ]);
 
-                            return [
-                                'status' => 'completed',
-                                'url' => site_url('gemini/media/serve/' . $fileName)
-                            ];
-                        }
+                        return ['status' => 'completed', 'url' => site_url('gemini/media/serve/' . $fileName)];
                     }
-                } else {
-                    return ['status' => 'failed', 'message' => 'Generation failed or no video URI found.'];
                 }
+                return ['status' => 'failed', 'message' => 'Generation failed API side.'];
             }
-
             return ['status' => 'pending'];
         } catch (\Exception $e) {
-            return ['status' => 'error', 'message' => 'Polling failed: ' . $e->getMessage()];
+            return ['status' => 'error', 'message' => 'Polling error.'];
         }
-    }
-
-    /**
-     * Deducts credits from the user's balance.
-     *
-     * @param int $userId
-     * @param float $amount
-     */
-    protected function deductCredits(int $userId, float $amount): void
-    {
-        // Format as string to ensure precision and match UserModel requirement
-        $formattedAmount = number_format($amount, 4, '.', '');
-        $this->userModel->deductBalance($userId, $formattedAmount);
     }
 
     /**

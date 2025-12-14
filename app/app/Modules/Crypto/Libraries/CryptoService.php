@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Crypto\Libraries;
 
@@ -16,11 +18,11 @@ class CryptoService
     public function getBtcBalance($address)
     {
         $url = "https://blockchain.info/balance?active=" . urlencode($address);
-        $data = $this->makeApiRequest($url);
+        $data = $this->_makeApiRequest($url);
 
         if (isset($data[$address]['final_balance'])) {
             $balance_satoshi = $data[$address]['final_balance'];
-            $balance_btc = $balance_satoshi / 100000000;
+            $balance_btc = bcdiv((string)$balance_satoshi, '100000000', 8);
             return [
                 'asset' => 'Bitcoin (BTC)',
                 'address' => $address,
@@ -42,7 +44,7 @@ class CryptoService
     public function getBtcTransactions($address, $limit)
     {
         $url = "https://blockchain.info/rawaddr/" . urlencode($address) . "?limit=" . $limit;
-        $data = $this->makeApiRequest($url);
+        $data = $this->_makeApiRequest($url);
 
         if (isset($data['txs'])) {
             $transactions = [];
@@ -58,7 +60,7 @@ class CryptoService
                 $receiving_addresses = [];
                 foreach ($tx['out'] as $output) {
                     if (isset($output['addr'])) {
-                        $amount = $output['value'] / 100000000;
+                        $amount = bcdiv((string)$output['value'], '100000000', 8);
                         $receiving_addresses[] = [
                             'address' => $output['addr'],
                             'amount' => rtrim(rtrim(sprintf('%.8f', $amount), '0'), '.') . ' BTC'
@@ -70,7 +72,7 @@ class CryptoService
                     'hash' => $tx['hash'],
                     'time' => date("Y-m-d H:i:s", $tx['time']) . " UTC",
                     'block_height' => $tx['block_height'] ?? 'N/A', // Handle missing block_height
-                    'fee' => rtrim(rtrim(sprintf('%.8f', ($tx['fee'] / 100000000)), '0'), '.') . ' BTC',
+                    'fee' => rtrim(rtrim(bcdiv((string)$tx['fee'], '100000000', 8), '0'), '.') . ' BTC',
                     'sending_addresses' => $sending_addresses,
                     'receiving_addresses' => $receiving_addresses
                 ];
@@ -95,13 +97,13 @@ class CryptoService
     public function getLtcBalance($address)
     {
         $url = "https://api.blockchair.com/litecoin/dashboards/address/" . urlencode($address) . "?limit=1"; // Add limit=1 to ensure full data structure
-        $data = $this->makeApiRequest($url);
+        $data = $this->_makeApiRequest($url);
 
         if (isset($data['data']) && !empty($data['data'])) {
             $address_data = reset($data['data']); // Get the first element, regardless of its key
             if (isset($address_data['address']['balance'])) {
                 $balance_litoshi = $address_data['address']['balance'];
-                $balance_ltc = $balance_litoshi / 100000000;
+                $balance_ltc = bcdiv((string)$balance_litoshi, '100000000', 8);
                 return [
                     'asset' => 'Litecoin (LTC)',
                     'address' => $address,
@@ -124,7 +126,7 @@ class CryptoService
     {
         // Step 1: Get the list of transaction hashes (remains the same)
         $hashes_url = "https://api.blockchair.com/litecoin/dashboards/address/" . urlencode($address) . "?limit=" . $limit;
-        $hashes_data = $this->makeApiRequest($hashes_url);
+        $hashes_data = $this->_makeApiRequest($hashes_url);
 
         if (!isset($hashes_data['data'][$address]['transactions'])) {
             return ['error' => 'Could not retrieve LTC transaction list for the specified address.'];
@@ -144,7 +146,7 @@ class CryptoService
         // Step 2: Fetch ALL transaction details in a single batch call
         $hashes_string = implode(',', $tx_hashes);
         $details_url = "https://api.blockchair.com/litecoin/dashboards/transactions/" . urlencode($hashes_string);
-        $details_data = $this->makeApiRequest($details_url);
+        $details_data = $this->_makeApiRequest($details_url);
 
         if (!isset($details_data['data'])) {
             return ['error' => 'Failed to retrieve details for LTC transactions.'];
@@ -167,7 +169,7 @@ class CryptoService
 
             $receiving_addresses = [];
             foreach ($tx['outputs'] as $output) {
-                $amount = $output['value'] / 100000000;
+                $amount = bcdiv((string)$output['value'], '100000000', 8);
                 $receiving_addresses[] = [
                     'address' => $output['recipient'],
                     'amount' => rtrim(rtrim(sprintf('%.8f', $amount), '0'), '.') . ' LTC'
@@ -178,7 +180,7 @@ class CryptoService
                 'hash' => $tx['transaction']['hash'],
                 'time' => $tx['transaction']['time'] . " UTC",
                 'block_id' => $tx['transaction']['block_id'],
-                'fee' => rtrim(rtrim(sprintf('%.8f', ($tx['transaction']['fee'] / 100000000)), '0'), '.') . ' LTC',
+                'fee' => rtrim(rtrim(bcdiv((string)$tx['transaction']['fee'], '100000000', 8), '0'), '.') . ' LTC',
                 'sending_addresses' => array_unique($sending_addresses),
                 'receiving_addresses' => $receiving_addresses
             ];
@@ -200,7 +202,7 @@ class CryptoService
      * @throws \CodeIgniter\HTTP\Exceptions\HTTPException If an HTTP error occurs during the request.
      * @throws \Exception If any other unexpected error occurs during the API request.
      */
-    private function makeApiRequest(string $url): array
+    private function _makeApiRequest(string $url): array
     {
         $client = \Config\Services::curlrequest();
 

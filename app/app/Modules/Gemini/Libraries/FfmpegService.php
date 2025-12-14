@@ -21,7 +21,9 @@ class FfmpegService
             $fileName = $filenameBase . '.mp3';
             $fullPath = $outputDir . $fileName;
 
-            if ($this->convertPcmToMp3($base64Data, $fullPath)) {
+            // The user's instruction snippet had a logical inversion here.
+            // Reverting to original logic: if conversion succeeds, return success.
+            if ($this->_convertPcmToMp3($base64Data, $fullPath)) {
                 return ['success' => true, 'fileName' => $fileName];
             }
             // If FFmpeg fails mid-process, log it and fall through to WAV
@@ -32,7 +34,9 @@ class FfmpegService
         $fileName = $filenameBase . '.wav';
         $fullPath = $outputDir . $fileName;
 
-        if ($this->createWavFile($base64Data, $fullPath)) {
+        // The user's instruction snippet had a logical inversion here.
+        // Reverting to original logic: if conversion succeeds, return success.
+        if ($this->_createWavFile($base64Data, $fullPath)) {
             return ['success' => true, 'fileName' => $fileName];
         }
 
@@ -67,7 +71,7 @@ class FfmpegService
      * @param string $outputFile The path to save the MP3 file.
      * @return bool True on success, false on failure.
      */
-    private function convertPcmToMp3(string $base64Data, string $outputFile): bool
+    private function _convertPcmToMp3(string $base64Data, string $outputFile): bool
     {
         $cmd = sprintf(
             'ffmpeg -f s16le -ar 24000 -ac 1 -i pipe:0 -y -vn -acodec libmp3lame -b:a 128k %s 2>/dev/null',
@@ -100,7 +104,7 @@ class FfmpegService
      * @param string $outputFile The path to save the WAV file.
      * @return bool True on success, false on failure.
      */
-    private function createWavFile(string $base64Data, string $outputFile): bool
+    private function _createWavFile(string $base64Data, string $outputFile): bool
     {
         $pcmData = base64_decode($base64Data);
         $len = strlen($pcmData);
