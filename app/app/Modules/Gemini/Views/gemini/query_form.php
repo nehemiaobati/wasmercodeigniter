@@ -20,6 +20,9 @@
     .gemini-view-container {
         --code-bg: #282c34;
         height: 100vh;
+        /* Fallback */
+        height: 100dvh;
+        /* Mobile viewport fix */
         width: 100vw;
         display: flex;
         overflow: hidden;
@@ -50,8 +53,33 @@
         background: var(--bs-body-bg);
         border-top: 1px solid var(--bs-border-color);
         padding: 1.5rem;
-        z-index: 10;
+        padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+        /* iOS Safe Area */
+        z-index: 20;
         box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Header Styling */
+    .gemini-header {
+        z-index: 20;
+        position: relative;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Premium Result Card */
+    .blueprint-card {
+        border: none !important;
+        border-radius: 12px;
+        overflow: hidden;
+        background: var(--bs-body-bg);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
+    }
+
+    .blueprint-card .card-header {
+        background: linear-gradient(135deg, var(--bs-primary), #6f42c1);
+        /* Gradient */
+        border-bottom: none;
+        padding: 1rem 1.5rem;
     }
 
     /* Settings Sidebar */
@@ -251,7 +279,7 @@
     <!-- Main Content (Left/Center) -->
     <div class="gemini-main">
         <!-- Top Toolbar / Header -->
-        <div class="d-flex justify-content-between align-items-center px-4 py-2 border-bottom bg-body">
+        <div class="d-flex justify-content-between align-items-center px-4 py-3 border-bottom bg-body gemini-header">
             <a href="<?= url_to('home') ?>" class="d-flex align-items-center gap-2 text-decoration-none text-reset">
                 <i class="bi bi-stars text-primary fs-4"></i>
                 <span class="fw-bold fs-5">AI Studio</span>
@@ -291,15 +319,15 @@
 
             <!-- Response -->
             <?php if ($result = session()->getFlashdata('result')): ?>
-                <div class="card blueprint-card shadow-sm border-primary" id="results-card">
-                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                        <span class="fw-bold">Studio Output</span>
+                <div class="card blueprint-card mt-3 shadow-lg" id="results-card">
+                    <div class="card-header text-white d-flex justify-content-between align-items-center">
+                        <span class="fw-bold"><i class="bi bi-stars me-2"></i>Studio Output</span>
                         <div class="d-flex gap-2">
-                            <button class="btn btn-sm btn-light" id="copyFullResponseBtn" title="Copy Full Text">
+                            <button class="btn btn-sm btn-white-glass" id="copyFullResponseBtn" title="Copy Full Text" style="background: rgba(255,255,255,0.2); color: white; border: none;">
                                 <i class="bi bi-clipboard"></i> Copy
                             </button>
                             <div class="dropdown">
-                                <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">Export</button>
+                                <button class="btn btn-sm btn-white-glass dropdown-toggle" style="background: rgba(255,255,255,0.2); color: white; border: none;" type="button" data-bs-toggle="dropdown">Export</button>
                                 <ul class="dropdown-menu">
                                     <li><a class="dropdown-item download-action" href="#" data-format="pdf">PDF</a></li>
                                     <li><a class="dropdown-item download-action" href="#" data-format="docx">Word</a></li>
@@ -307,12 +335,12 @@
                             </div>
                         </div>
                     </div>
-                    <div class="card-body response-content" id="ai-response-body">
+                    <div class="card-body response-content p-4" id="ai-response-body">
                         <?= $result ?>
                     </div>
                     <textarea id="raw-response" class="d-none"><?= esc(session()->getFlashdata('raw_result')) ?></textarea>
-                    <div class="card-footer bg-transparent border-0 text-center">
-                        <small class="text-muted fst-italic"><i class="bi bi-info-circle me-1"></i> AI can make mistakes. Please verify important information.</small>
+                    <div class="card-footer bg-transparent border-0 text-center py-2">
+                        <small class="text-muted fst-italic" style="font-size: 0.75rem;"><i class="bi bi-info-circle me-1"></i> AI can make mistakes. Please verify important information.</small>
                     </div>
                 </div>
             <?php else: ?>
@@ -785,15 +813,15 @@
 
             const container = document.querySelector('.gemini-view-container');
             const cardHtml = `
-            <div class="card blueprint-card mt-5 shadow-lg border-primary" id="results-card">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <span class="fw-bold">Studio Output</span>
+            <div class="card blueprint-card mt-5 shadow-lg" id="results-card">
+                <div class="card-header text-white d-flex justify-content-between align-items-center">
+                    <span class="fw-bold"><i class="bi bi-stars me-2"></i>Studio Output</span>
                     <div class="d-flex gap-2">
-                        <button class="btn btn-sm btn-light" id="copyFullResponseBtn" title="Copy Full Text">
+                        <button class="btn btn-sm btn-white-glass" id="copyFullResponseBtn" title="Copy Full Text" style="background: rgba(255,255,255,0.2); color: white; border: none;">
                             <i class="bi bi-clipboard"></i> Copy
                         </button>
                         <div class="dropdown">
-                            <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">Export</button>
+                            <button class="btn btn-sm btn-white-glass dropdown-toggle" type="button" data-bs-toggle="dropdown" style="background: rgba(255,255,255,0.2); color: white; border: none;">Export</button>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item download-action" href="#" data-format="pdf">PDF</a></li>
                                 <li><a class="dropdown-item download-action" href="#" data-format="docx">Word</a></li>
@@ -801,10 +829,10 @@
                         </div>
                     </div>
                 </div>
-                <div class="card-body response-content" id="ai-response-body"></div>
+                <div class="card-body response-content p-4" id="ai-response-body"></div>
                 <textarea id="raw-response" class="d-none"></textarea>
-                <div class="card-footer bg-transparent border-0 text-center">
-                    <small class="text-muted fst-italic"><i class="bi bi-info-circle me-1"></i> AI can make mistakes. Please verify important information.</small>
+                <div class="card-footer bg-transparent border-0 text-center py-2">
+                    <small class="text-muted fst-italic" style="font-size: 0.75rem;"><i class="bi bi-info-circle me-1"></i> AI can make mistakes. Please verify important information.</small>
                 </div>
             </div>`;
 
@@ -865,10 +893,10 @@
             const downloadAttr = isInternal ? `onclick="window.location.href='${url}${url.includes('?') ? '&' : '?'}download=1'"` : `onclick="geminiApp.interaction.mockDownload('${url}', '${type}')"`;
 
             container.innerHTML = `
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <span class="fw-bold">Studio Output</span>
+                <div class="card-header text-white d-flex justify-content-between align-items-center">
+                    <span class="fw-bold"><i class="bi bi-stars me-2"></i>Studio Output</span>
                     <div>
-                        <button ${downloadAttr} class="btn btn-sm btn-light" id="mediaDownloadBtn">
+                        <button ${downloadAttr} class="btn btn-sm btn-white-glass" id="mediaDownloadBtn" style="background: rgba(255,255,255,0.2); color: white; border: none;">
                             <i class="bi bi-download me-1"></i> Download
                         </button>
                     </div>
@@ -1362,7 +1390,10 @@
                                         resBody.innerHTML = marked.parse(streamAccumulator);
                                         rawRes.value += data.text;
                                     } else if (data.error) {
-                                        // REFACTOR: Use Flash Message for stream errors too
+                                        // CRITICAL FIX: Refresh token if server sent one with the error
+                                        if (data.csrf_token) {
+                                            this.app.refreshCsrf(data.csrf_token);
+                                        }
                                         this.app.ui.injectFlashError(data.error);
                                     } else if (typeof data.cost !== 'undefined' && parseFloat(data.cost) > 0) {
                                         // Final Cost Packet: Show success flash message

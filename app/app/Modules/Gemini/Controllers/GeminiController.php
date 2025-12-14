@@ -335,7 +335,10 @@ class GeminiController extends BaseController
         $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
 
         if (empty(trim($inputText)) && empty($uploadedFileIds)) {
-            $this->response->setBody("data: " . json_encode(['error' => 'Please provide a prompt.']) . "\n\n");
+            $this->response->setBody("data: " . json_encode([
+                'error' => 'Please provide a prompt.',
+                'csrf_token' => csrf_hash()
+            ]) . "\n\n");
             return $this->response;
         }
 
@@ -349,7 +352,10 @@ class GeminiController extends BaseController
 
         $filesResult = $this->_prepareFilesAndContext($uploadedFileIds, $userId);
         if (isset($filesResult['error'])) {
-            $this->response->setBody("data: " . json_encode(['error' => $filesResult['error']]) . "\n\n");
+            $this->response->setBody("data: " . json_encode([
+                'error' => $filesResult['error'],
+                'csrf_token' => csrf_hash()
+            ]) . "\n\n");
             return $this->response;
         }
 
@@ -362,7 +368,10 @@ class GeminiController extends BaseController
         $estimate = $this->geminiService->estimateCost($parts);
         if ($estimate['status'] && $user->balance < $estimate['costKSH']) {
             $this->_cleanupTempFiles($uploadedFileIds, $userId);
-            $this->response->setBody("data: " . json_encode(['error' => "Insufficient balance. Estimated: KSH " . number_format($estimate['costKSH'], 2)]) . "\n\n");
+            $this->response->setBody("data: " . json_encode([
+                'error' => "Insufficient balance. Estimated: KSH " . number_format($estimate['costKSH'], 2),
+                'csrf_token' => csrf_hash()
+            ]) . "\n\n");
             return $this->response;
         }
 
