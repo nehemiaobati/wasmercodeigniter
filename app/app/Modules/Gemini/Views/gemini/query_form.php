@@ -19,11 +19,18 @@
     /* Scoped Styles for Gemini View */
     .gemini-view-container {
         --code-bg: #282c34;
+        position: fixed;
+        /* Lock to viewport to prevent body scroll on input focus */
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
         height: 100dvh;
         /* Mobile browser address bar fix */
         width: 100vw;
         display: flex;
         overflow: hidden;
+        z-index: 1000;
     }
 
     /* Main Content Area */
