@@ -91,6 +91,7 @@ class MediaGenerationService
     /**
      * Handles file writing, balance deduction, and DB logging in one atomic flow.
      * Compliant with serverless (creates path on fly) and state management.
+     * REFACTOR: Wrapped in Transaction to prevent phantom charges.
      */
     private function _finalizeArtifact(int $userId, string $type, string $binaryData, string $ext, float $cost, string $modelId, ?string $remoteOpId = null): array
     {
@@ -99,14 +100,20 @@ class MediaGenerationService
 
         if (!is_dir($uploadPath)) mkdir($uploadPath, 0755, true);
 
+        // Transaction Start
+        $this->db->transStart();
+
+        // 1. Write File
+        // Note: In strict ACID, file IO is not transactional, but we ensure DB consistency.
         if (file_put_contents($uploadPath . $fileName, $binaryData) === false) {
+            $this->db->transRollback(); // Nothing happened in DB yet, but good practice
             return ['status' => 'error', 'message' => 'Failed to write artifact to disk.'];
         }
 
-        // Deduct Balance
+        // 2. Deduct Balance
         $this->userModel->deductBalance($userId, number_format($cost, 4, '.', ''));
 
-        // Insert DB Record
+        // 3. Insert DB Record
         $this->db->table('generated_media')->insert([
             'user_id' => $userId,
             'type' => $type,
@@ -118,6 +125,14 @@ class MediaGenerationService
             'created_at' => Time::now()->toDateTimeString(),
             'updated_at' => Time::now()->toDateTimeString(),
         ]);
+
+        // Transaction Complete
+        $this->db->transComplete();
+
+        if ($this->db->transStatus() === false) {
+            // Optional: Orphan file cleanup could happen here, but failure to write to DB after writing file is rare.
+            return ['status' => 'error', 'message' => 'Transaction failed. Credits not deducted.'];
+        }
 
         return [
             'status' => 'success',
@@ -151,6 +166,9 @@ class MediaGenerationService
     {
         if (!isset($response['name'])) return ['status' => 'error', 'message' => 'No operation ID returned.'];
 
+        // Transaction Start
+        $this->db->transStart();
+
         // Deduct upfront for async video
         $this->userModel->deductBalance($userId, number_format($cost, 4, '.', ''));
 
@@ -164,6 +182,12 @@ class MediaGenerationService
             'created_at' => Time::now()->toDateTimeString(),
             'updated_at' => Time::now()->toDateTimeString(),
         ]);
+
+        $this->db->transComplete();
+
+        if ($this->db->transStatus() === false) {
+            return ['status' => 'error', 'message' => 'Transaction failed.'];
+        }
 
         return ['status' => 'pending', 'type' => 'video', 'op_id' => $response['name']];
     }
@@ -188,10 +212,6 @@ class MediaGenerationService
                         // Find record to update
                         $record = $this->db->table('generated_media')->where('remote_op_id', $opId)->get()->getRow();
                         if (!$record) return ['status' => 'error', 'message' => 'Record not found.'];
-
-                        // Reuse finalizeArtifact logic, but we need to update existing record, not insert new.
-                        // For simplicity in this plan, we'll manually handle the update logic here or adapt finalizeArtifact.
-                        // Adapting logic here to stay within strict scope:
 
                         $fileName = 'vid_' . time() . '_' . bin2hex(random_bytes(4)) . '.mp4';
                         $uploadPath = WRITEPATH . 'uploads/generated/' . $record->user_id . '/';

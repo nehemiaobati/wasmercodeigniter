@@ -277,12 +277,13 @@
             <!-- Audio Player Container (Dynamically Populated via AJAX) -->
             <div id="audio-player-container">
                 <?php
-                // Server-side fallback for initial load (Non-AJAX) using Data URI
-                if (session()->getFlashdata('audio_base64')): ?>
+                // REFACTOR: Check audio_url instead of base64 for session hygiene
+                if (session()->getFlashdata('audio_url')): ?>
                     <div class="alert alert-info d-flex align-items-center mb-4">
                         <i class="bi bi-volume-up-fill fs-4 me-3"></i>
                         <audio controls autoplay class="w-100">
-                            <source src="<?= session()->getFlashdata('audio_base64') ?>">
+                            <!-- Use the served URL -->
+                            <source src="<?= url_to('gemini.serve_audio', session()->getFlashdata('audio_url')) ?>">
                         </audio>
                     </div>
                 <?php endif; ?>
@@ -1229,7 +1230,7 @@
         /**
          * Handles standard (non-streaming) text generation via Fetch.
          * Updates content and injects flash messages via AJAX.
-         * Explicitly handles audio rendering if audio_base64 is present.
+         * Explicitly handles audio rendering if audio_url is present.
          */
         async handleStandardGeneration(formData) {
             this.app.ui.ensureResultCardExists();
@@ -1252,15 +1253,15 @@
                         }
                     }
 
-                    // FIX: Handle Audio BASE64 injection dynamically for visibility
+                    // FIX: Handle Audio URL injection dynamically for visibility
                     const audioContainer = document.getElementById('audio-player-container');
-                    if (data.audio_base64) {
+                    if (data.audio_url) {
                         if (audioContainer) {
                             audioContainer.innerHTML = `
                                 <div class="alert alert-info d-flex align-items-center mb-4">
                                     <i class="bi bi-volume-up-fill fs-4 me-3"></i>
                                     <audio controls autoplay class="w-100">
-                                        <source src="${data.audio_base64}" type="audio/mpeg">
+                                        <source src="${data.audio_url}" type="audio/mpeg">
                                     </audio>
                                 </div>
                             `;
@@ -1376,14 +1377,14 @@
                                             flashContainer.innerHTML = costHtml;
                                         }
 
-                                        // FIX: Handle Audio Base64 from final packet in Streaming
-                                        if (data.audio_base64) {
+                                        // FIX: Handle Audio URL from final packet in Streaming
+                                        if (data.audio_url) {
                                             if (audioContainer) {
                                                 audioContainer.innerHTML = `
                                                     <div class="alert alert-info d-flex align-items-center mb-4">
                                                         <i class="bi bi-volume-up-fill fs-4 me-3"></i>
                                                         <audio controls autoplay class="w-100">
-                                                            <source src="${data.audio_base64}" type="audio/mpeg">
+                                                            <source src="${data.audio_url}" type="audio/mpeg">
                                                         </audio>
                                                     </div>
                                                 `;
