@@ -277,12 +277,12 @@
             <!-- Audio Player Container (Dynamically Populated via AJAX) -->
             <div id="audio-player-container">
                 <?php
-                // Server-side fallback for initial load (Non-AJAX)
-                if (session()->getFlashdata('audio_url')): ?>
+                // Server-side fallback for initial load (Non-AJAX) using Data URI
+                if (session()->getFlashdata('audio_base64')): ?>
                     <div class="alert alert-info d-flex align-items-center mb-4">
                         <i class="bi bi-volume-up-fill fs-4 me-3"></i>
                         <audio controls autoplay class="w-100">
-                            <source src="<?= url_to('gemini.serve_audio', session()->getFlashdata('audio_url')) ?>">
+                            <source src="<?= session()->getFlashdata('audio_base64') ?>">
                         </audio>
                     </div>
                 <?php endif; ?>
@@ -552,7 +552,7 @@
                     generate: '<?= url_to('gemini.generate') ?>',
                     generateMedia: '<?= url_to('gemini.media.generate') ?>',
                     pollMedia: '<?= url_to('gemini.media.poll') ?>',
-                    // Pass placeholder to route, then strip it to prevent router crash on empty segment
+                    // No longer needing serveAudio for core generation, but keeping safe route generation
                     serveAudio: '<?= url_to('gemini.serve_audio', 'placeholder') ?>'.replace('placeholder', '')
                 }
             };
@@ -1229,7 +1229,7 @@
         /**
          * Handles standard (non-streaming) text generation via Fetch.
          * Updates content and injects flash messages via AJAX.
-         * Explicitly handles audio rendering if audio_url is present.
+         * Explicitly handles audio rendering if audio_base64 is present.
          */
         async handleStandardGeneration(formData) {
             this.app.ui.ensureResultCardExists();
@@ -1252,15 +1252,15 @@
                         }
                     }
 
-                    // FIX: Handle Audio URL injection dynamically for visibility
+                    // FIX: Handle Audio BASE64 injection dynamically for visibility
                     const audioContainer = document.getElementById('audio-player-container');
-                    if (data.audio_url) {
+                    if (data.audio_base64) {
                         if (audioContainer) {
                             audioContainer.innerHTML = `
                                 <div class="alert alert-info d-flex align-items-center mb-4">
                                     <i class="bi bi-volume-up-fill fs-4 me-3"></i>
                                     <audio controls autoplay class="w-100">
-                                        <source src="${data.audio_url}" type="audio/mpeg">
+                                        <source src="${data.audio_base64}" type="audio/mpeg">
                                     </audio>
                                 </div>
                             `;
@@ -1375,6 +1375,21 @@
                                         if (flashContainer) {
                                             flashContainer.innerHTML = costHtml;
                                         }
+
+                                        // FIX: Handle Audio Base64 from final packet in Streaming
+                                        if (data.audio_base64) {
+                                            if (audioContainer) {
+                                                audioContainer.innerHTML = `
+                                                    <div class="alert alert-info d-flex align-items-center mb-4">
+                                                        <i class="bi bi-volume-up-fill fs-4 me-3"></i>
+                                                        <audio controls autoplay class="w-100">
+                                                            <source src="${data.audio_base64}" type="audio/mpeg">
+                                                        </audio>
+                                                    </div>
+                                                `;
+                                            }
+                                        }
+
                                     } else if (data.csrf_token) {
                                         // Update CSRF for subsequent requests
                                         this.app.refreshCsrf(data.csrf_token);

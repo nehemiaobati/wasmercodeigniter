@@ -57,7 +57,7 @@ class GeminiController extends BaseController
         'application/pdf',
         'text/plain'
     ];
-    private const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    private const MAX_FILE_SIZE = 100 * 1024 * 1024; // 10MB
     private const MAX_FILES = 5;
 
 
@@ -180,7 +180,7 @@ class GeminiController extends BaseController
             'assistant_mode_enabled' => $userSetting ? $userSetting->assistant_mode_enabled : true,
             'voice_output_enabled'   => $userSetting ? $userSetting->voice_output_enabled : false,
             'stream_output_enabled'  => $userSetting ? $userSetting->stream_output_enabled : false,
-            'audio_url'              => session()->getFlashdata('audio_url'),
+            'audio_base64'           => session()->getFlashdata('audio_base64'),
             'maxFileSize'            => self::MAX_FILE_SIZE,
             'maxFiles'               => self::MAX_FILES,
             'supportedMimeTypes'     => json_encode(self::SUPPORTED_MIME_TYPES),
@@ -339,6 +339,8 @@ class GeminiController extends BaseController
         // 1. Prepare Context & Files
         $userSetting = $this->_getUserSettings($userId);
         $isAssistantMode = $userSetting ? $userSetting->assistant_mode_enabled : true;
+        // Check for voice output preference
+        $isVoiceEnabled = $userSetting ? $userSetting->voice_output_enabled : false;
 
         $contextData = $this->_prepareContext($userId, $inputText, $isAssistantMode);
 
@@ -377,32 +379,46 @@ class GeminiController extends BaseController
                 if (ob_get_level() > 0) ob_flush();
                 flush();
             },
-            function ($fullText, $usageMetadata) use ($userId, $contextData, $inputText) {
+            function ($fullText, $usageMetadata) use ($userId, $contextData, $inputText, $isVoiceEnabled) {
                 // 1. Calculate and Deduct Cost
-                // We do this at the end of the stream to ensure accuracy based on actual token usage.
+                $audioUsage = null;
+                $audioBase64 = null;
+
+                // --- AUDIO GENERATION FOR STREAMING ---
+                if ($isVoiceEnabled && !empty($fullText)) {
+                    $audioResult = $this->geminiService->generateSpeech($fullText);
+                    if ($audioResult['status']) {
+                        $audioUsage = $audioResult['usage'] ?? null;
+                        // Process raw audio to Base64 MP3 for serverless delivery
+                        $audioBase64 = $this->_processAudioToBase64($audioResult['audioData']);
+                    }
+                }
+
                 $costData = ['costKSH' => 0];
                 if ($usageMetadata) {
-                    $costData = $this->geminiService->calculateCost($usageMetadata);
+                    $costData = $this->geminiService->calculateCost($usageMetadata, $audioUsage);
                     $deduction = number_format($costData['costKSH'], 4, '.', '');
                     $this->userModel->deductBalance($userId, $deduction);
                 }
 
                 // 2. Update Context Memory
-                // Store the interaction so the Assistant Mode can recall it in future queries.
                 if (isset($contextData['memoryService'])) {
                     $contextData['memoryService']->updateMemory($inputText, $fullText, $contextData['usedInteractionIds']);
                 }
 
-                // 3. Send Final Status Event
-                // We explicitly send 'event: close' separately to ensure the client parser handles it cleanly,
-                // even if it arrives in the same TCP packet as the last text chunk.
-                echo "event: close\n";
-                echo "data: " . json_encode([
-                    'csrf_token' => csrf_hash(), // Refresh CSRF for next request
+                // 3. Send Final Status Event with Cost AND Audio
+                $finalPayload = [
+                    'csrf_token' => csrf_hash(),
                     'cost' => $costData['costKSH']
-                ]) . "\n\n";
+                ];
 
-                // Force flush the buffer to ensure the client receives the close event immediately.
+                if ($audioBase64) {
+                    $finalPayload['audio_base64'] = $audioBase64;
+                }
+
+                echo "event: close\n";
+                echo "data: " . json_encode($finalPayload) . "\n\n";
+
                 if (ob_get_level() > 0) ob_flush();
                 flush();
             }
@@ -699,14 +715,10 @@ class GeminiController extends BaseController
     private function _buildGenerationResponse(array $result, int $userId)
     {
         // Process Audio if present
-        $audioUrl = null;
+        $audioBase64 = null;
         if (!empty($result['audioData'])) {
-            // Returns filename only, e.g. "speech_123.mp3"
-            $audioFilename = $this->_processAudioData($result['audioData']);
-            if ($audioFilename) {
-                // Construct full URL for Frontend
-                $audioUrl = url_to('gemini.serve_audio', $audioFilename);
-            }
+            // Process to Base64 string directly - Serverless compatible
+            $audioBase64 = $this->_processAudioToBase64($result['audioData']);
         }
 
         // Set Flash Message
@@ -733,9 +745,9 @@ class GeminiController extends BaseController
                 'token' => csrf_hash()
             ];
 
-            if ($audioUrl) {
-                // Return the generated URL so the frontend can create the <audio> tag
-                $responsePayload['audio_url'] = $audioUrl;
+            if ($audioBase64) {
+                // Return the Base64 Data URI so the frontend can create the <audio> tag instantly
+                $responsePayload['audio_base64'] = $audioBase64;
             }
 
             return $this->response->setJSON($responsePayload);
@@ -746,46 +758,64 @@ class GeminiController extends BaseController
             ->with('result', $parsedHtml)
             ->with('raw_result', $result['result']);
 
-        if ($audioUrl) {
-            // Pass the URL for the view to use in the <audio> tag
-            $redirect->with('audio_url', basename($audioUrl)); // passing filename for route consistency in view logic
+        if ($audioBase64) {
+            // Pass the Base64 string directly to flashdata
+            $redirect->with('audio_base64', $audioBase64);
         }
-
-        // For non-AJAX, we rely on the session flashdata to display the file.
-        // In serverless, if the file is deleted after the first read (by serveAudio logic),
-        // we might prefer to embed it directly if not using AJAX. 
-        // However, the existing view logic handles audio_file_path checks. 
-        // For strict serverless compliance, AJAX + Blob or ephemeral URL is preferred.
-        // We will stick to the URL pattern which works if served immediately.
 
         return $redirect;
     }
 
     /**
-     * Handles the storage and conversion of the raw audio data.
+     * Handles the processing of raw audio data into a Base64 encoded string.
      *
-     * Delegates to the FFmpegService to convert the raw audio to a browser-compatible format.
+     * This method converts the raw PCM data using FFmpeg (or PHP fallback)
+     * within a temporary request lifecycle, then reads it back as Base64.
+     * It ensures the temporary file is deleted immediately, maintaining strict
+     * serverless stateless compliance.
      *
-     * @param string $base64Data Base64 encoded raw audio data.
-     * @return string|null The filename of the processed audio file, or null on failure.
+     * @param string $base64Data Base64 encoded raw audio data (PCM/WAV).
+     * @return string|null The Data URI string (e.g., "data:audio/mp3;base64,..."), or null on failure.
      */
-    private function _processAudioData(string $base64Data): ?string
+    private function _processAudioToBase64(string $base64Data): ?string
     {
         $userId = (int) session()->get('userId');
+        // Use a temp path that is safe for ephemeral storage
         $securePath = WRITEPATH . 'uploads/ttsaudio_secure/' . $userId . '/';
 
         if (!is_dir($securePath)) mkdir($securePath, 0755, true);
 
-        // Generate base name (e.g., "speech_651a...")
-        $filenameBase = 'speech_' . bin2hex(random_bytes(8));
+        // Generate temporary base name
+        $filenameBase = 'audio_proc_' . bin2hex(random_bytes(8));
 
-        // Delegate to Service (Returns .mp3 OR .wav)
+        // Delegate to Service (Returns {success, fileName})
+        // FfmpegService writes to disk. We accept this temporary write.
         $result = service('ffmpegService')->processAudio(
             $base64Data,
             $securePath,
             $filenameBase
         );
 
-        return $result['success'] ? $result['fileName'] : null;
+        if (!$result['success'] || !$result['fileName']) {
+            return null;
+        }
+
+        $fullPath = $securePath . $result['fileName'];
+
+        // Read file into memory
+        if (!file_exists($fullPath)) {
+            return null;
+        }
+
+        $fileContent = file_get_contents($fullPath);
+
+        // Determine MIME type
+        $mime = str_ends_with($result['fileName'], '.wav') ? 'audio/wav' : 'audio/mpeg';
+
+        // UNLINK IMMEDIATELY - Serverless Requirement
+        @unlink($fullPath);
+
+        // Return Data URI
+        return 'data:' . $mime . ';base64,' . base64_encode($fileContent);
     }
 }
