@@ -1106,6 +1106,19 @@
                 ui.remove();
             }
         }
+
+        clearUploads() {
+            // Remove all chips
+            const wrapper = document.getElementById('upload-list-wrapper');
+            if (wrapper) wrapper.innerHTML = '';
+
+            // Remove hidden inputs
+            const container = document.getElementById('uploaded-files-container');
+            if (container) container.innerHTML = '';
+
+            // Reset queue
+            this.queue = [];
+        }
     }
 
     class PromptManager {
@@ -1321,6 +1334,8 @@
                 this.app.ui.injectFlashError('Generation failed due to a system error.');
             } finally {
                 this.app.ui.setLoading(false);
+                // Clear uploads on success to sync with backend deletion
+                this.app.uploader.clearUploads();
             }
         }
 
@@ -1435,6 +1450,8 @@
                 this.app.ui.injectFlashError('Stream error occurred.');
             } finally {
                 this.app.ui.setLoading(false);
+                // Clear uploads on success to sync with backend deletion
+                this.app.uploader.clearUploads();
             }
         }
 
@@ -1483,7 +1500,11 @@
                         this.app.ui.injectFlashError(res.message);
                         this.app.ui.setLoading(false);
                     }
-                } catch (e) {}
+                } catch (e) {
+                    clearInterval(timer);
+                    this.app.ui.injectFlashError('Polling failed: ' + e.message);
+                    this.app.ui.setLoading(false);
+                }
             }, 5000);
         }
 

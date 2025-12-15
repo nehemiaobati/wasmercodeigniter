@@ -384,7 +384,10 @@ class GeminiController extends BaseController
             $parts,
             function ($chunk) {
                 if (is_array($chunk) && isset($chunk['error'])) {
-                    echo "data: " . json_encode(['error' => $chunk['error']]) . "\n\n";
+                    echo "data: " . json_encode([
+                        'error' => $chunk['error'],
+                        'csrf_token' => csrf_hash() // Inject fresh token for recovery
+                    ]) . "\n\n";
                 } else {
                     echo "data: " . json_encode(['text' => $chunk]) . "\n\n";
                 }
