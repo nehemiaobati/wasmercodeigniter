@@ -141,7 +141,7 @@ class OllamaController extends BaseController
     /**
      * Generates content using Ollama with Memory Integration.
      */
-    public function generate(): RedirectResponse
+    public function generate(): ResponseInterface
     {
         // Timeout Safety: Prevent PHP timeouts during slow local LLM inference
         set_time_limit(300);
@@ -160,6 +160,7 @@ class OllamaController extends BaseController
         }
 
         $inputText = (string) $this->request->getPost('prompt');
+        $inputText = strip_tags($inputText); // Remove HTML tags for weak model that get confused by them.
         $selectedModel = (string) $this->request->getPost('model');
         $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
 
@@ -204,6 +205,13 @@ class OllamaController extends BaseController
 
         if (isset($response['error']) || (isset($response['success']) && !$response['success'])) {
             $msg = $response['error'] ?? 'Unknown error';
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'status'     => 'error',
+                    'message'    => $msg,
+                    'csrf_token' => csrf_hash()
+                ]);
+            }
             return redirect()->back()->withInput()->with('error', $msg);
         }
 
@@ -215,10 +223,22 @@ class OllamaController extends BaseController
 
         // 4. Output
         $parsedown = new Parsedown();
+        $parsedown->setBreaksEnabled(true);
         $parsedown->setSafeMode(true);
+        $finalHtml = $parsedown->text($resultText);
+
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON([
+                'status'     => 'success',
+                'result'     => $finalHtml,
+                'raw_result' => $resultText,
+                'flash_html' => view('App\Views\partials\flash_messages', ['success' => 'Generated successfully.']),
+                'csrf_token' => csrf_hash()
+            ]);
+        }
 
         return redirect()->back()->withInput()
-            ->with('result', $parsedown->text($resultText))
+            ->with('result', $finalHtml)
             ->with('raw_result', $resultText)
             ->with('success', 'Generated successfully. Cost: ' . self::COST_PER_REQUEST . ' credits.');
     }
@@ -291,5 +311,60 @@ class OllamaController extends BaseController
         }
 
         return redirect()->back()->with('error', $result['message'] ?? 'Export failed.');
+    }
+
+    /**
+     * Adds a new saved prompt.
+     */
+    public function addPrompt(): ResponseInterface
+    {
+        $userId = (int) session()->get('userId');
+        if ($userId <= 0) return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Auth required']);
+
+        $rules = [
+            'title'       => 'required|min_length[3]|max_length[255]',
+            'prompt_text' => 'required',
+        ];
+
+        if (!$this->validate($rules)) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Invalid input']);
+        }
+
+        $data = [
+            'user_id'     => $userId,
+            'title'       => $this->request->getPost('title'),
+            'prompt_text' => $this->request->getPost('prompt_text'),
+        ];
+
+        $id = $this->promptModel->insert($data);
+
+        if ($id) {
+            return $this->response->setJSON([
+                'status' => 'success',
+                'prompt' => array_merge($data, ['id' => $id]),
+                'csrf_token' => csrf_hash()
+            ]);
+        }
+
+        return $this->response->setJSON(['status' => 'error', 'message' => 'Failed to save']);
+    }
+
+    /**
+     * Deletes a saved prompt.
+     */
+    public function deletePrompt($id): ResponseInterface
+    {
+        $userId = (int) session()->get('userId');
+        $prompt = $this->promptModel->find($id);
+
+        if (!$prompt || $prompt->user_id !== $userId) {
+            return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+        }
+
+        if ($this->promptModel->delete($id)) {
+            return $this->response->setJSON(['status' => 'success', 'csrf_token' => csrf_hash()]);
+        }
+
+        return $this->response->setJSON(['status' => 'error', 'message' => 'Failed to delete']);
     }
 }

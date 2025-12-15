@@ -190,7 +190,7 @@ class OllamaMemoryService
 
     private function _constructSystemPrompt(string $contextText): string
     {
-        return "You are DeepSeek R1, a helpful AI assistant. " .
+        return "You are a helpful AI assistant. " .
             "CONTEXT FROM MEMORY:\n" . $contextText . "\n\n" .
             "INSTRUCTIONS:\n" .
             "1. Use the above context to answer the user's query.\n" .

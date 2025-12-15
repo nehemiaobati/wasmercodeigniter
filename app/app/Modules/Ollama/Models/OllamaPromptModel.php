@@ -23,7 +23,11 @@ class OllamaPromptModel extends Model
     protected $deletedField  = 'deleted_at';
 
     // Validation
-    protected $validationRules      = [];
+    protected $validationRules      = [
+        'user_id'     => 'required|integer',
+        'title'       => 'required|min_length[3]|max_length[255]',
+        'prompt_text' => 'required',
+    ];
     protected $validationMessages   = [];
     protected $skipValidation       = false;
     protected $cleanValidationRules = true;
