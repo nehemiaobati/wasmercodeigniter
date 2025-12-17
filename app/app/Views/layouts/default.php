@@ -277,9 +277,9 @@
                 <div class="col-lg-2 col-6">
                     <h5>Services</h5>
                     <ul class="list-unstyled">
-                        <li><a href="<?= url_to('gemini.public') ?>">Gemini AI</a></li>
+                        <li><a href="<?= url_to('gemini.index') ?>">Gemini AI</a></li>
                         <li><a href="<?= url_to('ollama.index') ?>">Ollama AI</a></li>
-                        <li><a href="<?= url_to('crypto.public') ?>">Crypto Data</a></li>
+                        <li><a href="<?= url_to('crypto.index') ?>">Crypto Data</a></li>
                     </ul>
                 </div>
                 <div class="col-lg-3 col-6">
