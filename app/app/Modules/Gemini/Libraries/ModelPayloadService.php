@@ -7,13 +7,27 @@ namespace App\Modules\Gemini\Libraries;
 use stdClass;
 
 /**
- * Service responsible for generating model-specific configurations and payloads.
+ * Model Payload Service
+ *
+ * Generates model-specific configurations and payloads for the Gemini API.
  * Implements the "Standalone" pattern for infinite model scalability.
+ *
+ * Uses PHP 8.0 match expression with structured configuration for clean,
+ * self-contained model definitions.
+ *
+ * @package App\Modules\Gemini\Libraries
  */
 class ModelPayloadService
 {
     /**
      * Returns the specific API Endpoint URL and JSON Request Body for a given model.
+     *
+     * Uses PHP 8.0 match expression that returns structured configuration:
+     * - 'method': API method name (generateContent, predict, predictLongRunning, etc.)
+     * - 'payload': Model-specific request payload
+     *
+     * This approach eliminates post-match correction logic by having each model
+     * define its own complete configuration.
      *
      * @param string $modelId The specific model ID.
      * @param string $apiKey The API Key.
@@ -23,121 +37,132 @@ class ModelPayloadService
      */
     public function getPayloadConfig(string $modelId, string $apiKey, array $parts, bool $isStream = false): ?array
     {
-        $payload = null;
-        // Default method is generateContent, overridden in specific cases (Imagen/Veo)
-        $apiMethod = $isStream ? 'streamGenerateContent' : 'generateContent';
-
-        switch ($modelId) {
-            // ----------------------------------------------------------------
-            // 1. ADVANCED THINKING MODELS (Pro)
-            // ----------------------------------------------------------------
-            case 'gemini-3-pro-preview':
-                $payload = [
+        // Match expression returns structured config with method + payload
+        $config = match ($modelId) {
+            // Advanced Thinking Models (Pro) - Standard API
+            'gemini-3-pro-preview' => [
+                'method' => $isStream ? 'streamGenerateContent' : 'generateContent',
+                'payload' => [
                     "contents" => [["role" => "user", "parts" => $parts]],
-                    "generationConfig" => ["thinkingConfig" => ["thinkingLevel" => "HIGH"]],
+                    "generationConfig" => [
+                        "thinkingConfig" => ["thinkingLevel" => "HIGH"],
+                        "temperature" => 1,
+                        "topP" => 0.95,
+                    ],
                     "tools" => [["googleSearch" => new stdClass()]],
-                ];
-                break;
-
-            case 'gemini-2.5-pro':
-                $payload = [
+                ]
+            ],
+            'gemini-2.5-pro' => [
+                'method' => $isStream ? 'streamGenerateContent' : 'generateContent',
+                'payload' => [
                     "contents" => [["role" => "user", "parts" => $parts]],
-                    "generationConfig" => ["thinkingConfig" => ["thinkingBudget" => 32768]],
+                    "generationConfig" => [
+                        "thinkingConfig" => ["thinkingBudget" => 32768],
+                        "temperature" => 1,
+                        "topP" => 0.95,
+                    ],
                     "tools" => [["googleSearch" => new stdClass()]],
-                ];
-                break;
+                ]
+            ],
 
-            // ----------------------------------------------------------------
-            // 2. STANDARD FLASH MODELS (Thinking Disabled/Low)
-            // ----------------------------------------------------------------
-            case 'gemini-flash-latest':
-            case 'gemini-2.5-flash':
-                $payload = [
+            // Standard Flash Models - Standard API
+            'gemini-flash-latest', 'gemini-2.5-flash' => [
+                'method' => $isStream ? 'streamGenerateContent' : 'generateContent',
+                'payload' => [
                     "contents" => [["role" => "user", "parts" => $parts]],
-                    "generationConfig" => ["thinkingConfig" => ["thinkingBudget" => -1]],
+                    "generationConfig" => [
+                        "thinkingConfig" => ["thinkingBudget" => -1],
+                        "temperature" => 1,
+                        "topP" => 0.95,
+                    ],
                     "tools" => [["googleSearch" => new stdClass()]],
-                ];
-                break;
-
-            case 'gemini-flash-lite-latest':
-            case 'gemini-2.5-flash-lite':
-                $payload = [
+                ]
+            ],
+            'gemini-flash-lite-latest', 'gemini-2.5-flash-lite' => [
+                'method' => $isStream ? 'streamGenerateContent' : 'generateContent',
+                'payload' => [
                     "contents" => [["role" => "user", "parts" => $parts]],
-                    "generationConfig" => ["thinkingConfig" => ["thinkingBudget" => 0]],
+                    "generationConfig" => [
+                        "thinkingConfig" => ["thinkingBudget" => 0],
+                        "temperature" => 1,
+                        "topP" => 0.95,
+                    ],
                     "tools" => [["googleSearch" => new stdClass()]],
-                ];
-                break;
+                ]
+            ],
 
-            // ----------------------------------------------------------------
-            // 3. LEGACY FLASH MODELS (2.0)
-            // ----------------------------------------------------------------
-            case 'gemini-2.0-flash':
-                $payload = [
+            // Legacy Flash Models (2.0) - Standard API
+            'gemini-2.0-flash' => [
+                'method' => $isStream ? 'streamGenerateContent' : 'generateContent',
+                'payload' => [
                     "contents" => [["role" => "user", "parts" => $parts]],
-                    "generationConfig" => new stdClass(), // Force {}
+                    "generationConfig" => [
+                        "temperature" => 1,
+                        "topP" => 0.95,
+                    ],
                     "tools" => [["googleSearch" => new stdClass()]],
-                ];
-                break;
-
-            case 'gemini-2.0-flash-lite':
-                $payload = [
+                ]
+            ],
+            'gemini-2.0-flash-lite' => [
+                'method' => $isStream ? 'streamGenerateContent' : 'generateContent',
+                'payload' => [
                     "contents" => [["role" => "user", "parts" => $parts]],
-                    "generationConfig" => new stdClass(),
-                    // No tools for 2.0 Flash Lite
-                ];
-                break;
+                    "generationConfig" => [
+                        "temperature" => 1,
+                        "topP" => 0.95,
+                    ],
+                ]
+            ],
 
-            // ----------------------------------------------------------------
-            // 4. MULTIMODAL GENERATION (Image + Text Output)
-            // ----------------------------------------------------------------
-            case 'gemini-3-pro-image-preview':
-                $payload = [
+            // Multimodal Generation (Image + Text Output) - Standard API
+            'gemini-3-pro-image-preview' => [
+                'method' => $isStream ? 'streamGenerateContent' : 'generateContent',
+                'payload' => [
                     "contents" => [["role" => "user", "parts" => $parts]],
                     "generationConfig" => [
                         "responseModalities" => ["IMAGE", "TEXT"],
                         "imageConfig" => ["image_size" => "1K"],
+                        "temperature" => 1,
+                        "topP" => 0.95,
                     ],
                     "tools" => [["googleSearch" => new stdClass()]],
-                ];
-                break;
-
-            case 'gemini-2.5-flash-image':
-            case 'gemini-2.5-flash-image-preview':
-                $payload = [
+                ]
+            ],
+            'gemini-2.5-flash-image', 'gemini-2.5-flash-image-preview' => [
+                'method' => $isStream ? 'streamGenerateContent' : 'generateContent',
+                'payload' => [
                     "contents" => [["role" => "user", "parts" => $parts]],
                     "generationConfig" => [
                         "responseModalities" => ["IMAGE", "TEXT"],
+                        "temperature" => 1,
+                        "topP" => 0.95,
                     ],
-                ];
-                break;
+                ]
+            ],
 
-            // ----------------------------------------------------------------
-            // 5. IMAGEN 4.0 (Text-to-Image / Predict Endpoint)
-            // ----------------------------------------------------------------
-            case 'imagen-4.0-generate-preview-06-06':
-            case 'imagen-4.0-ultra-generate-preview-06-06':
-            case 'imagen-4.0-ultra-generate-001':
-            case 'imagen-4.0-fast-generate-001':
-            case 'imagen-4.0-generate-001':
-                $apiMethod = 'predict';
-                $payload = [
+            // Imagen 4.0 (Text-to-Image) - Uses predict API
+            'imagen-4.0-generate-preview-06-06',
+            'imagen-4.0-ultra-generate-preview-06-06',
+            'imagen-4.0-ultra-generate-001',
+            'imagen-4.0-fast-generate-001',
+            'imagen-4.0-generate-001' => [
+                'method' => 'predict',
+                'payload' => [
                     "instances" => [["prompt" => $this->_extractTextPrompt($parts)]],
                     "parameters" => [
                         "outputMimeType" => "image/jpeg",
                         "sampleCount" => 1,
                         "personGeneration" => "ALLOW_ALL",
                         "aspectRatio" => "1:1",
-                        "imageSize" => "1K", // Defaulting to 1K for consistency
+                        "imageSize" => "1K",
                     ]
-                ];
-                break;
+                ]
+            ],
 
-            // ----------------------------------------------------------------
-            // 6. VEO 2.0 (Text-to-Video / Async Endpoint)
-            // ----------------------------------------------------------------
-            case 'veo-2.0-generate-001':
-                $apiMethod = 'predictLongRunning';
-                $payload = [
+            // Veo 2.0 (Text-to-Video) - Uses async predictLongRunning API
+            'veo-2.0-generate-001' => [
+                'method' => 'predictLongRunning',
+                'payload' => [
                     "instances" => [["prompt" => $this->_extractTextPrompt($parts)]],
                     "parameters" => [
                         "aspectRatio" => "16:9",
@@ -145,17 +170,22 @@ class ModelPayloadService
                         "durationSeconds" => 8,
                         "personGeneration" => "ALLOW_ALL",
                     ]
-                ];
-                break;
+                ]
+            ],
 
-            default:
-                // Strict: Return null for unknown models to ensure explicit configuration
-                return null;
+            // Unknown model
+            default => null
+        };
+
+        // Return null if model not supported
+        if ($config === null) {
+            return null;
         }
 
+        // Build and return final URL + payload
         return [
-            'url' => $this->_buildEndpoint($modelId, $apiMethod, $apiKey),
-            'body' => json_encode($payload)
+            'url' => $this->_buildEndpoint($modelId, $config['method'], $apiKey),
+            'body' => json_encode($config['payload'])
         ];
     }
 

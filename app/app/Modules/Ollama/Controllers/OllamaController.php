@@ -19,46 +19,69 @@ use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\I18n\Time;
 use Parsedown;
 
+/**
+ * Ollama Controller
+ *
+ * Handles all HTTP interactions for the Ollama module, which provides
+ * local LLM inference capabilities via the Ollama server. Supports text generation,
+ * multimodal input (images), conversational memory, and document export.
+ *
+ * Key Features:
+ * - Local AI inference (Llama 3, Mistral, DeepSeek, etc.)
+ * - Multimodal support (text + images for vision models)
+ * - Hybrid memory system (vector embeddings + keyword search)
+ * - Real-time streaming responses (SSE)
+ * - Document generation (PDF/DOCX)
+ *
+ * @package App\Modules\Ollama\Controllers
+ */
 class OllamaController extends BaseController
 {
-    protected UserModel $userModel;
-    protected OllamaService $ollamaService;
-    protected OllamaPromptModel $promptModel;
-    protected OllamaUserSettingsModel $userSettingsModel;
-
+    /** @var array List of allowed MIME types for image uploads */
     private const SUPPORTED_MIME_TYPES = [
         'image/png',
         'image/jpeg',
-        'image/jpg', // Some clients send this
+        'image/jpg',
         'image/webp',
         'image/gif',
-        //'application/pdf',
     ];
-    private const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-    private const MAX_FILES = 3;
-    private const COST_PER_REQUEST = 1.00; // Flat rate per request
 
-    public function __construct()
-    {
-        $this->userModel         = new UserModel();
-        $this->ollamaService     = new OllamaService();
-        $this->promptModel       = new OllamaPromptModel();
-        $this->userSettingsModel = new OllamaUserSettingsModel();
-    }
+    /** @var int Maximum file size in bytes (10MB) */
+    private const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+    /** @var int Maximum number of files per request */
+    private const MAX_FILES = 3;
+
+    /** @var float Cost in credits per AI request */
+    private const COST_PER_REQUEST = 1.00;
 
     /**
-     * Displays the main application dashboard.
+     * Constructor with Property Promotion (PHP 8.0+)
+     *
+     * Automatically declares and initializes protected properties from constructor parameters.
+     * This eliminates the need for explicit property declarations and assignments in the constructor body.
+     *
+     * @param UserModel $userModel Handles user authentication and balance management
+     * @param OllamaService $ollamaService Core service for Ollama API communication
+     * @param OllamaPromptModel $promptModel Manages saved user prompts
+     * @param OllamaUserSettingsModel $userSettingsModel Handles user preferences (assistant mode, streaming)
      */
+    public function __construct(
+        protected UserModel $userModel = new UserModel(),
+        protected OllamaService $ollamaService = new OllamaService(),
+        protected OllamaPromptModel $promptModel = new OllamaPromptModel(),
+        protected OllamaUserSettingsModel $userSettingsModel = new OllamaUserSettingsModel()
+    ) {}
+
     public function index(): string
     {
         $userId = (int) session()->get('userId');
         $prompts = $this->promptModel->where('user_id', $userId)->findAll();
         $userSetting = $this->userSettingsModel->where('user_id', $userId)->first();
 
-        // Fetch available models
         $availableModels = $this->ollamaService->getModels();
         if (empty($availableModels)) {
-            $availableModels = ['llama3']; // Fallback
+            $availableModels = ['llama3'];
         }
 
         $data = [
@@ -69,24 +92,22 @@ class OllamaController extends BaseController
             'error'                  => session()->getFlashdata('error'),
             'prompts'                => $prompts,
             'assistant_mode_enabled' => $userSetting ? $userSetting->assistant_mode_enabled : true,
+            'stream_output_enabled'  => $userSetting ? $userSetting->stream_output_enabled : true,
             'maxFileSize'            => self::MAX_FILE_SIZE,
             'maxFiles'               => self::MAX_FILES,
             'supportedMimeTypes'     => json_encode(self::SUPPORTED_MIME_TYPES),
             'availableModels'        => $availableModels,
+            'robotsTag'              => 'noindex, follow'
         ];
-        $data['robotsTag'] = 'noindex, follow';
 
         return view('App\Modules\Ollama\Views\ollama\query_form', $data);
     }
 
-    /**
-     * Handles file uploads.
-     */
     public function uploadMedia(): ResponseInterface
     {
         $userId = (int) session()->get('userId');
         if ($userId <= 0) {
-            return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Auth required.']);
+            return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Auth required.', 'csrf_token' => csrf_hash()]);
         }
 
         if (!$this->validate([
@@ -95,7 +116,7 @@ class OllamaController extends BaseController
                 'rules' => 'uploaded[file]|max_size[file,' . (self::MAX_FILE_SIZE / 1024) . ']|mime_in[file,' . implode(',', self::SUPPORTED_MIME_TYPES) . ']',
             ],
         ])) {
-            return $this->response->setStatusCode(400)->setJSON(['status' => 'error', 'message' => $this->validator->getErrors()['file']]);
+            return $this->response->setStatusCode(400)->setJSON(['status' => 'error', 'message' => $this->validator->getErrors()['file'], 'csrf_token' => csrf_hash()]);
         }
 
         $file = $this->request->getFile('file');
@@ -107,7 +128,7 @@ class OllamaController extends BaseController
 
         $fileName = $file->getRandomName();
         if (!$file->move($userTempPath, $fileName)) {
-            return $this->response->setStatusCode(500)->setJSON(['status' => 'error', 'message' => 'Save failed.']);
+            return $this->response->setStatusCode(500)->setJSON(['status' => 'error', 'message' => 'Save failed.', 'csrf_token' => csrf_hash()]);
         }
 
         return $this->response->setJSON([
@@ -118,16 +139,13 @@ class OllamaController extends BaseController
         ]);
     }
 
-    /**
-     * Deletes a temporary uploaded file.
-     */
     public function deleteMedia(): ResponseInterface
     {
         $userId = (int) session()->get('userId');
-        if ($userId <= 0) return $this->response->setStatusCode(403);
+        if ($userId <= 0) return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'csrf_token' => csrf_hash()]);
 
         $fileId = $this->request->getPost('file_id');
-        if (!$fileId) return $this->response->setStatusCode(400);
+        if (!$fileId) return $this->response->setStatusCode(400)->setJSON(['status' => 'error', 'csrf_token' => csrf_hash()]);
 
         $filePath = WRITEPATH . 'uploads/ollama_temp/' . $userId . '/' . basename($fileId);
 
@@ -135,15 +153,11 @@ class OllamaController extends BaseController
             return $this->response->setJSON(['status' => 'success', 'csrf_token' => csrf_hash()]);
         }
 
-        return $this->response->setStatusCode(404)->setJSON(['status' => 'error', 'message' => 'File not found']);
+        return $this->response->setStatusCode(404)->setJSON(['status' => 'error', 'message' => 'File not found', 'csrf_token' => csrf_hash()]);
     }
 
-    /**
-     * Generates content using Ollama with Memory Integration.
-     */
     public function generate(): ResponseInterface
     {
-        // Timeout Safety: Prevent PHP timeouts during slow local LLM inference
         set_time_limit(300);
 
         $userId = (int) session()->get('userId');
@@ -151,57 +165,43 @@ class OllamaController extends BaseController
 
         if (!$user) return redirect()->back()->with('error', 'User not found.');
 
-        // Input Validation
         if (!$this->validate([
             'prompt' => 'max_length[100000]',
             'model'  => 'required'
         ])) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'message' => 'Invalid input.',
+                    'csrf_token' => csrf_hash()
+                ]);
+            }
             return redirect()->back()->withInput()->with('error', 'Invalid input.');
         }
 
-        $inputText = (string) $this->request->getPost('prompt');
-        $inputText = strip_tags($inputText); // Remove HTML tags for weak model that get confused by them.
+        $inputText = strip_tags((string) $this->request->getPost('prompt'));
         $selectedModel = (string) $this->request->getPost('model');
         $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
 
         $userSetting = $this->userSettingsModel->where('user_id', $userId)->first();
         $isAssistantMode = $userSetting ? $userSetting->assistant_mode_enabled : true;
 
-        // 1. Check Balance
-        if ($user->balance < self::COST_PER_REQUEST) {
+        if (!$this->_hasBalance($user, self::COST_PER_REQUEST)) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'message' => 'Insufficient balance.',
+                    'csrf_token' => csrf_hash()
+                ]);
+            }
             return redirect()->back()->withInput()->with('error', 'Insufficient balance.');
         }
 
-        // 2. Handle Files (Multimodal)
-        $images = [];
-        $userTempPath = WRITEPATH . 'uploads/ollama_temp/' . $userId . '/';
-        foreach ($uploadedFileIds as $fileId) {
-            $filePath = $userTempPath . basename($fileId);
-            if (file_exists($filePath)) {
-                $images[] = base64_encode(file_get_contents($filePath));
-                @unlink($filePath); // Cleanup immediately
-            }
-        }
+        $images = $this->_processUploadedFiles($uploadedFileIds, $userId);
 
-        $response = [];
-
-        if (!empty($images)) {
-            // Multimodal Request (Direct API, no RAG for now)
-            $messages = [
-                ['role' => 'user', 'content' => $inputText, 'images' => $images]
-            ];
-            $response = $this->ollamaService->generateChat($selectedModel, $messages);
-        } elseif ($isAssistantMode) {
-            // Text-only Request with Assistant Mode (Use MemoryService for RAG)
-            $memoryService = new \App\Modules\Ollama\Libraries\OllamaMemoryService($userId);
-            $response = $memoryService->processChat($inputText, $selectedModel);
-        } else {
-            // Simple Text Request (Direct API, no Memory)
-            $messages = [
-                ['role' => 'user', 'content' => $inputText]
-            ];
-            $response = $this->ollamaService->generateChat($selectedModel, $messages);
-        }
+        $response = $isAssistantMode
+            ? (new \App\Modules\Ollama\Libraries\OllamaMemoryService($userId))->processChat($inputText, $selectedModel, $images)
+            : $this->ollamaService->generateChat($selectedModel, $this->_buildMessages($inputText, $images));
 
         if (isset($response['error']) || (isset($response['success']) && !$response['success'])) {
             $msg = $response['error'] ?? 'Unknown error';
@@ -215,16 +215,14 @@ class OllamaController extends BaseController
             return redirect()->back()->withInput()->with('error', $msg);
         }
 
-        // Normalize response format
+        log_message('debug', 'Response: ' . json_encode($response));
         $resultText = $response['result'] ?? $response['response'] ?? '';
 
-        // 3. Deduct Balance
         $this->userModel->deductBalance((int)$user->id, (string)self::COST_PER_REQUEST);
 
-        // 4. Output
         $parsedown = new Parsedown();
         $parsedown->setBreaksEnabled(true);
-        $parsedown->setSafeMode(true);
+        $parsedown->setSafeMode(false);
         $finalHtml = $parsedown->text($resultText);
 
         if ($this->request->isAJAX()) {
@@ -243,14 +241,91 @@ class OllamaController extends BaseController
             ->with('success', 'Generated successfully. Cost: ' . self::COST_PER_REQUEST . ' credits.');
     }
 
+    public function stream(): ResponseInterface
+    {
+        $this->response->setContentType('text/event-stream');
+        $this->response->setHeader('Cache-Control', 'no-cache');
+        $this->response->setHeader('Connection', 'keep-alive');
+        $this->response->setHeader('X-Accel-Buffering', 'no');
+        $this->response->setHeader('X-CSRF-TOKEN', csrf_hash());
+
+        $userId = (int) session()->get('userId');
+        $user = $this->userModel->find($userId);
+
+        if (!$user) {
+            $this->response->setBody("data: " . json_encode([
+                'error' => 'User not found',
+                'csrf_token' => csrf_hash()
+            ]) . "\n\n");
+            return $this->response;
+        }
+
+        $inputText = (string) $this->request->getPost('prompt');
+        $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
+        $selectedModel = (string) $this->request->getPost('model');
+
+        if (!$this->_hasBalance($user, self::COST_PER_REQUEST)) {
+            $this->response->setBody("data: " . json_encode([
+                'error' => "Insufficient balance.",
+                'csrf_token' => csrf_hash()
+            ]) . "\n\n");
+            return $this->response;
+        }
+
+        $images = $this->_processUploadedFiles($uploadedFileIds, $userId);
+
+        $userSetting = $this->userSettingsModel->where('user_id', $userId)->first();
+        $isAssistantMode = $userSetting ? $userSetting->assistant_mode_enabled : true;
+
+        $messages = $isAssistantMode
+            ? [['role' => 'system', 'content' => 'You are a helpful AI assistant.']]
+            : [];
+
+        $messages[] = $this->_buildUserMessage($inputText, $images);
+
+        session_write_close();
+
+        $this->response->sendHeaders();
+        if (ob_get_level() > 0) ob_end_flush();
+        flush();
+
+        $result = $this->ollamaService->generateStream(
+            $selectedModel,
+            $messages,
+            function ($chunk) {
+                echo "data: " . json_encode(['text' => $chunk]) . "\n\n";
+                if (ob_get_level() > 0) ob_flush();
+                flush();
+            }
+        );
+
+        if (isset($result['error'])) {
+            echo "data: " . json_encode([
+                'error' => $result['error'],
+                'csrf_token' => csrf_hash()
+            ]) . "\n\n";
+            exit;
+        }
+
+        $this->userModel->deductBalance((int)$user->id, (string)self::COST_PER_REQUEST);
+
+        echo "event: close\n";
+        echo "data: " . json_encode([
+            'csrf_token' => csrf_hash(),
+            'cost' => self::COST_PER_REQUEST
+        ]) . "\n\n";
+
+        exit;
+    }
+
     public function updateSetting(): ResponseInterface
     {
         $userId = (int) session()->get('userId');
         $key = $this->request->getPost('setting_key');
         $enabled = $this->request->getPost('enabled') === 'true';
 
-        if (!in_array($key, ['assistant_mode_enabled'])) {
-            return $this->response->setJSON(['status' => 'error', 'message' => 'Invalid setting']);
+        if (!in_array($key, ['assistant_mode_enabled', 'stream_output_enabled'])) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Invalid setting', 'csrf_token' => csrf_hash()]);
         }
 
         $setting = $this->userSettingsModel->where('user_id', $userId)->first();
@@ -269,30 +344,33 @@ class OllamaController extends BaseController
     {
         $userId = (int) session()->get('userId');
 
-        // Clear Interactions
         $interactionModel = new OllamaInteractionModel();
         $interactionModel->where('user_id', $userId)->delete();
 
-        // Clear Entities
         $entityModel = new OllamaEntityModel();
         $entityModel->where('user_id', $userId)->delete();
 
         return redirect()->back()->with('success', 'Memory cleared.');
     }
 
-    /**
-     * Downloads the generated content as a document.
-     */
     public function downloadDocument()
     {
         $userId = (int) session()->get('userId');
-        if ($userId <= 0) return redirect()->back()->with('error', 'Auth required.');
+        if ($userId <= 0) {
+            return $this->response->setStatusCode(403)->setJSON([
+                'message' => 'Auth required.',
+                'csrf_token' => csrf_hash()
+            ]);
+        }
 
         $content = $this->request->getPost('content');
         $format  = $this->request->getPost('format');
 
         if (empty($content) || !in_array($format, ['pdf', 'docx'])) {
-            return redirect()->back()->with('error', 'Invalid content or format.');
+            return $this->response->setStatusCode(400)->setJSON([
+                'message' => 'Invalid content or format.',
+                'csrf_token' => csrf_hash()
+            ]);
         }
 
         $docService = new OllamaDocumentService();
@@ -300,26 +378,27 @@ class OllamaController extends BaseController
             'author' => 'Ollama User ' . $userId
         ]);
 
-        if ($result['status'] === 'success') {
-            $filename = 'ollama_export_' . date('Ymd_His') . '.' . $format;
-            $contentType = ($format === 'pdf') ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-
-            return $this->response
-                ->setHeader('Content-Type', $contentType)
-                ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
-                ->setBody($result['fileData']);
+        if ($result['status'] !== 'success') {
+            return $this->response->setStatusCode(500)->setJSON([
+                'message' => $result['message'] ?? 'Export failed.',
+                'csrf_token' => csrf_hash()
+            ]);
         }
 
-        return redirect()->back()->with('error', $result['message'] ?? 'Export failed.');
+        $filename = 'ollama_export_' . date('Ymd_His') . '.' . $format;
+        $contentType = ($format === 'pdf') ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+        return $this->response
+            ->setHeader('Content-Type', $contentType)
+            ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
+            ->setHeader('X-CSRF-TOKEN', csrf_hash())
+            ->setBody($result['fileData']);
     }
 
-    /**
-     * Adds a new saved prompt.
-     */
     public function addPrompt(): ResponseInterface
     {
         $userId = (int) session()->get('userId');
-        if ($userId <= 0) return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Auth required']);
+        if ($userId <= 0) return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Auth required', 'csrf_token' => csrf_hash()]);
 
         $rules = [
             'title'       => 'required|min_length[3]|max_length[255]',
@@ -327,7 +406,7 @@ class OllamaController extends BaseController
         ];
 
         if (!$this->validate($rules)) {
-            return $this->response->setJSON(['status' => 'error', 'message' => 'Invalid input']);
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Invalid input', 'csrf_token' => csrf_hash()]);
         }
 
         $data = [
@@ -346,25 +425,109 @@ class OllamaController extends BaseController
             ]);
         }
 
-        return $this->response->setJSON(['status' => 'error', 'message' => 'Failed to save']);
+        return $this->response->setJSON(['status' => 'error', 'message' => 'Failed to save', 'csrf_token' => csrf_hash()]);
     }
 
-    /**
-     * Deletes a saved prompt.
-     */
     public function deletePrompt($id): ResponseInterface
     {
         $userId = (int) session()->get('userId');
         $prompt = $this->promptModel->find($id);
 
         if (!$prompt || $prompt->user_id !== $userId) {
-            return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+            return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Unauthorized', 'csrf_token' => csrf_hash()]);
         }
 
         if ($this->promptModel->delete($id)) {
             return $this->response->setJSON(['status' => 'success', 'csrf_token' => csrf_hash()]);
         }
 
-        return $this->response->setJSON(['status' => 'error', 'message' => 'Failed to delete']);
+        return $this->response->setJSON(['status' => 'error', 'message' => 'Failed to delete', 'csrf_token' => csrf_hash()]);
+    }
+
+    /**
+     * Process Uploaded Files (Refactored Helper - DRY Principle)
+     *
+     * Consolidates file processing logic that was previously duplicated in both
+     * generate() and stream() methods. This helper:
+     * 1. Verifies file existence
+     * 2. Reads and base64-encodes file content for Ollama API
+     * 3. Immediately deletes temp files (ephemeral storage pattern)
+     *
+     * @param array $fileIds Array of file IDs (random filenames) from the upload handler
+     * @param int $userId Current user ID for path security/isolation
+     * @return array Array of base64-encoded image strings ready for API submission
+     */
+    private function _processUploadedFiles(array $fileIds, int $userId): array
+    {
+        $images = [];
+        $userTempPath = WRITEPATH . 'uploads/ollama_temp/' . $userId . '/';
+
+        foreach ($fileIds as $fileId) {
+            $filePath = $userTempPath . basename($fileId);
+            if (file_exists($filePath)) {
+                // Encode for Ollama multimodal API
+                $images[] = base64_encode(file_get_contents($filePath));
+                // Immediate cleanup: files are ephemeral and single-use
+                @unlink($filePath);
+            }
+        }
+
+        return $images;
+    }
+
+    /**
+     * Check User Balance Sufficiency (Refactored Helper - DRY Principle)
+     *
+     * Encapsulates balance validation logic that was previously duplicated.
+     * Simple comparison but extracted for:
+     * - Code clarity and readability
+     * - Single source of truth for balance logic
+     * - Easier testing and potential future cost complexity
+     *
+     * @param User $user User entity with balance property
+     * @param float $cost Required cost for the operation
+     * @return bool True if user has sufficient balance, false otherwise
+     */
+    private function _hasBalance(User $user, float $cost): bool
+    {
+        return $user->balance >= $cost;
+    }
+
+    /**
+     * Build Messages Array for Direct API Mode (Refactored Helper)
+     *
+     * Constructs a properly formatted messages array for Ollama API when
+     * NOT using assistant mode (no system prompt). Used in generate() method.
+     *
+     * @param string $inputText User's text prompt
+     * @param array $images Array of base64-encoded images (empty if text-only)
+     * @return array Messages array in Ollama API format
+     */
+    private function _buildMessages(string $inputText, array $images): array
+    {
+        $userMessage = ['role' => 'user', 'content' => $inputText];
+        if (!empty($images)) {
+            $userMessage['images'] = $images;
+        }
+        return [$userMessage];
+    }
+
+    /**
+     * Build User Message Object (Refactored Helper)
+     *
+     * Constructs a single user message object for appending to an existing
+     * messages array (e.g., after system prompt in assistant mode). Used in stream() method.
+     *
+     * @param string $inputText User's text prompt
+     * @param array $images Array of base64-encoded images (empty if text-only)
+     * @return array Single message object in Ollama API format
+     */
+    private function _buildUserMessage(string $inputText, array $images): array
+    {
+        $userMessage = ['role' => 'user', 'content' => $inputText];
+        if (!empty($images)) {
+            $userMessage['images'] = $images;
+        }
+        return $userMessage;
     }
 }

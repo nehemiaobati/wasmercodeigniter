@@ -155,6 +155,10 @@ class CampaignController extends BaseController
         $successCount = 0;
         $failedCount = 0;
 
+        // Use config/env values
+        $fromEmail = config('Email')->fromEmail;
+        $fromName  = config('Email')->fromName;
+
         foreach ($users as $user) {
             // Prepare the dynamic content for the email template, including username.
             $emailData = [
@@ -164,6 +168,7 @@ class CampaignController extends BaseController
             ];
 
             // Set recipient to the current user's email.
+            $emailService->setFrom($fromEmail, $fromName); // Ensure 'From' is set for each email
             $emailService->setTo($user->email);
             $emailService->setSubject($subject);
             $emailService->setMessage(view('emails/campaign_email', $emailData));
@@ -173,11 +178,11 @@ class CampaignController extends BaseController
             } else {
                 $failedCount++;
                 // Log the error for this specific user.
-                log_message('error', 'Campaign email sending failed for user ' . $user->email . ': ' . $emailService->printDebugger(['headers']));
+                log_message('error', '[CampaignController] Campaign email sending failed for user ' . $user->email . ': ' . print_r($emailService->printDebugger(['headers']), true));
+                log_message('error', '[CampaignController] SMTP Host: ' . config('Email')->SMTPHost);
             }
-            // It's good practice to clear recipients if the email service object is reused,
-            // though CodeIgniter's service might handle this internally.
-            // $emailService->clearTo();
+            // Clear settings for next iteration
+            $emailService->clear();
         }
 
         // Provide feedback based on the number of successful and failed sends.

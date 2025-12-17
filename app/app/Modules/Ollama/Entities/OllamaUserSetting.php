@@ -12,5 +12,6 @@ class OllamaUserSetting extends Entity
         'id'                     => 'integer',
         'user_id'                => 'integer',
         'assistant_mode_enabled' => 'boolean',
+        'stream_output_enabled'  => 'boolean',
     ];
 }

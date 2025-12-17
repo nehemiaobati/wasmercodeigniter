@@ -10,11 +10,10 @@ use Parsedown;
 
 class DocumentService
 {
-    protected PandocService $pandocService;
-
-    public function __construct()
-    {
-        $this->pandocService = service('pandocService');
+    public function __construct(
+        protected ?PandocService $pandocService = null
+    ) {
+        $this->pandocService = $pandocService ?? service('pandocService');
     }
 
     /**
@@ -65,21 +64,15 @@ class DocumentService
             log_message('warning', '[DocumentService] Pandoc failed: ' . ($pandocResult['message'] ?? 'Unknown') . '. Attempting fallback.');
         }
 
-        // 4. Strategy B: Fallbacks
-        if ($format === 'pdf') {
-            // Dompdf fallback for PDF
-            return $this->_generateWithDompdf($htmlContent, $meta);
-        } elseif ($format === 'docx') {
-            // PHPWord fallback for DOCX
-            // Pass raw markdown because we need to pre-process it specifically for PHPWord
-            return $this->_generateWithPHPWord($markdownContent, $meta);
-        }
-
-        // 5. Failure
-        return [
-            'status' => 'error',
-            'message' => 'Could not generate document. Unsupported format or all converters failed.'
-        ];
+        // 4. Strategy B: Fallbacks (using match expression)
+        return match ($format) {
+            'pdf' => $this->_generateWithDompdf($htmlContent, $meta),
+            'docx' => $this->_generateWithPHPWord($markdownContent, $meta),
+            default => [
+                'status' => 'error',
+                'message' => 'Could not generate document. Unsupported format or all converters failed.'
+            ]
+        };
     }
 
     /**

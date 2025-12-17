@@ -32,12 +32,6 @@ use Parsedown;
  */
 class GeminiController extends BaseController
 {
-    protected UserModel $userModel;
-    protected GeminiService $geminiService;
-    protected PromptModel $promptModel;
-    protected UserSettingsModel $userSettingsModel;
-    protected $db; // Added for Transaction Handling
-
     private $cachedUserSettings = null;
 
     private const SUPPORTED_MIME_TYPES = [
@@ -58,17 +52,21 @@ class GeminiController extends BaseController
         'application/pdf',
         'text/plain'
     ];
-    private const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    private const MAX_FILE_SIZE = 10 * 1024 * 1024;
     private const MAX_FILES = 5;
 
-
-    public function __construct()
-    {
-        $this->userModel         = new UserModel();
-        $this->geminiService     = service('geminiService');
-        $this->promptModel       = new PromptModel();
-        $this->userSettingsModel = new UserSettingsModel();
-        $this->db                = \Config\Database::connect(); // Initialize DB Connection
+    public function __construct(
+        protected ?UserModel $userModel = null,
+        protected ?GeminiService $geminiService = null,
+        protected ?PromptModel $promptModel = null,
+        protected ?UserSettingsModel $userSettingsModel = null,
+        protected $db = null
+    ) {
+        $this->userModel = $userModel ?? new UserModel();
+        $this->geminiService = $geminiService ?? service('geminiService');
+        $this->promptModel = $promptModel ?? new PromptModel();
+        $this->userSettingsModel = $userSettingsModel ?? new UserSettingsModel();
+        $this->db = $db ?? \Config\Database::connect();
     }
 
     // --- Core Helper Methods ---
@@ -348,7 +346,10 @@ class GeminiController extends BaseController
         // Check for voice output preference
         $isVoiceEnabled = $userSetting ? $userSetting->voice_output_enabled : false;
 
-        $contextData = $this->_prepareContext($userId, $inputText, $isAssistantMode);
+        $memoryService = service('memory', $userId);
+        $contextData = $isAssistantMode
+            ? $memoryService->buildContextualPrompt($inputText)
+            : ['finalPrompt' => $inputText, 'memoryService' => null, 'usedInteractionIds' => []];
 
         $filesResult = $this->_prepareFilesAndContext($uploadedFileIds, $userId);
         if (isset($filesResult['error'])) {
@@ -625,40 +626,7 @@ class GeminiController extends BaseController
 
     // --- Private Helpers ---
 
-    /**
-     * Prepares the context for the AI generation request.
-     *
-     * If Assistant Mode is enabled, this retrieves relevant past interactions
-     * from the MemoryService and constructs a context-aware system prompt.
-     *
-     * @param int $userId The user ID.
-     * @param string $inputText The user's current query.
-     * @param bool $isAssistantMode Whether Assistant Mode is enabled.
-     * @return array An array containing:
-     *               - 'finalPrompt' (string): The constructed prompt with context.
-     *               - 'memoryService' (MemoryService|null): The memory service instance.
-     *               - 'usedInteractionIds' (array): IDs of interactions used for context.
-     */
-    private function _prepareContext(int $userId, string $inputText, bool $isAssistantMode): array
-    {
-        $data = ['finalPrompt' => $inputText, 'memoryService' => null, 'usedInteractionIds' => []];
 
-        if ($isAssistantMode && !empty(trim($inputText))) {
-            $memoryService = service('memory', $userId);
-            $recalled = $memoryService->getRelevantContext($inputText);
-
-            $template = $memoryService->getTimeAwareSystemPrompt();
-            $template = str_replace('{{CURRENT_TIME}}', Time::now()->format('Y-m-d H:i:s T'), $template);
-            $template = str_replace('{{CONTEXT_FROM_MEMORY_SERVICE}}', $recalled['context'], $template);
-            $template = str_replace('{{USER_QUERY}}', htmlspecialchars($inputText), $template);
-            $template = str_replace('{{TONE_INSTRUCTION}}', "Maintain default persona: dry, witty, concise.", $template);
-
-            $data['finalPrompt'] = $template;
-            $data['memoryService'] = $memoryService;
-            $data['usedInteractionIds'] = $recalled['used_interaction_ids'];
-        }
-        return $data;
-    }
 
     /**
      * Prepares files and assembles file parts array for API request.

@@ -10,68 +10,85 @@ use App\Modules\Ollama\Entities\OllamaInteraction;
 use App\Modules\Ollama\Models\OllamaInteractionModel;
 use App\Modules\Ollama\Models\OllamaEntityModel;
 
+/**
+ * Ollama Memory Service
+ *
+ * Implements a sophisticated Hybrid Memory System for conversational AI context.
+ * Combines vector embeddings (semantic search) with keyword extraction (lexical search)
+ * to retrieve the most relevant historical interactions for each query.
+ *
+ * Key Components:
+ * - Vector Search: Uses cosine similarity on embeddings for semantic relevance
+ * - Keyword Search: Tracks entity mentions and relevance scores for lexical matching
+ * - Hybrid Fusion: Weighted combination (configurable alpha) of both search strategies
+ * - Temporal Decay: Rewards recently used memories, gradually decays unused ones
+ * - Short-Term Memory: Forces inclusion of N most recent interactions
+ *
+ * @package App\Modules\Ollama\Libraries
+ */
 class OllamaMemoryService
 {
-    private Ollama $config;
-    private OllamaInteractionModel $interactionModel;
-    private OllamaEntityModel $entityModel;
-    private OllamaService $api;
-    private OllamaTokenService $tokenizer;
-    private int $userId;
-
-    // Tuning Parameters
-    // Tuning Parameters
-
-
-    public function __construct(int $userId)
-    {
-        $this->userId           = $userId;
-        $this->config           = config(Ollama::class);
-        $this->interactionModel = new OllamaInteractionModel();
-        $this->entityModel      = new OllamaEntityModel();
-        $this->api              = new OllamaService();
-        $this->tokenizer        = new OllamaTokenService();
+    /**
+     * Constructor with Property Promotion (PHP 8.0+)
+     *
+     * Implements the same nullable parameter pattern as OllamaService due to PHP's
+     * constraint on default values (cannot use function calls). All dependencies are
+     * injected via constructor for testability and flexibility.
+     *
+     * @param int $userId User ID for memory isolation (each user has separate memory space)
+     * @param Ollama|null $config Configuration object for memory tuning parameters
+     * @param OllamaInteractionModel|null $interactionModel Manages chat history storage
+     * @param OllamaEntityModel|null $entityModel Manages keyword/entity graph
+     * @param OllamaService|null $api Service for embeddings and chat completions
+     * @param OllamaTokenService|null $tokenizer Service for text processing and keyword extraction
+     */
+    public function __construct(
+        private int $userId,
+        private ?Ollama $config = null,
+        private ?OllamaInteractionModel $interactionModel = null,
+        private ?OllamaEntityModel $entityModel = null,
+        private ?OllamaService $api = null,
+        private ?OllamaTokenService $tokenizer = null
+    ) {
+        // Initialize all dependencies with defaults if not injected
+        $this->config = $config ?? config(Ollama::class);
+        $this->interactionModel = $interactionModel ?? new OllamaInteractionModel();
+        $this->entityModel = $entityModel ?? new OllamaEntityModel();
+        $this->api = $api ?? new OllamaService();
+        $this->tokenizer = $tokenizer ?? new OllamaTokenService();
     }
 
-    /**
-     * Main orchestration method for handling a user chat interaction.
-     */
-    public function processChat(string $prompt, ?string $model = null): array
+    public function processChat(string $prompt, ?string $model = null, array $images = []): array
     {
-        // 1. Build Context (Gemini Style)
         $contextData = $this->_getRelevantContext($prompt);
-
-        // 2. Construct System Prompt
         $systemPrompt = $this->_constructSystemPrompt($contextData['context']);
 
-        // 3. Assemble Messages (System + User only, as history is in context)
+        $userMessage = ['role' => 'user', 'content' => $prompt];
+        if (!empty($images)) {
+            $userMessage['images'] = $images;
+        }
+
         $messages = [
             ['role' => 'system', 'content' => $systemPrompt],
-            ['role' => 'user', 'content' => $prompt]
+            $userMessage
         ];
 
-        // 4. Call API
         $result = $this->api->chat($messages, $model);
 
         if (!$result['success']) {
             return $result;
         }
 
-        // 5. Save Memory
         $this->_saveInteraction($prompt, $result['response'], $result['model'], $contextData['used_interaction_ids']);
 
         return $result;
     }
 
-    /**
-     * Retrieves relevant context from memory based on user input.
-     * Replicates Gemini's MemoryService workflow.
-     */
     private function _getRelevantContext(string $userInput): array
     {
-        // 1. Vector Search (Semantic)
         $semanticResults = [];
         $inputVector = $this->api->embed($userInput);
+
         if (!empty($inputVector)) {
             $candidates = $this->interactionModel
                 ->where('user_id', $this->userId)
@@ -87,9 +104,9 @@ class OllamaMemoryService
             $semanticResults = array_slice($semanticResults, 0, 50, true);
         }
 
-        // 2. Keyword Search (Lexical)
         $keywords = $this->tokenizer->processText($userInput);
         $keywordResults = [];
+
         if (!empty($keywords)) {
             $entities = $this->entityModel
                 ->where('user_id', $this->userId)
@@ -99,9 +116,7 @@ class OllamaMemoryService
             $candidateIds = [];
             foreach ($entities as $entity) {
                 if (!empty($entity->mentioned_in)) {
-                    foreach ($entity->mentioned_in as $intId) {
-                        $candidateIds[] = $intId;
-                    }
+                    $candidateIds = array_merge($candidateIds, $entity->mentioned_in);
                 }
             }
 
@@ -113,30 +128,26 @@ class OllamaMemoryService
                     ->findAll();
 
                 foreach ($interactions as $int) {
-                    // Gemini uses the interaction's persistent relevance_score
                     $keywordResults[$int->id] = $int->relevance_score;
                 }
             }
             arsort($keywordResults);
         }
 
-        // 3. Hybrid Fusion
         $fusedScores = [];
         $allIds = array_unique(array_merge(array_keys($semanticResults), array_keys($keywordResults)));
+
         foreach ($allIds as $id) {
             $semanticScore = $semanticResults[$id] ?? 0.0;
-            // Apply tanh normalization with scaling (Gemini uses / 10)
             $keywordScore  = isset($keywordResults[$id]) ? tanh($keywordResults[$id] / 10) : 0.0;
             $fusedScores[$id] = ($this->config->hybridSearchAlpha * $semanticScore) + ((1 - $this->config->hybridSearchAlpha) * $keywordScore);
         }
         arsort($fusedScores);
 
-        // 4. Build Context String
         $context = "";
         $tokenCount = 0;
         $usedInteractionIds = [];
 
-        // A. Forced Recent Interactions (Short-Term Memory)
         $recentInteractions = [];
         if ($this->config->forcedRecentInteractions > 0) {
             $recentInteractions = $this->interactionModel
@@ -146,7 +157,6 @@ class OllamaMemoryService
                 ->findAll();
         }
 
-        // Reverse to maintain chronological order
         $recentInteractions = array_reverse($recentInteractions);
 
         foreach ($recentInteractions as $interaction) {
@@ -160,9 +170,7 @@ class OllamaMemoryService
             }
         }
 
-        // B. Relevant Long-Term Memories
         foreach ($fusedScores as $id => $score) {
-            // Skip if already included via recent list
             if (in_array($id, $usedInteractionIds)) {
                 continue;
             }
@@ -178,7 +186,7 @@ class OllamaMemoryService
                 $tokenCount += $itemTokens;
                 $usedInteractionIds[] = $id;
             } else {
-                break; // Stop if budget exceeded
+                break;
             }
         }
 
@@ -202,7 +210,6 @@ class OllamaMemoryService
     {
         $keywords  = $this->tokenizer->processText($input);
 
-        // Strip HTML tags for cleaner embedding
         $cleanInput = strip_tags($input);
         $cleanResponse = strip_tags($response);
         $embedding = $this->api->embed("User: $cleanInput | AI: $cleanResponse");
@@ -229,7 +236,7 @@ class OllamaMemoryService
         if ($interactionId) {
             log_message('info', 'Ollama Memory: Interaction saved. ID: ' . $interactionId);
             $this->_updateKnowledgeGraph($keywords, (int)$interactionId);
-            $this->_applyDecay($usedIds); // Reward used, decay others
+            $this->_applyDecay($usedIds);
         } else {
             log_message('error', 'Ollama Memory: Failed to save interaction. Errors: ' . json_encode($this->interactionModel->errors()));
         }
@@ -270,17 +277,14 @@ class OllamaMemoryService
 
     private function _applyDecay(array $usedIds): void
     {
-        // 1. Reward Used Interactions
         if (!empty($usedIds)) {
             $this->interactionModel->builder()
                 ->where('user_id', $this->userId)
-                ->whereIn('id', $usedIds) // Note: 'id' not 'unique_id' for Ollama model
+                ->whereIn('id', $usedIds)
                 ->set('relevance_score', "relevance_score + " . $this->config->rewardScore, false)
                 ->update();
         }
 
-        // 2. Decay All (Simplification: Decay everyone, the boost above offsets it for used ones)
-        // Or strictly: Decay unused. Let's decay all to keep scores normalized over time.
         $this->interactionModel->builder()
             ->where('user_id', $this->userId)
             ->set('relevance_score', "relevance_score - " . $this->config->decayScore, false)
@@ -292,12 +296,14 @@ class OllamaMemoryService
         $dot = 0.0;
         $magA = 0.0;
         $magB = 0.0;
+
         foreach ($vecA as $i => $val) {
             if (!isset($vecB[$i])) continue;
             $dot += $val * $vecB[$i];
             $magA += $val * $val;
             $magB += $vecB[$i] * $vecB[$i];
         }
+
         return ($magA * $magB) == 0 ? 0.0 : $dot / (sqrt($magA) * sqrt($magB));
     }
 }

@@ -23,19 +23,10 @@ class MediaController extends BaseController
 {
     use ResponseTrait;
 
-    /**
-     * Service for handling media generation logic.
-     * @var MediaGenerationService
-     */
-    protected $mediaService;
-
-    /**
-     * Constructor.
-     * Initializes the MediaGenerationService.
-     */
-    public function __construct()
-    {
-        $this->mediaService = service('mediaGenerationService');
+    public function __construct(
+        protected $mediaService = null
+    ) {
+        $this->mediaService = $mediaService ?? service('mediaGenerationService');
     }
 
     /**

@@ -5,18 +5,20 @@ declare(strict_types=1);
 namespace App\Modules\Gemini\Libraries;
 
 use App\Models\UserModel;
-use CodeIgniter\I18n\Time;
 
+/**
+ * Gemini Service
+ *
+ * Core service for interacting with Google's Gemini API. Handles text generation,
+ * streaming responses, token counting, cost estimation, and TTS synthesis.
+ *
+ * Implements automatic fallback through model priorities with quota handling.
+ *
+ * @package App\Modules\Gemini\Libraries
+ */
 class GeminiService
 {
-    protected $apiKey;
-    protected $payloadService;
-    protected $userModel;
-    protected $db;
-
     public const MODEL_PRIORITIES = [
-        // "gemini-3-pro-preview", // Multimodal, Thinking Level High
-        //"gemini-2.5-pro",       // Multimodal, Thinking Budget
         "gemini-flash-latest",      // Primary: Latest Flash model for speed and efficiency
         "gemini-flash-lite-latest", // Secondary: Lite version for lower latency
         "gemini-2.5-flash",         // Fallback: Stable Flash version
@@ -31,12 +33,24 @@ class GeminiService
         'audio' => ['input' => 0.50, 'output' => 10.00]
     ];
 
-    public function __construct()
-    {
-        $this->apiKey = env('GEMINI_API_KEY');
-        $this->payloadService = service('modelPayloadService');
-        $this->userModel = new UserModel();
-        $this->db = \Config\Database::connect();
+    /**
+     * Constructor with Property Promotion (PHP 8.0+)
+     *
+     * @param string|null $apiKey API key for Gemini (defaults to env variable)
+     * @param mixed $payloadService Service for building model-specific payloads
+     * @param UserModel|null $userModel User model for balance management
+     * @param mixed $db Database connection for transactions
+     */
+    public function __construct(
+        protected ?string $apiKey = null,
+        protected $payloadService = null,
+        protected ?UserModel $userModel = null,
+        protected $db = null
+    ) {
+        $this->apiKey = $apiKey ?? env('GEMINI_API_KEY');
+        $this->payloadService = $payloadService ?? service('modelPayloadService');
+        $this->userModel = $userModel ?? new UserModel();
+        $this->db = $db ?? \Config\Database::connect();
     }
 
     public function processInteraction(int $userId, string $prompt, array $fileParts, array $options): array
@@ -44,13 +58,16 @@ class GeminiService
         // 1. Context & Setup
         $allParts = $fileParts;
         if (!empty($options['assistant_mode'] ?? true)) {
-            // Memory context logic
-            $contextData = $this->_prepareContext($userId, $prompt, true);
+            // Use centralized prompt construction from MemoryService
+            $memoryService = service('memory', $userId);
+            $contextData = $memoryService->buildContextualPrompt($prompt);
+
             if ($contextData['finalPrompt']) {
                 array_unshift($allParts, ['text' => $contextData['finalPrompt']]);
             }
         } else {
             array_unshift($allParts, ['text' => $prompt]);
+            $contextData = ['memoryService' => null, 'usedInteractionIds' => []];
         }
 
         if (empty($allParts)) return ['error' => 'No content provided.'];
@@ -62,7 +79,7 @@ class GeminiService
             return ['error' => "Insufficient balance. Need KSH " . number_format($estimate['costKSH'], 2)];
         }
 
-        // 3. Execution (Flattened Logic)
+        // 3. Execution
         $apiResponse = $this->generateContent($allParts);
         if (isset($apiResponse['error'])) return ['error' => $apiResponse['error']];
 
@@ -79,15 +96,12 @@ class GeminiService
         $this->userModel->deductBalance($userId, number_format($costData['costKSH'], 4, '.', ''));
 
         // Memory updates
-        if (!empty($options['assistant_mode'] ?? true) && isset($contextData)) {
-            $memoryService = $contextData['memoryService'] ?? null;
-            if ($memoryService) {
-                $memoryService->updateMemory(
-                    $prompt,
-                    $apiResponse['result'],
-                    $contextData['usedInteractionIds'] ?? []
-                );
-            }
+        if (!empty($options['assistant_mode'] ?? true) && isset($contextData['memoryService'])) {
+            $contextData['memoryService']->updateMemory(
+                $prompt,
+                $apiResponse['result'],
+                $contextData['usedInteractionIds'] ?? []
+            );
         }
 
         $this->db->transComplete();
@@ -100,9 +114,6 @@ class GeminiService
         ];
     }
 
-    /**
-     * Loops through models and attempts execution using the flattened _executeRequest method.
-     */
     public function generateContent(array $parts): array
     {
         if (!$this->apiKey) return ['error' => 'API Key missing.'];
@@ -132,9 +143,6 @@ class GeminiService
         return ['error' => 'All models failed or quota exceeded.'];
     }
 
-    /**
-     * Flattens the cURL execution and retry logic.
-     */
     private function _executeRequest(string $url, string $body, string $model = 'unknown'): array
     {
         $maxRetries = 2;
@@ -148,7 +156,7 @@ class GeminiService
                 $response = $client->post($url, [
                     'body' => $body,
                     'headers' => ['Content-Type' => 'application/json'],
-                    'http_errors' => false, // Handle manually
+                    'http_errors' => false,
                     'timeout' => 90
                 ]);
 
@@ -210,7 +218,6 @@ class GeminiService
                 CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
                 CURLOPT_WRITEFUNCTION => function ($ch, $chunk) use (&$buffer, &$fullText, &$usage, $chunkCallback) {
                     $buffer .= $chunk;
-                    // Delegate complexity to private helper
                     $parsed = $this->_processStreamBuffer($buffer);
                     foreach ($parsed['chunks'] as $text) {
                         $fullText .= $text;
@@ -224,7 +231,6 @@ class GeminiService
             curl_exec($ch);
             $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-
             if ($code === 200) {
                 $completeCallback($fullText, $usage);
                 return;
@@ -233,9 +239,6 @@ class GeminiService
         $chunkCallback(['error' => "Error: Stream failed."]);
     }
 
-    /**
-     * Encapsulates the fragile JSON stream parsing logic.
-     */
     private function _processStreamBuffer(string &$buffer): array
     {
         $result = ['chunks' => [], 'usage' => null];
@@ -246,14 +249,13 @@ class GeminiService
         // 2. Process all complete objects in buffer
         while (!empty($buffer) && $buffer[0] === '{') {
             $objectFound = false;
-            $len = strlen($buffer);
             $offset = 0;
 
             // Search for the matching closing brace
             while (true) {
                 $pos = strpos($buffer, '}', $offset);
                 if ($pos === false) {
-                    break; // No more braces, wait for more data
+                    break;
                 }
 
                 // Try to decode substring up to this brace
@@ -275,16 +277,14 @@ class GeminiService
                     // Advance buffer past this object
                     $buffer = substr($buffer, $pos + 1);
                     $buffer = ltrim($buffer, ", \n\r\t");
-                    break; // Break inner loop to process next object
+                    break;
                 }
 
-                // Not a valid object yet (brace was likely inside a string), continue search
+                // Not a valid object yet, continue search
                 $offset = $pos + 1;
             }
 
             if (!$objectFound) {
-                // We scanned available braces but couldn't find a valid object end.
-                // Leave buffer as is and wait for next chunk.
                 break;
             }
         }
@@ -377,7 +377,7 @@ class GeminiService
         $pricing = self::PRICING['tier1'];
 
         $estimatedCostUSD = ($estimatedTokens / 1000000) * $pricing['input'];
-        $usdToKsh = 129; // Fixed exchange rate
+        $usdToKsh = 129;
         $estimatedCostKSH = $estimatedCostUSD * $usdToKsh;
 
         return [
@@ -472,26 +472,5 @@ class GeminiService
             log_message('error', 'Gemini TTS Exception: ' . $e->getMessage());
             return ['status' => false, 'error' => 'Could not connect to the speech synthesis service.'];
         }
-    }
-
-    private function _prepareContext(int $userId, string $inputText, bool $isAssistantMode): array
-    {
-        $data = ['finalPrompt' => $inputText, 'memoryService' => null, 'usedInteractionIds' => []];
-
-        if ($isAssistantMode && !empty(trim($inputText))) {
-            $memoryService = service('memory', $userId);
-            $recalled = $memoryService->getRelevantContext($inputText);
-
-            $template = $memoryService->getTimeAwareSystemPrompt();
-            $template = str_replace('{{CURRENT_TIME}}', Time::now()->format('Y-m-d H:i:s T'), $template);
-            $template = str_replace('{{CONTEXT_FROM_MEMORY_SERVICE}}', $recalled['context'], $template);
-            $template = str_replace('{{USER_QUERY}}', htmlspecialchars($inputText), $template);
-            $template = str_replace('{{TONE_INSTRUCTION}}', "Maintain default persona: dry, witty, concise.", $template);
-
-            $data['finalPrompt'] = $template;
-            $data['memoryService'] = $memoryService;
-            $data['usedInteractionIds'] = $recalled['used_interaction_ids'];
-        }
-        return $data;
     }
 }

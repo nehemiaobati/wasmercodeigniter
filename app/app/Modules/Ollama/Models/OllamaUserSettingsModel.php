@@ -13,7 +13,7 @@ class OllamaUserSettingsModel extends Model
     protected $returnType       = OllamaUserSetting::class;
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
-    protected $allowedFields    = ['user_id', 'assistant_mode_enabled'];
+    protected $allowedFields    = ['user_id', 'assistant_mode_enabled', 'stream_output_enabled'];
 
     // Dates
     protected $useTimestamps = true;

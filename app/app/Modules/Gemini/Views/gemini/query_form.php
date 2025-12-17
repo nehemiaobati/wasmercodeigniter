@@ -646,12 +646,22 @@
 
         init() {
             // setupTabs and AutoTextarea
+            this.handleResponsiveSidebar();
             this.setupTabs();
             this.setupSettings();
             this.setupCodeHighlighting();
             this.setupAutoScroll();
             this.setupDownloads();
             this.initTinyMCE();
+        }
+
+        handleResponsiveSidebar() {
+            if (window.innerWidth < 992) {
+                const sidebar = document.getElementById('geminiSidebar');
+                if (sidebar && sidebar.classList.contains('show')) {
+                    sidebar.classList.remove('show');
+                }
+            }
         }
 
         initTinyMCE() {
@@ -929,7 +939,10 @@
                 }));
 
                 area.addEventListener('drop', (e) => this.handleFiles(e.dataTransfer.files));
-                input.addEventListener('change', (e) => this.handleFiles(e.target.files));
+                input.addEventListener('change', (e) => {
+                    this.handleFiles(e.target.files);
+                    input.value = ''; // Allow re-upload
+                });
 
                 const listWrapper = document.getElementById('upload-list-wrapper');
                 if (listWrapper) {
@@ -1519,7 +1532,7 @@
             }
             if (p === '<p>test video</p>' && type === 'video') {
                 setTimeout(() => {
-                    this.app.ui.showMediaResult('http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', 'video');
+                    this.app.ui.showMediaResult('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', 'video');
                     this.app.ui.setLoading(false);
                 }, 1500);
                 return true;

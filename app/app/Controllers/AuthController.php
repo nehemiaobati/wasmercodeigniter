@@ -82,8 +82,14 @@ class AuthController extends BaseController
 
         // Prepare and send the email verification message.
         $emailService = service('email');
+
+        // Use config/env values
+        $fromEmail = config('Email')->fromEmail;
+        $fromName  = config('Email')->fromName;
+
+        $emailService->setFrom($fromEmail, $fromName);
         $emailService->setTo($user->email);
-        $emailService->setReplyTo('afrikenkid@gmail.com');
+        $emailService->setReplyTo($fromEmail); // Reply to support email
         $emailService->setSubject('Email Verification');
         $verificationLink = url_to('verify_email', $token);
         $message = view('emails/verification_email', [
@@ -288,8 +294,14 @@ class AuthController extends BaseController
 
             // Prepare and send the password reset email.
             $emailService = service('email');
+
+            // Use config/env values
+            $fromEmail = config('Email')->fromEmail;
+            $fromName  = config('Email')->fromName;
+
+            $emailService->setFrom($fromEmail, $fromName);
             $emailService->setTo($user->email);
-            $emailService->setReplyTo('afrikenkid@gmail.com');
+            $emailService->setReplyTo($fromEmail);
             $emailService->setSubject('Password Reset Request');
             $resetLink = url_to('auth.reset_password', $token);
             $message = view('emails/reset_password_email', [
@@ -300,7 +312,8 @@ class AuthController extends BaseController
 
             // Log an error if email sending fails.
             if (! $emailService->send()) {
-                log_message('error', 'Password reset email sending failed: ' . print_r($emailService->printDebugger(['headers']), true));
+                log_message('error', '[AuthController] Password reset email sending failed: ' . print_r($emailService->printDebugger(['headers']), true));
+                log_message('error', '[AuthController] SMTP Host: ' . config('Email')->SMTPHost);
                 return redirect()->back()->with('error', 'Could not send password reset email. Please try again later.');
             }
         }

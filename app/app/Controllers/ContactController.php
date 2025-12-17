@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Controllers;
 
@@ -53,9 +55,13 @@ class ContactController extends BaseController
 
         $emailService = service('email');
 
-        $emailService->setFrom(config('Email')->fromEmail, config('Email')->fromName);
-        $emailService->setTo('nehemiahobati@gmail.com');
-        $emailService->setReplyTo('afrikenkid@gmail.com');
+        // Use config values which should fallback to .env
+        $fromEmail = config('Email')->fromEmail;
+        $fromName  = config('Email')->fromName;
+
+        $emailService->setFrom($fromEmail, $fromName);
+        $emailService->setTo('nehemiahobati@gmail.com'); // Admin email
+        $emailService->setReplyTo($email); // User's email as reply-to
         $emailService->setSubject($subject);
 
         // --- FIX START: Construct an HTML email body ---
@@ -81,9 +87,12 @@ class ContactController extends BaseController
             session()->setFlashdata('warning', 'Your message has been sent. Please note that email delivery may experience slight delays.');
             return redirect()->back()->with('success', 'Your message has been sent successfully!');
         }
-        
-        $data = $emailService->printDebugger(['headers']);
-        log_message('error', 'Email sending failed: ' . print_r($data, true));
+
+        // Detailed error logging
+        $debuggerData = $emailService->printDebugger(['headers']);
+        log_message('error', '[ContactController] Email sending failed: ' . print_r($debuggerData, true));
+        log_message('error', '[ContactController] SMTP Host: ' . config('Email')->SMTPHost);
+
         return redirect()->back()->with('error', 'Failed to send your message. Please try again later.');
     }
 }

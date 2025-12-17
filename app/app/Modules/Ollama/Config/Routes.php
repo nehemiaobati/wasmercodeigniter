@@ -11,6 +11,7 @@ $routes->group('ollama', ['namespace' => 'App\Modules\Ollama\Controllers', 'filt
 
     // Core Generation
     $routes->post('generate', 'OllamaController::generate', ['as' => 'ollama.generate']);
+    $routes->post('stream', 'OllamaController::stream', ['as' => 'ollama.stream']);
 
     // File Uploads (reuse Gemini's logic or implement similar)
     $routes->post('upload-media', 'OllamaController::uploadMedia', ['as' => 'ollama.upload_media']);

@@ -49,8 +49,13 @@ class PortfolioController extends BaseController
 
         $emailService = service('email');
 
-        $emailService->setFrom(config('Email')->fromEmail, config('Email')->fromName);
+        // Use config/env values
+        $fromEmail = config('Email')->fromEmail;
+        $fromName  = config('Email')->fromName;
+
+        $emailService->setFrom($fromEmail, $fromName);
         $emailService->setTo('nehemiahobati@gmail.com');
+        $emailService->setReplyTo($email); // User's email
         $emailService->setSubject($subject);
         // --- FIX START: Construct an HTML email body ---
         // We build an HTML string for proper formatting and escape all user input
@@ -75,8 +80,10 @@ class PortfolioController extends BaseController
             return redirect()->back()->with('success', 'Your message has been sent successfully!');
         }
 
-        $data = $emailService->printDebugger(['headers']);
-        log_message('error', 'Portfolio email sending failed: ' . print_r($data, true));
+        $debuggerData = $emailService->printDebugger(['headers']);
+        log_message('error', '[PortfolioController] Email sending failed: ' . print_r($debuggerData, true));
+        log_message('error', '[PortfolioController] SMTP Host: ' . config('Email')->SMTPHost);
+
         return redirect()->back()->with('error', 'Failed to send your message. Please try again later.');
     }
 }
