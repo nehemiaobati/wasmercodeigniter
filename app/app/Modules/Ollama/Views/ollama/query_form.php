@@ -16,7 +16,7 @@
         padding: 0 !important;
     }
 
-    /* Scoped Styles for Ollama View */
+    /* Scoped Styles for Ollama View (Mirrored from Gemini) */
     .ollama-view-container {
         --code-bg: #282c34;
         position: fixed;
@@ -108,6 +108,15 @@
         margin-bottom: 0;
     }
 
+    .prompt-editor-wrapper {
+        min-height: 100px;
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid var(--bs-border-color);
+        border-radius: 0.5rem;
+        background: var(--bs-body-bg);
+    }
+
     /* Code Block Styling */
     pre {
         background: var(--code-bg);
@@ -189,8 +198,7 @@
         height: 16px;
         margin-right: 8px;
         border: 2px solid var(--bs-secondary-bg);
-        border-top: 2px solid var(--bs-success);
-        /* Green for Ollama */
+        border-top: 2px solid var(--bs-primary);
         border-radius: 50%;
         animation: spin 1s linear infinite;
     }
@@ -217,8 +225,10 @@
     .prompt-textarea {
         resize: none;
         overflow-y: hidden;
+        /* Hide scrollbar initially */
         min-height: 40px;
         max-height: 120px;
+        /* Approx 4-5 lines */
         border-radius: 1.5rem;
         padding: 0.6rem 1rem;
         transition: border-color 0.2s;
@@ -227,14 +237,14 @@
 
     .prompt-textarea:focus {
         box-shadow: none;
-        border-color: var(--bs-success);
-        /* Green for Ollama */
+        border-color: var(--bs-primary);
     }
 
     /* Prompt Area Layout Adjustment */
     .ollama-prompt-area {
         padding: 1rem 1.5rem;
         padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+        /* iOS Safe Area */
     }
 </style>
 <?= $this->endSection() ?>
@@ -247,7 +257,7 @@
         <!-- Top Toolbar / Header -->
         <div class="d-flex justify-content-between align-items-center px-4 py-2 border-bottom bg-body ollama-header">
             <a href="<?= url_to('home') ?>" class="d-flex align-items-center gap-2 text-decoration-none text-reset">
-                <i class="bi bi-cpu text-success fs-4"></i>
+                <i class="bi bi-cpu text-primary fs-4"></i>
                 <span class="fw-bold fs-5">Local AI Studio (Ollama)</span>
             </a>
             <div class="d-flex gap-2">
@@ -263,15 +273,18 @@
         <!-- Scrollable Response Area -->
         <div class="ollama-response-area" id="response-area-wrapper">
 
-            <!-- Flash Messages Container -->
+            <!-- Flash Messages Container for AJAX Injection -->
             <div id="flash-messages-container">
                 <?= view('App\Views\partials\flash_messages') ?>
             </div>
 
+            <!-- Audio Player Container (Dynamically Populated via AJAX - Kept for structure) -->
+            <div id="audio-player-container"></div>
+
             <!-- Response -->
             <?php if ($result = session()->getFlashdata('result')): ?>
-                <div class="card blueprint-card shadow-sm border-success" id="results-card">
-                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <div class="card blueprint-card shadow-sm border-primary" id="results-card">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <span class="fw-bold">Studio Output</span>
                         <div class="d-flex gap-2">
                             <button class="btn btn-sm btn-light" id="copyFullResponseBtn" title="Copy Full Text">
@@ -309,7 +322,7 @@
             <form id="ollamaForm" action="<?= url_to('ollama.generate') ?>" method="post" enctype="multipart/form-data">
                 <?= csrf_field() ?>
 
-                <!-- Uploads List -->
+                <!-- Uploads List (Moved above input) -->
                 <div id="upload-list-wrapper"></div>
                 <div id="uploaded-files-container"></div>
 
@@ -324,8 +337,10 @@
 
                     <!-- Textarea -->
                     <div class="flex-grow-1">
-                        <!-- Model Selection Hidden Input -->
+                        <!-- Model Selection Hidden Input (Ollama Specific: Populated by Sidebar) -->
                         <input type="hidden" name="model" id="selectedModelInput" value="<?= $availableModels[0] ?? 'llama3' ?>">
+                        <input type="hidden" name="generation_type" id="generationType" value="text"> <!-- Kept for JS compatibility -->
+
                         <textarea
                             id="prompt"
                             name="prompt"
@@ -339,7 +354,7 @@
                         <button type="button" class="btn btn-link text-secondary p-1" data-bs-toggle="modal" data-bs-target="#savePromptModal" title="Save Prompt">
                             <i class="bi bi-bookmark-plus fs-5"></i>
                         </button>
-                        <button type="submit" id="generateBtn" class="btn btn-success rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" title="Send">
+                        <button type="submit" id="generateBtn" class="btn btn-primary rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" title="Send">
                             <i class="bi bi-arrow-up text-white fs-5"></i>
                         </button>
                     </div>
@@ -355,7 +370,7 @@
             <button type="button" class="btn-close d-lg-none" data-bs-toggle="collapse" data-bs-target="#ollamaSidebar"></button>
         </div>
 
-        <!-- Model Selector -->
+        <!-- Model Selector (Ollama Specific) -->
         <div class="mb-3">
             <label class="form-label small fw-bold text-uppercase text-muted">Model</label>
             <select class="form-select" id="modelSelector">
@@ -374,19 +389,18 @@
         <div class="form-check form-switch mb-3">
             <input class="form-check-input setting-toggle" type="checkbox" id="assistantMode"
                 data-key="assistant_mode_enabled" <?= $assistant_mode_enabled ? 'checked' : '' ?>>
-            <label class="form-check-label fw-medium" for="assistantMode">Assistant Mode</label>
+            <label class="form-check-label fw-medium" for="assistantMode">Conversational Memory</label>
             <div class="form-text text-muted small lh-sm">
                 Maintains context from previous messages.
             </div>
         </div>
 
-        <!-- Stream Toggle -->
-        <div class="form-check form-switch mb-3">
+        <div class="form-check form-switch mb-4">
             <input class="form-check-input setting-toggle" type="checkbox" id="streamOutput"
                 data-key="stream_output_enabled" <?= (isset($stream_output_enabled) && $stream_output_enabled) ? 'checked' : '' ?>>
-            <label class="form-check-label fw-medium" for="streamOutput">Stream Response</label>
+            <label class="form-check-label fw-medium" for="streamOutput">Stream Responses</label>
             <div class="form-text text-muted small lh-sm">
-                Typewriter effect (Tokens appear as they are generated).
+                Typewriter effect (faster perception).
             </div>
         </div>
 
@@ -428,10 +442,14 @@
 
 <!-- Hidden Forms/Modals -->
 <form id="downloadForm" method="post" action="<?= url_to('ollama.download_document') ?>" target="_blank" class="d-none">
-    <input type="hidden" name="content" id="dl_content">
+    <?= csrf_field() ?>
+    <input type="hidden" name="raw_response" id="dl_raw"> <!-- Matched Gemini ID -->
     <input type="hidden" name="format" id="dl_format">
+    <!-- Keep content for legacy if needed, but Gemini uses raw_response -->
+    <input type="hidden" name="content" id="dl_content">
 </form>
 
+<!-- Hidden Delete Prompt Form -->
 <form id="deletePromptForm" method="post" action="" class="d-none">
     <?= csrf_field() ?>
 </form>
@@ -468,7 +486,8 @@
 <script>
     /**
      * Ollama Module - Frontend Application
-     * Refactored into modular classes for improved maintainability.
+     * Refactored into modular classes for improved maintainability and scalability.
+     * STRICTLY MIRRORED FROM GEMINI APP to ensure CSRF stability.
      */
 
     class OllamaApp {
@@ -476,16 +495,17 @@
             this.config = {
                 csrfName: '<?= csrf_token() ?>',
                 csrfHash: document.querySelector('input[name="<?= csrf_token() ?>"]').value,
-                maxFileSize: <?= $maxFileSize ?>,
-                maxFiles: <?= $maxFiles ?>,
-                supportedMimeTypes: <?= $supportedMimeTypes ?>,
+                maxFileSize: <?= $maxFileSize ? $maxFileSize : 10 * 1024 * 1024 ?>, // Default fallback if not passed
+                maxFiles: <?= $maxFiles ? $maxFiles : 5 ?>,
+                supportedMimeTypes: <?= isset($supportedMimeTypes) ? $supportedMimeTypes : json_encode([]) ?>,
                 endpoints: {
                     upload: '<?= url_to('ollama.upload_media') ?>',
                     deleteMedia: '<?= url_to('ollama.delete_media') ?>',
                     settings: '<?= url_to('ollama.settings.update') ?>',
+                    deletePromptBase: '<?= url_to('ollama.prompts.delete', 0) ?>'.slice(0, -1),
                     stream: '<?= url_to('ollama.stream') ?>',
+                    generate: '<?= url_to('ollama.generate') ?>',
                     download: '<?= url_to('ollama.download_document') ?>',
-                    deletePromptBase: '<?= url_to('ollama.prompts.delete', 0) ?>'.slice(0, -1)
                 }
             };
 
@@ -497,11 +517,11 @@
         }
 
         init() {
-            // Configure Marked.js
+            // Configure Marked.js to handle line breaks like PHP Parsedown
             if (typeof marked !== 'undefined') {
                 marked.use({
-                    breaks: true,
-                    gfm: true
+                    breaks: true, // Converts single \n to <br>
+                    gfm: true // Enables GitHub Flavored Markdown
                 });
             }
 
@@ -510,7 +530,7 @@
             this.prompts.init();
             this.interaction.init();
 
-            // Expose for global access
+            // Expose for global access (e.g. onclick handlers)
             window.ollamaApp = this;
         }
 
@@ -534,26 +554,20 @@
                         'X-Requested-With': 'XMLHttpRequest'
                     }
                 });
+                const responseData = await res.json();
 
-                // 1. Check Headers for CSRF (Primary Defense)
+                // 1. Check Payload for CSRF
+                constnewToken = responseData.token || responseData.csrf_token;
+                if (newToken) this.refreshCsrf(newToken);
+
+                // 2. Check Headers for CSRF (Primary Defense)
                 const headerToken = res.headers.get('X-CSRF-TOKEN');
                 if (headerToken) this.refreshCsrf(headerToken);
-
-                // Parse JSON regardless of status to check for CSRF token in error responses
-                const responseData = await res.json().catch(() => ({}));
-
-                // 2. Check Body for CSRF (Secondary/Legacy)
-                const bodyToken = responseData.token || responseData.csrf_token;
-                if (bodyToken) this.refreshCsrf(bodyToken);
-
-                if (!res.ok) {
-                    throw new Error(responseData.message || 'Request failed');
-                }
 
                 return responseData;
             } catch (err) {
                 console.error('AJAX Error:', err);
-                this.ui.showToast(err.message || 'Network error occurred.');
+                this.ui.showToast('Network error occurred.');
                 throw err;
             }
         }
@@ -562,16 +576,18 @@
     class UIManager {
         constructor(app) {
             this.app = app;
+            this.generateBtn = document.getElementById('generateBtn');
         }
 
         init() {
+            // setupTabs not needed for Ollama text-only view, but model selector needed
             this.handleResponsiveSidebar();
+            this.setupModelSelector();
             this.setupSettings();
             this.setupCodeHighlighting();
             this.setupAutoScroll();
             this.setupDownloads();
             this.initTinyMCE();
-            this.setupModelSelector();
         }
 
         handleResponsiveSidebar() {
@@ -580,6 +596,16 @@
                 if (sidebar && sidebar.classList.contains('show')) {
                     sidebar.classList.remove('show');
                 }
+            }
+        }
+
+        setupModelSelector() {
+            const selector = document.getElementById('modelSelector');
+            const input = document.getElementById('selectedModelInput');
+            if (selector && input) {
+                selector.addEventListener('change', (e) => {
+                    input.value = e.target.value;
+                });
             }
         }
 
@@ -597,7 +623,6 @@
                 autoresize_overflow_padding: 0,
                 min_height: 40,
                 max_height: 120, // Approx 4-5 lines
-                placeholder: 'Message Ollama...',
 
                 setup: (editor) => {
                     editor.on('keydown', (e) => {
@@ -621,6 +646,17 @@
             }
         }
 
+        // Helper to inject error messages into the flash container (for Consistency)
+        injectFlashError(message) {
+            const container = document.getElementById('flash-messages-container');
+            if (container) {
+                container.innerHTML = `<div class="alert alert-danger alert-dismissible fade show">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>`;
+            }
+        }
+
         setupSettings() {
             document.querySelectorAll('.setting-toggle').forEach(toggle => {
                 toggle.addEventListener('change', async (e) => {
@@ -629,30 +665,18 @@
                     fd.append('enabled', e.target.checked);
                     try {
                         const data = await this.app.sendAjax(this.app.config.endpoints.settings, fd);
+                        // Using Toast for settings toggle confirmation (Consistency Requirement)
                         this.showToast(data.status === 'success' ? 'Setting saved.' : 'Failed to save.');
-                    } catch (e) {
-                        // Attempt to parse/refresh if error object has token (handled by sendAjax mostly but verify)
-                        console.error(e);
-                    }
+                    } catch (e) {}
                 });
             });
-        }
-
-        setupModelSelector() {
-            const selector = document.getElementById('modelSelector');
-            const input = document.getElementById('selectedModelInput');
-            if (selector && input) {
-                selector.addEventListener('change', (e) => {
-                    input.value = e.target.value;
-                });
-            }
         }
 
         setupCodeHighlighting() {
             if (typeof hljs !== 'undefined') hljs.highlightAll();
 
             document.querySelectorAll('pre code').forEach((block) => {
-                if (block.parentElement.querySelector('.copy-code-btn')) return;
+                if (block.parentElement.querySelector('.copy-code-btn')) return; // Avoid duplicates
                 const btn = document.createElement('button');
                 btn.className = 'btn btn-sm btn-dark copy-code-btn';
                 btn.innerHTML = '<i class="bi bi-clipboard"></i>';
@@ -695,7 +719,9 @@
                     try {
                         const fd = new FormData();
                         fd.append(this.app.config.csrfName, this.app.config.csrfHash);
+                        // Handle legacy "content" vs new "raw_response" input expectation
                         fd.append('content', content);
+                        fd.append('raw_response', content);
                         fd.append('format', format);
 
                         const response = await fetch(this.app.config.endpoints.download, {
@@ -711,7 +737,7 @@
                         if (headerToken) this.app.refreshCsrf(headerToken);
 
                         if (!response.ok) {
-                            const err = await response.json();
+                            const err = await response.json().catch(() => ({}));
                             throw new Error(err.message || 'Download failed');
                         }
 
@@ -772,6 +798,7 @@
             }
         }
 
+        // Ensure result card exists (Strict Mirror)
         ensureResultCardExists() {
             if (!document.getElementById('results-card')) {
                 const wrapper = document.getElementById('response-area-wrapper');
@@ -779,8 +806,8 @@
                 if (emptyState) emptyState.remove();
 
                 const cardHtml = `
-                <div class="card blueprint-card shadow-sm border-success" id="results-card">
-                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <div class="card blueprint-card shadow-sm border-primary" id="results-card">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <span class="fw-bold">Studio Output</span>
                         <div class="d-flex gap-2">
                             <button class="btn btn-sm btn-light" id="copyFullResponseBtn" title="Copy Full Text">
@@ -802,8 +829,10 @@
                     </div>
                 </div>`;
                 wrapper.insertAdjacentHTML('beforeend', cardHtml);
+
+                // Re-bind events for the new card
                 this.setupCodeHighlighting();
-                this.setupDownloads();
+                this.setupDownloads(); // Bind new export buttons
             }
         }
     }
@@ -811,189 +840,136 @@
     class MediaUploader {
         constructor(app) {
             this.app = app;
-            this.queue = [];
-            this.isUploading = false;
-        }
-
-        clearUploads() {
-            // Remove all chips
-            const wrapper = document.getElementById('upload-list-wrapper');
-            if (wrapper) wrapper.innerHTML = '';
-
-            // Remove hidden inputs
-            const container = document.getElementById('uploaded-files-container');
-            if (container) container.innerHTML = '';
-
-            // Reset queue
-            this.queue = [];
+            this.input = document.getElementById('media-input-trigger');
+            this.dropZone = document.getElementById('mediaUploadArea');
+            this.listContainer = document.getElementById('upload-list-wrapper'); // Chips container
+            this.uploadedContainer = document.getElementById('uploaded-files-container'); // Hidden inputs
         }
 
         init() {
-            const area = document.getElementById('mediaUploadArea');
-            const input = document.getElementById('media-input-trigger');
+            if (!this.input || !this.dropZone) return;
 
-            if (area && input) {
-                ['dragenter', 'dragover'].forEach(e => area.addEventListener(e, (ev) => {
-                    ev.preventDefault();
-                    area.classList.add('dragover');
-                }));
-                ['dragleave', 'drop'].forEach(e => area.addEventListener(e, (ev) => {
-                    ev.preventDefault();
-                    area.classList.remove('dragover');
-                }));
+            // Click Handler
+            this.input.addEventListener('change', (e) => this.handleFiles(e.target.files));
 
-                area.addEventListener('drop', (e) => this.handleFiles(e.dataTransfer.files));
-                input.addEventListener('change', (e) => {
-                    this.handleFiles(e.target.files);
-                    input.value = ''; // Allow re-upload
-                });
-
-                const listWrapper = document.getElementById('upload-list-wrapper');
-                if (listWrapper) {
-                    listWrapper.addEventListener('click', (e) => {
-                        if (e.target.closest('.remove-btn')) this.removeFile(e.target.closest('.remove-btn'));
-                    });
-                }
-            }
-        }
-
-        handleFiles(files) {
-            const currentCount = document.querySelectorAll('input[name="uploaded_media[]"]').length + this.queue.length;
-            let accepted = 0;
-
-            Array.from(files).forEach(file => {
-                // 1. Check file limit
-                if (currentCount + accepted >= this.app.config.maxFiles) {
-                    this.app.ui.showToast(`Max ${this.app.config.maxFiles} files allowed.`);
-                    return;
-                }
-
-                // 2. Check MIME type
-                if (!this.app.config.supportedMimeTypes.includes(file.type)) {
-                    this.app.ui.showToast(`${file.name}: Unsupported file type`);
-                    return;
-                }
-
-                // 3. Check file size
-                if (file.size > this.app.config.maxFileSize) {
-                    this.app.ui.showToast(`${file.name} exceeds ${(this.app.config.maxFileSize / 1024 / 1024).toFixed(1)}MB limit`);
-                    return;
-                }
-
-                const id = Math.random().toString(36).substr(2, 9);
-                const ui = this.createFileChip(file, id);
-                this.queue.push({
-                    file,
-                    ui,
-                    id
-                });
-                accepted++;
+            // Drag & Drop
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                this.dropZone.addEventListener(eventName, preventDefaults, false);
             });
 
-            if (this.queue.length > 0) this.processQueue();
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            this.dropZone.addEventListener('dragover', () => this.dropZone.classList.add('dragover'));
+            this.dropZone.addEventListener('dragleave', () => this.dropZone.classList.remove('dragover'));
+            this.dropZone.addEventListener('drop', (e) => {
+                this.dropZone.classList.remove('dragover');
+                this.handleFiles(e.dataTransfer.files);
+            });
         }
 
-        createFileChip(file, id) {
-            const div = document.createElement('div');
-            div.id = `file-item-${id}`;
-            div.className = 'file-chip fade show';
-            div.innerHTML = `
+        async handleFiles(files) {
+            const maxFiles = this.app.config.maxFiles;
+            const currentFiles = this.uploadedContainer.querySelectorAll('input[name="uploaded_files[]"]').length;
+
+            if (currentFiles + files.length > maxFiles) {
+                this.app.ui.showToast(`Max ${maxFiles} files allowed.`);
+                return;
+            }
+
+            for (const file of files) {
+                if (!this.validateFile(file)) continue;
+                await this.uploadFile(file);
+            }
+            this.input.value = ''; // Reset input
+        }
+
+        validateFile(file) {
+            const types = this.app.config.supportedMimeTypes;
+            if (!types.includes(file.type)) {
+                this.app.ui.showToast(`FileType ${file.type} not supported.`);
+                return false;
+            }
+            if (file.size > this.app.config.maxFileSize) {
+                this.app.ui.showToast(`File ${file.name} too large.`);
+                return false;
+            }
+            return true;
+        }
+
+        async uploadFile(file) {
+            // Create Chip (Optimistic UI)
+            const id = 'file-' + Date.now() + Math.random().toString(36).substr(2, 9);
+            const chip = document.createElement('div');
+            chip.className = 'file-chip';
+            chip.id = id;
+            chip.innerHTML = `
                 <div class="progress-ring"></div>
                 <span class="file-name" title="${file.name}">${file.name}</span>
-                <button type="button" class="btn-close p-1 remove-btn disabled" style="width: 0.75rem; height: 0.75rem; opacity: 0.6;" data-id="${id}"></button>
+                <button type="button" class="btn-close btn-close-white small remove-btn disabled" aria-label="Remove"></button>
             `;
-            document.getElementById('upload-list-wrapper').appendChild(div);
-            return div;
+            this.listContainer.appendChild(chip);
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append(this.app.config.csrfName, this.app.config.csrfHash);
+
+            try {
+                const data = await this.app.sendAjax(this.app.config.endpoints.upload, formData);
+                if (data.status === 'success') {
+                    // Update Chip
+                    chip.querySelector('.progress-ring').remove();
+                    const icon = document.createElement('i');
+                    icon.className = 'bi bi-file-earmark-check text-success me-2';
+                    chip.prepend(icon);
+
+                    const removeBtn = chip.querySelector('.remove-btn');
+                    removeBtn.classList.remove('disabled');
+                    removeBtn.onclick = () => this.removeFile(id, data.file_path, data.file_name); // Assuming backend returns stored name/path
+
+                    // Add hidden input
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'uploaded_files[]';
+                    input.value = data.file_name; // Or ID, depends on backend
+                    input.id = `input-${id}`;
+                    this.uploadedContainer.appendChild(input);
+
+                } else {
+                    chip.remove();
+                    this.app.ui.showToast(data.message || 'Upload failed');
+                }
+            } catch (e) {
+                chip.remove();
+                this.app.ui.showToast('Upload error');
+            }
         }
 
-        processQueue() {
-            if (this.isUploading || this.queue.length === 0) return;
-            this.isUploading = true;
-            this.performUpload(this.queue.shift());
-        }
+        async removeFile(chipId, filePath, fileName) {
+            const chip = document.getElementById(chipId);
+            if (!chip) return;
 
-        performUpload(job) {
+            // Optimistic removal
+            chip.remove();
+            const input = document.getElementById(`input-${chipId}`);
+            if (input) input.remove();
+
             const fd = new FormData();
-            fd.append(this.app.config.csrfName, this.app.config.csrfHash);
-            fd.append('file', job.file);
+            fd.append('file_path', filePath); // Adjust based on Controller needs
+            fd.append('file_name', fileName);
 
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', this.app.config.endpoints.upload, true);
-            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-
-            xhr.onreadystatechange = () => {
-                if (xhr.readyState === 4) {
-                    try {
-                        const res = JSON.parse(xhr.responseText);
-                        if (res.csrf_token) this.app.refreshCsrf(res.csrf_token);
-
-                        if (xhr.status === 200 && res.status === 'success') {
-                            this.updateUI(job.ui, 'success');
-                            const removeBtn = job.ui.querySelector('.remove-btn');
-                            removeBtn.dataset.serverFileId = res.file_id;
-
-                            const input = document.createElement('input');
-                            input.type = 'hidden';
-                            input.name = 'uploaded_media[]';
-                            input.value = res.file_id;
-                            input.id = `input-${job.id}`;
-                            document.getElementById('uploaded-files-container').appendChild(input);
-                        } else {
-                            this.updateUI(job.ui, 'error', res.message);
-                        }
-                    } catch (e) {
-                        this.updateUI(job.ui, 'error', 'JSON Error');
-                    }
-
-                    this.isUploading = false;
-                    this.processQueue();
-                }
-            };
-            xhr.send(fd);
-        }
-
-        updateUI(ui, status, msg = '') {
-            const spinner = ui.querySelector('.progress-ring');
-            const btn = ui.querySelector('.remove-btn');
-
-            if (spinner) spinner.remove();
-            btn.classList.remove('disabled');
-
-            if (status === 'success') {
-                const icon = document.createElement('i');
-                icon.className = 'bi bi-check-circle-fill text-success me-2';
-                ui.insertBefore(icon, ui.firstChild);
-                ui.style.borderColor = 'var(--bs-success)';
-            } else {
-                const icon = document.createElement('i');
-                icon.className = 'bi bi-exclamation-circle-fill text-danger me-2';
-                ui.insertBefore(icon, ui.firstChild);
-                ui.style.borderColor = 'var(--bs-danger)';
-                ui.title = msg;
+            try {
+                await this.app.sendAjax(this.app.config.endpoints.deleteMedia, fd);
+            } catch (e) {
+                console.error('Delete failed', e);
             }
         }
 
-        async removeFile(btn) {
-            if (btn.classList.contains('disabled')) return;
-            const ui = btn.closest('.file-chip');
-            const serverId = btn.dataset.serverFileId;
-
-            ui.style.opacity = '0.5';
-            if (serverId) {
-                const fd = new FormData();
-                fd.append('file_id', serverId);
-                try {
-                    const res = await this.app.sendAjax(this.app.config.endpoints.deleteMedia, fd);
-                    if (res.status === 'success') {
-                        ui.remove();
-                        document.getElementById(`input-${btn.dataset.id}`)?.remove();
-                    } else ui.style.opacity = '1';
-                } catch (e) {
-                    ui.style.opacity = '1';
-                }
-            } else {
-                ui.remove();
-            }
+        clearUploads() {
+            this.listContainer.innerHTML = '';
+            this.uploadedContainer.innerHTML = '';
         }
     }
 
@@ -1100,117 +1076,105 @@
 
         async handleSubmit(e) {
             e.preventDefault();
+            // Ollama only supports text generation in this view
+            const useStreaming = document.getElementById('streamOutput')?.checked;
 
             if (typeof tinymce !== 'undefined') tinymce.triggerSave();
             const prompt = document.getElementById('prompt').value.trim();
-
             if (!prompt) {
                 this.app.ui.showToast('Please enter a prompt.');
                 return;
             }
 
             this.app.ui.setLoading(true);
-            const form = document.getElementById('ollamaForm');
-            const fd = new FormData(form);
+            const fd = new FormData(document.getElementById('ollamaForm'));
 
-            // Check Stream Toggle
-            const isStream = document.getElementById('streamOutput')?.checked;
-
-            if (isStream) {
-                await this.handleStream(fd);
+            // Text Generation: Determine flow based on Streaming setting
+            if (useStreaming) {
+                await this.handleStreaming(fd);
             } else {
-                await this.handleStandard(fd, form.action);
+                await this.handleStandardGeneration(fd);
             }
         }
 
-        async handleStandard(fd, action) {
+        /**
+         * Handles standard (non-streaming) text generation via Fetch.
+         * Updates content and injects flash messages via AJAX.
+         */
+        async handleStandardGeneration(formData) {
+            this.app.ui.ensureResultCardExists();
+
             try {
-                const data = await this.app.sendAjax(action, fd);
+                const data = await this.app.sendAjax(this.app.config.endpoints.generate, formData);
 
                 if (data.status === 'success') {
-                    // Update CSRF if present (sendAjax does it, but redundant check doesn't hurt)
-                    if (data.csrf_token) this.app.refreshCsrf(data.csrf_token);
-
-                    // 1. Ensure Result Card Exists
-                    this.app.ui.ensureResultCardExists();
-
-                    // 2. Update Content
+                    // Update Content
                     document.getElementById('ai-response-body').innerHTML = data.result;
                     document.getElementById('raw-response').value = data.raw_result;
-
-                    // 3. Highlight Code & Scroll
                     this.app.ui.setupCodeHighlighting();
                     this.app.ui.setupAutoScroll();
 
-                    // 4. Update Flash Messages
+                    // Inject Flash Messages (Standardized)
                     if (data.flash_html) {
                         const flashContainer = document.getElementById('flash-messages-container');
-                        if (flashContainer) flashContainer.innerHTML = data.flash_html;
+                        if (flashContainer) {
+                            flashContainer.innerHTML = data.flash_html;
+                        }
                     }
 
-                    // 5. Clear Uploads (Since they are processed)
+                    // Clear Uploads (Since they are processed)
                     this.app.uploader.clearUploads();
-                } else {
-                    this.app.ui.showToast(data.message || 'Generation failed.');
+
+                } else if (data.status === 'error') {
+                    this.app.ui.injectFlashError(data.message || 'Generation failed.');
                 }
-            } catch (err) {
-                console.error(err);
-                this.app.ui.showToast('Error during generation.');
+
+            } catch (e) {
+                console.error(e);
+                this.app.ui.injectFlashError('Generation failed due to a system error.');
             } finally {
                 this.app.ui.setLoading(false);
             }
         }
 
-        async handleStream(fd) {
-            try {
-                // Ensure CSRF
-                if (!fd.has(this.app.config.csrfName)) {
-                    fd.append(this.app.config.csrfName, this.app.config.csrfHash);
-                }
+        /**
+         * CRITICAL: STRICT MIRROR OF GEMINI handleStreaming
+         * Handles SSE streaming with robust CSRF and TextDecoder support
+         */
+        async handleStreaming(formData) {
+            this.app.ui.ensureResultCardExists();
 
+            // Reset UI for new stream
+            const resBody = document.getElementById('ai-response-body');
+            const rawRes = document.getElementById('raw-response');
+            // Clear audio container on new stream start
+            const audioContainer = document.getElementById('audio-player-container');
+            if (audioContainer) audioContainer.innerHTML = '';
+
+            resBody.innerHTML = '';
+            rawRes.value = '';
+            this.app.ui.setupAutoScroll();
+
+            let streamAccumulator = '';
+
+            try {
                 const response = await fetch(this.app.config.endpoints.stream, {
                     method: 'POST',
-                    body: fd,
+                    body: formData,
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest'
                     }
                 });
 
-                const headerToken = response.headers.get('X-CSRF-TOKEN');
-                if (headerToken) this.app.refreshCsrf(headerToken);
-
-                if (!response.ok) {
-                    try {
-                        const errRes = await response.json();
-                        // Check body token in error response
-                        if (errRes.csrf_token || errRes.token) {
-                            this.app.refreshCsrf(errRes.csrf_token || errRes.token);
-                        }
-                        throw new Error(errRes.message || 'Stream failed');
-                    } catch (e) {
-                        if (e.message !== 'Stream failed') throw new Error('Network error'); // Re-throw if not ours
-                        throw e;
-                    }
-                }
-
-                this.app.ui.ensureResultCardExists();
-                const resultBody = document.getElementById('ai-response-body');
-                const rawResponse = document.getElementById('raw-response');
-
-                // Clear previous if any
-                resultBody.innerHTML = '';
-                rawResponse.value = '';
-
-                // Create a temporary content accumulator
-                let fullText = '';
-                let buffer = ''; // Buffer for split chunks
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
+                let buffer = '';
 
+                // Read stream chunks
                 while (true) {
                     const {
-                        done,
-                        value
+                        value,
+                        done
                     } = await reader.read();
                     if (done) break;
 
@@ -1218,42 +1182,69 @@
                         stream: true
                     });
 
-                    // Split by double newline (SSE standard delimiter)
+                    // Split by double newline which standard SSE uses to separate messages
                     const parts = buffer.split('\n\n');
                     buffer = parts.pop(); // Keep incomplete message in buffer
 
                     for (const part of parts) {
+                        // Handle potential multiple lines within a single message block
                         const lines = part.split('\n');
 
                         for (const line of lines) {
                             if (line.trim().startsWith('data: ')) {
                                 try {
-                                    const payload = JSON.parse(line.trim().substring(6));
+                                    const jsonStr = line.trim().substring(6);
+                                    const data = JSON.parse(jsonStr);
 
-                                    if (payload.csrf_token) {
-                                        this.app.refreshCsrf(payload.csrf_token);
-                                    }
-
-                                    if (payload.error) {
-                                        this.app.ui.showToast(payload.error);
-                                        return; // Stop
-                                    }
-
-                                    if (payload.text) {
-                                        fullText += payload.text;
-                                        // Use Marked if available, else raw text
+                                    if (data.text) {
+                                        // Append text chunk and update UI
+                                        streamAccumulator += data.text;
                                         if (typeof marked !== 'undefined') {
-                                            resultBody.innerHTML = marked.parse(fullText);
+                                            resBody.innerHTML = marked.parse(streamAccumulator);
                                         } else {
-                                            resultBody.innerText = fullText;
+                                            resBody.innerText = streamAccumulator;
                                         }
-                                    }
+                                        rawRes.value += data.text;
+                                    } else if (data.error) {
+                                        // CRITICAL FIX: Refresh token if server sent one with the error
+                                        if (data.csrf_token) {
+                                            this.app.refreshCsrf(data.csrf_token);
+                                        }
+                                        this.app.ui.injectFlashError(data.error);
+                                    } else if (typeof data.cost !== 'undefined') {
+                                        // Final Cost Packet: Show success flash message
+                                        // Note: Ollama might send cost: 0 or similar, but structure remains
+                                        if (parseFloat(data.cost) > 0) {
+                                            const costHtml = `<div class="alert alert-success alert-dismissible fade show" role="alert">
+                                                <i class="bi bi-check-circle-fill me-2"></i>
+                                                KSH ${parseFloat(data.cost).toFixed(2)} deducted.
+                                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                            </div>`;
+                                            const flashContainer = document.getElementById('flash-messages-container');
+                                            if (flashContainer) flashContainer.innerHTML = costHtml;
+                                        }
 
-                                    if (payload.cost) {
-                                        this.app.ui.showToast(`Initial Cost: ${payload.cost}`);
+                                        // Handle Audio URL from final packet (Structure Copy, even if Ollama does not use it yet)
+                                        if (data.audio_url) {
+                                            if (audioContainer) {
+                                                audioContainer.innerHTML = `
+                                                    <div class="alert alert-info d-flex align-items-center mb-4">
+                                                        <i class="bi bi-volume-up-fill fs-4 me-3"></i>
+                                                        <audio controls autoplay class="w-100">
+                                                            <source src="${data.audio_url}" type="audio/mpeg">
+                                                        </audio>
+                                                    </div>
+                                                `;
+                                            }
+                                        }
+
+                                    } else if (data.csrf_token) {
+                                        // Update CSRF for subsequent requests (e.g. from KeepAlive or intermediate events)
+                                        this.app.refreshCsrf(data.csrf_token);
                                     }
                                 } catch (e) {
-                                    // Partial JSON ignore
+                                    console.warn('JSON Parse Error in Stream:', e);
+                                    // this.app.ui.injectFlashError('JSON Parse Error in Stream: ' + e.message); // Optional: suppress noisy parse errors
                                 }
                             }
                         }
@@ -1263,13 +1254,15 @@
                 }
 
                 // Final Polish
-                rawResponse.value = fullText;
-                this.app.uploader.clearUploads();
-                this.app.ui.setupCodeHighlighting();
+                // Ensure final raw value matches accumulator, mirroring handleStandard
+                rawRes.value = streamAccumulator;
 
-            } catch (err) {
-                console.error(err);
-                this.app.ui.showToast('Stream failed.');
+                this.app.ui.setupCodeHighlighting();
+                this.app.uploader.clearUploads();
+
+            } catch (e) {
+                console.error(e);
+                this.app.ui.injectFlashError('Stream error occurred.');
             } finally {
                 this.app.ui.setLoading(false);
             }

@@ -70,8 +70,11 @@ class OllamaController extends BaseController
         protected UserModel $userModel = new UserModel(),
         protected OllamaService $ollamaService = new OllamaService(),
         protected OllamaPromptModel $promptModel = new OllamaPromptModel(),
-        protected OllamaUserSettingsModel $userSettingsModel = new OllamaUserSettingsModel()
-    ) {}
+        protected OllamaUserSettingsModel $userSettingsModel = new OllamaUserSettingsModel(),
+        protected $db = null
+    ) {
+        $this->db = $db ?? \Config\Database::connect();
+    }
 
     public function index(): string
     {
@@ -79,10 +82,10 @@ class OllamaController extends BaseController
         $prompts = $this->promptModel->where('user_id', $userId)->findAll();
         $userSetting = $this->userSettingsModel->where('user_id', $userId)->first();
 
-        $availableModels = $this->ollamaService->getModels();
-        if (empty($availableModels)) {
-            $availableModels = ['llama3'];
-        }
+        $modelsResponse = $this->ollamaService->getModels();
+        $availableModels = ($modelsResponse['status'] === 'success' && !empty($modelsResponse['data']))
+            ? $modelsResponse['data']
+            : ['llama3'];
 
         $data = [
             'pageTitle'              => 'Local AI Workspace | Ollama',
@@ -203,6 +206,20 @@ class OllamaController extends BaseController
             ? (new \App\Modules\Ollama\Libraries\OllamaMemoryService($userId))->processChat($inputText, $selectedModel, $images)
             : $this->ollamaService->generateChat($selectedModel, $this->_buildMessages($inputText, $images));
 
+        // Handle new standardized return format
+        if (isset($response['status']) && $response['status'] === 'error') {
+            $msg = $response['message'] ?? 'Unknown error';
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'status'     => 'error',
+                    'message'    => $msg,
+                    'csrf_token' => csrf_hash()
+                ]);
+            }
+            return redirect()->back()->withInput()->with('error', $msg);
+        }
+
+        // Legacy error handling for non-standardized responses (e.g., from OllamaMemoryService)
         if (isset($response['error']) || (isset($response['success']) && !$response['success'])) {
             $msg = $response['error'] ?? 'Unknown error';
             if ($this->request->isAJAX()) {
@@ -215,14 +232,14 @@ class OllamaController extends BaseController
             return redirect()->back()->withInput()->with('error', $msg);
         }
 
-        log_message('debug', 'Response: ' . json_encode($response));
-        $resultText = $response['result'] ?? $response['response'] ?? '';
+        // Extract result from new format or legacy format
+        $resultText = $response['data']['result'] ?? $response['result'] ?? $response['response'] ?? '';
 
         $this->userModel->deductBalance((int)$user->id, (string)self::COST_PER_REQUEST);
 
         $parsedown = new Parsedown();
         $parsedown->setBreaksEnabled(true);
-        $parsedown->setSafeMode(false);
+        $parsedown->setSafeMode(true);
         $finalHtml = $parsedown->text($resultText);
 
         if ($this->request->isAJAX()) {
@@ -241,29 +258,41 @@ class OllamaController extends BaseController
             ->with('success', 'Generated successfully. Cost: ' . self::COST_PER_REQUEST . ' credits.');
     }
 
+    /**
+     * Handles streaming text generation via Server-Sent Events (SSE).
+     * Mirrored strictly from GeminiController::stream.
+     *
+     * @return ResponseInterface
+     */
     public function stream(): ResponseInterface
     {
-        $this->response->setContentType('text/event-stream');
-        $this->response->setHeader('Cache-Control', 'no-cache');
-        $this->response->setHeader('Connection', 'keep-alive');
-        $this->response->setHeader('X-Accel-Buffering', 'no');
-        $this->response->setHeader('X-CSRF-TOKEN', csrf_hash());
-
         $userId = (int) session()->get('userId');
         $user = $this->userModel->find($userId);
 
         if (!$user) {
+            return $this->response->setStatusCode(401)->setJSON(['error' => 'User not found']);
+        }
+
+        // Setup SSE Headers (Mirrors Gemini _setupSSEHeaders inline or via method if copied)
+        $this->response->setContentType('text/event-stream');
+        $this->response->setHeader('Cache-Control', 'no-cache');
+        $this->response->setHeader('Connection', 'keep-alive');
+        $this->response->setHeader('X-Accel-Buffering', 'no'); // Disable buffering for Nginx
+
+        // Input Validation
+        $inputText = (string) $this->request->getPost('prompt');
+        $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
+        $selectedModel = (string) $this->request->getPost('model');
+
+        if (empty(trim($inputText)) && empty($uploadedFileIds)) {
             $this->response->setBody("data: " . json_encode([
-                'error' => 'User not found',
+                'error' => 'Please provide a prompt.',
                 'csrf_token' => csrf_hash()
             ]) . "\n\n");
             return $this->response;
         }
 
-        $inputText = (string) $this->request->getPost('prompt');
-        $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
-        $selectedModel = (string) $this->request->getPost('model');
-
+        // Check Balance
         if (!$this->_hasBalance($user, self::COST_PER_REQUEST)) {
             $this->response->setBody("data: " . json_encode([
                 'error' => "Insufficient balance.",
@@ -272,48 +301,73 @@ class OllamaController extends BaseController
             return $this->response;
         }
 
+        // 1. Prepare Context & Files
         $images = $this->_processUploadedFiles($uploadedFileIds, $userId);
 
         $userSetting = $this->userSettingsModel->where('user_id', $userId)->first();
         $isAssistantMode = $userSetting ? $userSetting->assistant_mode_enabled : true;
 
+        // Context Construction (Simplified for Ollama compared to Gemini's MemoryService for now, but preserving flow)
         $messages = $isAssistantMode
             ? [['role' => 'system', 'content' => 'You are a helpful AI assistant.']]
             : [];
 
         $messages[] = $this->_buildUserMessage($inputText, $images);
 
+        // Session Locking Prevention (Crucial mirroring of Gemini)
         session_write_close();
 
         $this->response->sendHeaders();
         if (ob_get_level() > 0) ob_end_flush();
         flush();
 
-        $result = $this->ollamaService->generateStream(
+        // 3. Call Stream Service
+        // Note: We are adapting OllamaService to match GeminiService's signature: (params, chunkCallback, completeCallback)
+        $this->ollamaService->generateStream(
             $selectedModel,
             $messages,
             function ($chunk) {
-                echo "data: " . json_encode(['text' => $chunk]) . "\n\n";
+                if (is_array($chunk) && isset($chunk['error'])) {
+                    echo "data: " . json_encode([
+                        'error' => $chunk['error'],
+                        'csrf_token' => csrf_hash()
+                    ]) . "\n\n";
+                } else {
+                    echo "data: " . json_encode(['text' => $chunk]) . "\n\n";
+                }
+                if (ob_get_level() > 0) ob_flush();
+                flush();
+            },
+            function ($fullText, $usageMetadata) use ($userId, $user) {
+                // 1. Calculate and Deduct Cost (Simplified for Ollama fixed cost)
+                // Re-open DB connection/transaction if needed, but for now strict mirror of logic flow
+
+                // Gemini wraps this in transaction, so we should too if possible, 
+                // but OllamaController simple logic used direct calls. 
+                // We will mirror the transaction block from Gemini for safety.
+                $this->db->transStart();
+
+                $this->userModel->deductBalance((int)$user->id, (string)self::COST_PER_REQUEST);
+
+                // Update Memory (If implemented in Ollama similarly)
+                // For now, we just perform the deduction as per original Ollama logic but in the completion callback
+
+                $this->db->transComplete();
+
+                // 3. Send Final Status Event
+                // Mirrors Gemini's `event: close` payload structure
+                $finalPayload = [
+                    'csrf_token' => csrf_hash(),
+                    'cost' => self::COST_PER_REQUEST
+                ];
+
+                echo "event: close\n";
+                echo "data: " . json_encode($finalPayload) . "\n\n";
+
                 if (ob_get_level() > 0) ob_flush();
                 flush();
             }
         );
-
-        if (isset($result['error'])) {
-            echo "data: " . json_encode([
-                'error' => $result['error'],
-                'csrf_token' => csrf_hash()
-            ]) . "\n\n";
-            exit;
-        }
-
-        $this->userModel->deductBalance((int)$user->id, (string)self::COST_PER_REQUEST);
-
-        echo "event: close\n";
-        echo "data: " . json_encode([
-            'csrf_token' => csrf_hash(),
-            'cost' => self::COST_PER_REQUEST
-        ]) . "\n\n";
 
         exit;
     }

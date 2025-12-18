@@ -66,6 +66,7 @@ class OllamaDocumentService
 
         // Convert Markdown to HTML (Parsedown library)
         $parsedown = new Parsedown();
+        $parsedown->setSafeMode(true);
         $parsedown->setBreaksEnabled(true);
         $htmlContent = $parsedown->text($markdownContent);
         $styledHtml = $this->_getStyledHtml($htmlContent, $meta['title']);
@@ -145,6 +146,7 @@ class OllamaDocumentService
             $markdownContent = preg_replace('/^(?!\|)(.*)\n\|/m', "$1\n\n|", $markdownContent);
 
             $parsedown = new Parsedown();
+            $parsedown->setSafeMode(true);
             $parsedown->setBreaksEnabled(true);
             $htmlContent = $parsedown->text($markdownContent);
 

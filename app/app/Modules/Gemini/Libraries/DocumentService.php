@@ -142,6 +142,7 @@ class DocumentService
             // Convert Markdown to HTML locally for PHPWord
             $parsedown = new Parsedown();
             $parsedown->setBreaksEnabled(true);
+            $parsedown->setSafeMode(true);
             $htmlContent = $parsedown->text($markdownContent);
 
             $phpWord = new \PhpOffice\PhpWord\PhpWord();

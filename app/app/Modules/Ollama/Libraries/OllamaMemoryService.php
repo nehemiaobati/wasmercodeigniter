@@ -75,19 +75,39 @@ class OllamaMemoryService
 
         $result = $this->api->chat($messages, $model);
 
-        if (!$result['success']) {
+        // Handle new standardized return format
+        if (isset($result['status']) && $result['status'] === 'error') {
+            return [
+                'error' => $result['message'] ?? 'Unknown error',
+                'success' => false
+            ];
+        }
+
+        // Legacy format support
+        if (isset($result['success']) && !$result['success']) {
             return $result;
         }
 
-        $this->_saveInteraction($prompt, $result['response'], $result['model'], $contextData['used_interaction_ids']);
+        // Extract data from new format or legacy format
+        $aiResponse = $result['data']['response'] ?? $result['response'] ?? '';
+        $usedModel = $result['data']['model'] ?? $result['model'] ?? $model ?? 'unknown';
 
-        return $result;
+        $this->_saveInteraction($prompt, $aiResponse, $usedModel, $contextData['used_interaction_ids']);
+
+        // Return in legacy format for backward compatibility with controller
+        return [
+            'success' => true,
+            'response' => $aiResponse,
+            'model' => $usedModel,
+            'usage' => $result['data']['usage'] ?? $result['usage'] ?? []
+        ];
     }
 
     private function _getRelevantContext(string $userInput): array
     {
         $semanticResults = [];
-        $inputVector = $this->api->embed($userInput);
+        $embedResponse = $this->api->embed($userInput);
+        $inputVector = ($embedResponse['status'] === 'success') ? $embedResponse['data'] : [];
 
         if (!empty($inputVector)) {
             $candidates = $this->interactionModel
@@ -212,10 +232,13 @@ class OllamaMemoryService
 
         $cleanInput = strip_tags($input);
         $cleanResponse = strip_tags($response);
-        $embedding = $this->api->embed("User: $cleanInput | AI: $cleanResponse");
+        $embedResponse = $this->api->embed("User: $cleanInput | AI: $cleanResponse");
+        $embedding = ($embedResponse['status'] === 'success') ? $embedResponse['data'] : [];
 
         if (empty($embedding)) {
-            log_message('error', 'Ollama Memory: Embedding generation failed for interaction.');
+            log_message('error', 'Ollama Memory: Embedding generation failed for interaction.', [
+                'error' => $embedResponse['message'] ?? 'Unknown error'
+            ]);
         } else {
             log_message('info', 'Ollama Memory: Embedding generated. Size: ' . count($embedding));
         }
