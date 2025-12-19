@@ -3,7 +3,7 @@
 <?= $this->section('styles') ?>
 <link rel="stylesheet" href="<?= base_url('public/assets/highlight/styles/atom-one-dark.min.css') ?>">
 <style>
-    /* Hide Global Nav & Footer */
+    /* --- Layout Overrides --- */
     #mainNavbar,
     .footer,
     .container.my-4 {
@@ -12,28 +12,24 @@
 
     body {
         overflow: hidden;
-        /* Important for sticky layout */
         padding: 0 !important;
     }
 
-    /* Scoped Styles for Gemini View */
+    /* --- Gemini Scoped Layout --- */
     .gemini-view-container {
         --code-bg: #282c34;
         position: fixed;
-        /* Lock to viewport to prevent body scroll on input focus */
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
         height: 100dvh;
-        /* Mobile browser address bar fix */
         width: 100vw;
         display: flex;
         overflow: hidden;
         z-index: 1000;
     }
 
-    /* Main Content Area */
     .gemini-main {
         flex: 1;
         display: flex;
@@ -42,20 +38,16 @@
         position: relative;
         min-width: 0;
         overflow: hidden;
-        /* Prevent double scrollbars */
     }
 
-    /* Response / History Area */
     .gemini-response-area {
         flex: 1;
         overflow-y: auto;
         padding: 2rem;
         scroll-behavior: smooth;
         min-height: 0;
-        /* Allow shrinking in flex container */
     }
 
-    /* Sticky Header */
     .gemini-header {
         position: sticky;
         top: 0;
@@ -63,17 +55,16 @@
         background: var(--bs-body-bg);
     }
 
-    /* Prompt Area (Sticky Bottom) */
     .gemini-prompt-area {
         width: 100%;
         background: var(--bs-body-bg);
         border-top: 1px solid var(--bs-border-color);
-        padding: 1.5rem;
+        padding: 1rem 1.5rem calc(1rem + env(safe-area-inset-bottom));
         z-index: 10;
         box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
     }
 
-    /* Settings Sidebar */
+    /* --- Sidebar --- */
     .gemini-sidebar {
         width: 350px;
         border-left: 1px solid var(--bs-border-color);
@@ -81,14 +72,13 @@
         overflow-y: auto;
         height: 100%;
         padding: 1.5rem;
-        transition: width 0.3s ease, padding 0.3s ease;
+        transition: 0.3s ease;
     }
 
     .gemini-sidebar.collapse:not(.show) {
         display: none;
     }
 
-    /* Responsive Adjustments */
     @media (max-width: 991.98px) {
         .gemini-sidebar {
             position: fixed;
@@ -100,24 +90,23 @@
         }
     }
 
-    /* Utilities */
-    .prompt-card {
-        border: none !important;
-        box-shadow: none !important;
-        background: transparent !important;
-        margin-bottom: 0;
+    /* --- Components --- */
+    .prompt-textarea {
+        resize: none;
+        overflow-y: hidden;
+        min-height: 40px;
+        max-height: 120px;
+        border-radius: 1.5rem;
+        padding: 0.6rem 1rem;
+        line-height: 1.5;
+        transition: border-color 0.2s;
     }
 
-    .prompt-editor-wrapper {
-        min-height: 100px;
-        max-height: 300px;
-        overflow-y: auto;
-        border: 1px solid var(--bs-border-color);
-        border-radius: 0.5rem;
-        background: var(--bs-body-bg);
+    .prompt-textarea:focus {
+        box-shadow: none;
+        border-color: var(--bs-primary);
     }
 
-    /* Code Block Styling */
     pre {
         background: var(--code-bg);
         color: #fff;
@@ -140,24 +129,10 @@
         opacity: 1;
     }
 
-    /* Upload Area */
-    #mediaUploadArea {
-        border: 2px dashed var(--bs-border-color);
-        padding: 1rem;
-        background: var(--bs-tertiary-bg);
-        transition: 0.2s;
-        border-radius: 0.5rem;
-    }
-
-    #mediaUploadArea.dragover {
-        background: var(--bs-primary-bg-subtle);
-        border-color: var(--bs-primary);
-    }
-
-    /* Model Selection */
+    /* Model Cards */
     .model-card {
         cursor: pointer;
-        transition: all 0.2s;
+        transition: 0.2s;
         border: 2px solid transparent;
     }
 
@@ -171,16 +146,7 @@
         background-color: var(--bs-primary-bg-subtle);
     }
 
-    /* Toast */
-    .gemini-toast-container {
-        right: 20px;
-        top: 20px;
-        bottom: auto;
-        transform: none;
-        z-index: 1060;
-    }
-
-    /* New Upload Chips Styles */
+    /* Upload Chips */
     #upload-list-wrapper {
         display: flex;
         flex-wrap: wrap;
@@ -230,38 +196,63 @@
         }
     }
 
-    .file-chip .remove-btn {
-        transition: opacity 0.2s;
+    /* Media Output */
+    .media-output-container {
+        background-color: var(--bs-tertiary-bg);
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 300px;
+        position: relative;
     }
 
-    .file-chip .remove-btn:not(.disabled):hover {
-        opacity: 1 !important;
+    .generated-media-item {
+        max-height: 500px;
+        width: auto;
+        max-width: 100%;
+        object-fit: contain;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border-radius: 4px;
+        transition: transform 0.2s;
     }
 
-    /* Auto-expanding Textarea */
-    .prompt-textarea {
-        resize: none;
-        overflow-y: hidden;
-        /* Hide scrollbar initially */
-        min-height: 40px;
-        max-height: 120px;
-        /* Approx 4-5 lines */
-        border-radius: 1.5rem;
-        padding: 0.6rem 1rem;
-        transition: border-color 0.2s;
-        line-height: 1.5;
+    .video-wrapper {
+        width: 100%;
+        max-width: 800px;
+        aspect-ratio: 16/9;
+        background: #000;
+        border-radius: 4px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
 
-    .prompt-textarea:focus {
-        box-shadow: none;
-        border-color: var(--bs-primary);
+    .video-wrapper video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
     }
 
-    /* Prompt Area Layout Adjustment */
-    .gemini-prompt-area {
-        padding: 1rem 1.5rem;
-        padding-bottom: calc(1rem + env(safe-area-inset-bottom));
-        /* iOS Safe Area */
+    .polling-pulse {
+        animation: pulse-border 2s infinite;
+    }
+
+    @keyframes pulse-border {
+        0% {
+            border-color: var(--bs-primary);
+            box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.4);
+        }
+
+        70% {
+            border-color: var(--bs-primary);
+            box-shadow: 0 0 0 10px rgba(13, 110, 253, 0);
+        }
+
+        100% {
+            border-color: var(--bs-primary);
+            box-shadow: 0 0 0 0 rgba(13, 110, 253, 0);
+        }
     }
 </style>
 <?= $this->endSection() ?>
@@ -269,58 +260,46 @@
 <?= $this->section('content') ?>
 <div class="gemini-view-container">
 
-    <!-- Main Content (Left/Center) -->
+    <!-- Main Content -->
     <div class="gemini-main">
-        <!-- Top Toolbar / Header -->
+        <!-- Toolbar -->
         <div class="d-flex justify-content-between align-items-center px-4 py-2 border-bottom bg-body gemini-header">
             <a href="<?= url_to('home') ?>" class="d-flex align-items-center gap-2 text-decoration-none text-reset">
                 <i class="bi bi-stars text-primary fs-4"></i>
                 <span class="fw-bold fs-5">AI Studio</span>
             </a>
             <div class="d-flex gap-2">
-                <button class="btn btn-outline-secondary btn-sm theme-toggle" type="button" aria-label="Toggle theme">
-                    <i class="bi bi-circle-half"></i>
-                </button>
-                <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#geminiSidebar" aria-expanded="true" aria-controls="geminiSidebar">
+                <button class="btn btn-outline-secondary btn-sm theme-toggle"><i class="bi bi-circle-half"></i></button>
+                <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#geminiSidebar">
                     <i class="bi bi-layout-sidebar-reverse"></i> Settings
                 </button>
             </div>
         </div>
 
-        <!-- Scrollable Response Area -->
+        <!-- Response Area -->
         <div class="gemini-response-area" id="response-area-wrapper">
+            <div id="flash-messages-container"><?= view('App\Views\partials\flash_messages') ?></div>
 
-            <!-- Flash Messages Container for AJAX Injection -->
-            <div id="flash-messages-container">
-                <?= view('App\Views\partials\flash_messages') ?>
-            </div>
-
-            <!-- Audio Player Container (Dynamically Populated via AJAX) -->
             <div id="audio-player-container">
-                <?php
-                // REFACTOR: Check audio_url instead of base64 for session hygiene
-                if (session()->getFlashdata('audio_url')): ?>
+                <?php if (session()->getFlashdata('audio_url')): ?>
                     <div class="alert alert-info d-flex align-items-center mb-4">
                         <i class="bi bi-volume-up-fill fs-4 me-3"></i>
                         <audio controls autoplay class="w-100">
-                            <!-- Use the served URL -->
                             <source src="<?= url_to('gemini.serve_audio', session()->getFlashdata('audio_url')) ?>">
                         </audio>
                     </div>
                 <?php endif; ?>
             </div>
 
-            <!-- Response -->
             <?php if ($result = session()->getFlashdata('result')): ?>
+                <!-- Server-Side Rendered Text Result -->
                 <div class="card blueprint-card shadow-sm border-primary" id="results-card">
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                        <span class="fw-bold">Studio Output</span>
+                        <span class="fw-bold"><i class="bi bi-stars me-2"></i>Studio Output</span>
                         <div class="d-flex gap-2">
-                            <button class="btn btn-sm btn-light" id="copyFullResponseBtn" title="Copy Full Text">
-                                <i class="bi bi-clipboard"></i> Copy
-                            </button>
+                            <button class="btn btn-sm btn-light" id="copyFullResponseBtn"><i class="bi bi-clipboard"></i> Copy</button>
                             <div class="dropdown">
-                                <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">Export</button>
+                                <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown">Export</button>
                                 <ul class="dropdown-menu">
                                     <li><a class="dropdown-item download-action" href="#" data-format="pdf">PDF</a></li>
                                     <li><a class="dropdown-item download-action" href="#" data-format="docx">Word</a></li>
@@ -328,113 +307,79 @@
                             </div>
                         </div>
                     </div>
-                    <div class="card-body response-content" id="ai-response-body">
-                        <?= $result ?>
-                    </div>
+                    <div class="card-body response-content" id="ai-response-body"><?= $result ?></div>
                     <textarea id="raw-response" class="d-none"><?= esc(session()->getFlashdata('raw_result')) ?></textarea>
-                    <div class="card-footer bg-transparent border-0 text-center">
-                        <small class="text-muted fst-italic"><i class="bi bi-info-circle me-1"></i> AI can make mistakes. Please verify important information.</small>
+                    <div class="card-footer bg-body border-top text-center py-2">
+                        <div class="d-flex flex-column gap-1">
+                            <small class="text-muted fw-medium">Generated by Google Gemini / Imagen / Veo</small>
+                            <small class="text-muted fst-italic" style="font-size: 0.75rem;">
+                                <i class="bi bi-info-circle me-1"></i> AI-generated content may be inaccurate. Please verify important information.
+                            </small>
+                        </div>
                     </div>
                 </div>
             <?php else: ?>
+                <!-- Empty State -->
                 <div class="text-center text-muted mt-5 pt-5" id="empty-state">
                     <div class="display-1 text-body-tertiary mb-3"><i class="bi bi-lightbulb"></i></div>
                     <h5>Start Creating</h5>
                     <p>Enter your prompt below to generate text, images, or code.</p>
                 </div>
             <?php endif; ?>
-
         </div>
 
-        <!-- Sticky Prompt Area -->
+        <!-- Prompt Input Area -->
         <div class="gemini-prompt-area">
             <form id="geminiForm" action="<?= url_to('gemini.generate') ?>" method="post" enctype="multipart/form-data">
                 <?= csrf_field() ?>
 
-                <!-- Tabs -->
                 <ul class="nav nav-pills nav-sm mb-2" id="generationTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active py-2 px-3" id="text-tab" data-bs-toggle="tab" data-bs-target="#text-pane" type="button" role="tab" data-type="text" data-model="gemini-2.5-flash">
-                            <i class="bi bi-chat-text me-2"></i>Text
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link py-2 px-3" id="image-tab" data-bs-toggle="tab" data-bs-target="#image-pane" type="button" role="tab" data-type="image">
-                            <i class="bi bi-image me-2"></i>Image
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link py-2 px-3" id="video-tab" data-bs-toggle="tab" data-bs-target="#video-pane" type="button" role="tab" data-type="video">
-                            <i class="bi bi-camera-video me-2"></i>Video
-                        </button>
-                    </li>
+                    <li class="nav-item"><button type="button" class="nav-link active py-2 px-3" data-bs-toggle="tab" data-type="text" data-model="gemini-2.5-flash"><i class="bi bi-chat-text me-2"></i>Text</button></li>
+                    <li class="nav-item"><button type="button" class="nav-link py-2 px-3" data-bs-toggle="tab" data-type="image"><i class="bi bi-image me-2"></i>Image</button></li>
+                    <li class="nav-item"><button type="button" class="nav-link py-2 px-3" data-bs-toggle="tab" data-type="video"><i class="bi bi-camera-video me-2"></i>Video</button></li>
                 </ul>
 
-                <!-- Model Selection (Hidden by default, toggles based on tab) -->
                 <div id="model-selection-area" class="mb-2 d-none">
                     <div id="image-models-grid" class="d-flex gap-2 d-none overflow-auto py-2">
-                        <?php if (!empty($mediaConfigs)): ?>
-                            <?php foreach ($mediaConfigs as $modelId => $config): ?>
-                                <?php if (strpos($config['type'], 'image') !== false): ?>
-                                    <div class="model-card card p-2" style="min-width: 120px;" data-model="<?= esc($modelId) ?>" data-type="image">
-                                        <div class="text-center small">
-                                            <i class="bi bi-image fs-5 text-primary"></i>
-                                            <div class="text-truncate mt-1"><?= esc($config['name']) ?></div>
-                                        </div>
+                        <?php foreach ($mediaConfigs as $modelId => $config): ?>
+                            <?php if (strpos($config['type'], 'image') !== false): ?>
+                                <div class="model-card card p-2" style="min-width: 120px;" data-model="<?= esc($modelId) ?>" data-type="image">
+                                    <div class="text-center small"><i class="bi bi-image fs-5 text-primary"></i>
+                                        <div class="text-truncate mt-1"><?= esc($config['name']) ?></div>
                                     </div>
-                                <?php endif; ?>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
                     </div>
                     <div id="video-models-grid" class="d-flex gap-2 d-none overflow-auto py-2">
-                        <?php if (!empty($mediaConfigs)): ?>
-                            <?php foreach ($mediaConfigs as $modelId => $config): ?>
-                                <?php if ($config['type'] === 'video'): ?>
-                                    <div class="model-card card p-2" style="min-width: 120px;" data-model="<?= esc($modelId) ?>" data-type="video">
-                                        <div class="text-center small">
-                                            <i class="bi bi-camera-video fs-5 text-danger"></i>
-                                            <div class="text-truncate mt-1"><?= esc($config['name']) ?></div>
-                                        </div>
+                        <?php foreach ($mediaConfigs as $modelId => $config): ?>
+                            <?php if ($config['type'] === 'video'): ?>
+                                <div class="model-card card p-2" style="min-width: 120px;" data-model="<?= esc($modelId) ?>" data-type="video">
+                                    <div class="text-center small"><i class="bi bi-camera-video fs-5 text-danger"></i>
+                                        <div class="text-truncate mt-1"><?= esc($config['name']) ?></div>
                                     </div>
-                                <?php endif; ?>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
                     </div>
                 </div>
 
-                <!-- Uploads List (Moved above input) -->
                 <div id="upload-list-wrapper"></div>
                 <div id="uploaded-files-container"></div>
 
                 <div class="d-flex align-items-end gap-2 bg-body-tertiary p-2 rounded-4 border">
-                    <!-- Attachment Button -->
                     <div id="mediaUploadArea" class="d-inline-block p-0 border-0 bg-transparent mb-1">
                         <input type="file" id="media-input-trigger" multiple class="d-none">
-                        <label for="media-input-trigger" class="btn btn-link text-secondary p-1" title="Attach files">
-                            <i class="bi bi-paperclip fs-4"></i>
-                        </label>
+                        <label for="media-input-trigger" class="btn btn-link text-secondary p-1"><i class="bi bi-paperclip fs-4"></i></label>
                     </div>
-
-                    <!-- Textarea -->
                     <div class="flex-grow-1">
                         <input type="hidden" name="model_id" id="selectedModelId" value="gemini-2.0-flash">
                         <input type="hidden" name="generation_type" id="generationType" value="text">
-                        <textarea
-                            id="prompt"
-                            name="prompt"
-                            class="form-control border-0 bg-transparent prompt-textarea shadow-none"
-                            placeholder="Message Gemini..."
-                            rows="1"><?= old('prompt') ?></textarea>
+                        <textarea id="prompt" name="prompt" class="form-control border-0 bg-transparent prompt-textarea shadow-none" placeholder="Message Gemini..." rows="1"><?= old('prompt') ?></textarea>
                     </div>
-
-                    <!-- Actions -->
                     <div class="d-flex align-items-center gap-1 mb-1">
-                        <button type="button" class="btn btn-link text-secondary p-1" data-bs-toggle="modal" data-bs-target="#savePromptModal" title="Save Prompt">
-                            <i class="bi bi-bookmark-plus fs-5"></i>
-                        </button>
-                        <button type="submit" id="generateBtn" class="btn btn-primary rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" title="Send">
-                            <i class="bi bi-arrow-up text-white fs-5"></i>
-                        </button>
+                        <button type="button" class="btn btn-link text-secondary p-1" data-bs-toggle="modal" data-bs-target="#savePromptModal"><i class="bi bi-bookmark-plus fs-5"></i></button>
+                        <button type="submit" id="generateBtn" class="btn btn-primary rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;"><i class="bi bi-arrow-up text-white fs-5"></i></button>
                     </div>
                 </div>
             </form>
@@ -445,84 +390,54 @@
     <div class="gemini-sidebar collapse collapse-horizontal show" id="geminiSidebar">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h5 class="fw-bold m-0"><i class="bi bi-sliders"></i> Configuration</h5>
-            <button type="button" class="btn-close d-lg-none" data-bs-toggle="collapse" data-bs-target="#geminiSidebar"></button>
+            <button class="btn-close d-lg-none" data-bs-toggle="collapse" data-bs-target="#geminiSidebar"></button>
         </div>
 
-        <!-- Toggles -->
         <div class="form-check form-switch mb-3">
-            <input class="form-check-input setting-toggle" type="checkbox" id="assistantMode"
-                data-key="assistant_mode_enabled" <?= $assistant_mode_enabled ? 'checked' : '' ?>>
+            <input class="form-check-input setting-toggle" type="checkbox" id="assistantMode" data-key="assistant_mode_enabled" <?= $assistant_mode_enabled ? 'checked' : '' ?>>
             <label class="form-check-label fw-medium" for="assistantMode">Conversational Memory</label>
-            <div class="form-text text-muted small lh-sm">
-                Maintains context from previous messages.
-            </div>
         </div>
         <div class="form-check form-switch mb-3">
-            <input class="form-check-input setting-toggle" type="checkbox" id="voiceOutput"
-                data-key="voice_output_enabled" <?= $voice_output_enabled ? 'checked' : '' ?>>
+            <input class="form-check-input setting-toggle" type="checkbox" id="voiceOutput" data-key="voice_output_enabled" <?= $voice_output_enabled ? 'checked' : '' ?>>
             <label class="form-check-label fw-medium" for="voiceOutput">Voice Output (TTS)</label>
-            <div class="form-text text-muted small lh-sm">
-                Reads the response aloud.
-            </div>
         </div>
         <div class="form-check form-switch mb-4">
-            <input class="form-check-input setting-toggle" type="checkbox" id="streamOutput"
-                data-key="stream_output_enabled" <?= $stream_output_enabled ? 'checked' : '' ?>>
+            <input class="form-check-input setting-toggle" type="checkbox" id="streamOutput" data-key="stream_output_enabled" <?= $stream_output_enabled ? 'checked' : '' ?>>
             <label class="form-check-label fw-medium" for="streamOutput">Stream Responses</label>
-            <div class="form-text text-muted small lh-sm">
-                Typewriter effect (faster perception).
+        </div>
+        <hr>
+
+        <label class="form-label small fw-bold text-uppercase text-muted">Saved Prompts</label>
+        <div id="saved-prompts-wrapper">
+            <div class="input-group mb-3 <?= empty($prompts) ? 'd-none' : '' ?>" id="savedPromptsContainer">
+                <select class="form-select form-select-sm" id="savedPrompts">
+                    <option value="" disabled selected>Select...</option>
+                    <?php if (!empty($prompts)): ?>
+                        <?php foreach ($prompts as $p): ?><option value="<?= esc($p->prompt_text, 'attr') ?>" data-id="<?= $p->id ?>"><?= esc($p->title) ?></option><?php endforeach; ?>
+                    <?php endif; ?>
+                </select>
+                <button class="btn btn-outline-secondary btn-sm" type="button" id="usePromptBtn">Load</button>
+                <button class="btn btn-outline-danger btn-sm" type="button" id="deletePromptBtn" disabled><i class="bi bi-trash"></i></button>
+            </div>
+            <div id="no-prompts-alert" class="alert alert-light border mb-3 small text-muted <?= !empty($prompts) ? 'd-none' : '' ?>">
+                No saved prompts yet.
             </div>
         </div>
 
         <hr>
-
-        <!-- Saved Prompts -->
-        <label class="form-label small fw-bold text-uppercase text-muted">Saved Prompts</label>
-        <div id="saved-prompts-wrapper">
-            <?php if (!empty($prompts)): ?>
-                <div class="input-group mb-3">
-                    <select class="form-select form-select-sm" id="savedPrompts">
-                        <option value="" disabled selected>Select...</option>
-                        <?php foreach ($prompts as $p): ?>
-                            <option value="<?= esc($p->prompt_text, 'attr') ?>" data-id="<?= $p->id ?>"><?= esc($p->title) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <button class="btn btn-outline-secondary btn-sm" type="button" id="usePromptBtn">Load</button>
-                    <button class="btn btn-outline-danger btn-sm" type="button" id="deletePromptBtn" disabled>
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </div>
-            <?php else: ?>
-                <div class="alert alert-light border mb-3 small text-muted">
-                    No saved prompts yet.
-                </div>
-            <?php endif; ?>
-        </div>
-
-        <!-- Clear Memory -->
-        <hr>
-        <form action="<?= url_to('gemini.memory.clear') ?>" method="post" onsubmit="return confirm('Are you sure? This cannot be undone.');">
-            <?= csrf_field() ?>
-            <button type="submit" class="btn btn-outline-danger w-100 btn-sm">
-                <i class="bi bi-trash me-2"></i> Clear History
-            </button>
+        <form action="<?= url_to('gemini.memory.clear') ?>" method="post" onsubmit="return confirm('Clear all history?');">
+            <?= csrf_field() ?><button type="submit" class="btn btn-outline-danger w-100 btn-sm"><i class="bi bi-trash me-2"></i> Clear History</button>
         </form>
     </div>
 </div>
 
-<!-- Hidden Forms/Modals -->
+<!-- Hidden Download Forms -->
 <form id="downloadForm" method="post" action="<?= url_to('gemini.download_document') ?>" target="_blank" class="d-none">
     <?= csrf_field() ?>
-    <input type="hidden" name="raw_response" id="dl_raw">
-    <input type="hidden" name="format" id="dl_format">
+    <input type="hidden" name="raw_response" id="dl_raw"><input type="hidden" name="format" id="dl_format">
 </form>
 
-<!-- Hidden Delete Prompt Form -->
-<form id="deletePromptForm" method="post" action="" class="d-none">
-    <?= csrf_field() ?>
-</form>
-
-<!-- Save Prompt Modal -->
+<!-- Modal -->
 <div class="modal fade" id="savePromptModal" tabindex="-1">
     <div class="modal-dialog">
         <form action="<?= url_to('gemini.prompts.add') ?>" method="post" class="modal-content">
@@ -539,7 +454,7 @@
     </div>
 </div>
 
-<div class="toast-container position-fixed bottom-0 p-3 gemini-toast-container">
+<div class="toast-container position-fixed top-0 start-50 translate-middle-x p-3 gemini-toast-container">
     <div id="liveToast" class="toast text-bg-dark" role="alert">
         <div class="toast-body"></div>
     </div>
@@ -552,11 +467,6 @@
 <script src="<?= base_url('public/assets/tinymce/tinymce.min.js') ?>"></script>
 <script src="<?= base_url('public/assets/marked/marked.min.js') ?>"></script>
 <script>
-    /**
-     * Gemini Module - Frontend Application
-     * Refactored into modular classes for improved maintainability and scalability.
-     */
-
     class GeminiApp {
         constructor() {
             this.config = {
@@ -573,49 +483,33 @@
                     stream: '<?= url_to('gemini.stream') ?>',
                     generate: '<?= url_to('gemini.generate') ?>',
                     generateMedia: '<?= url_to('gemini.media.generate') ?>',
-                    pollMedia: '<?= url_to('gemini.media.poll') ?>',
-                    // No longer needing serveAudio for core generation, but keeping safe route generation
-                    serveAudio: '<?= url_to('gemini.serve_audio', 'placeholder') ?>'.replace('placeholder', '')
+                    pollMedia: '<?= url_to('gemini.media.poll') ?>'
                 }
             };
-
-            // Modules
             this.ui = new UIManager(this);
             this.uploader = new MediaUploader(this);
             this.prompts = new PromptManager(this);
             this.interaction = new InteractionHandler(this);
         }
-
         init() {
-            // Configure Marked.js to handle line breaks like PHP Parsedown
-            if (typeof marked !== 'undefined') {
-                marked.use({
-                    breaks: true, // Converts single \n to <br>
-                    gfm: true // Enables GitHub Flavored Markdown
-                });
-            }
-
+            if (typeof marked !== 'undefined') marked.use({
+                breaks: true,
+                gfm: true
+            });
             this.ui.init();
             this.uploader.init();
             this.prompts.init();
             this.interaction.init();
-
-            // Expose for global access (e.g. onclick handlers)
             window.geminiApp = this;
         }
-
         refreshCsrf(hash) {
             if (!hash) return;
             this.config.csrfHash = hash;
             document.querySelectorAll(`input[name="${this.config.csrfName}"]`).forEach(el => el.value = hash);
         }
-
         async sendAjax(url, data = null) {
             const formData = data instanceof FormData ? data : new FormData();
-            if (!formData.has(this.config.csrfName)) {
-                formData.append(this.config.csrfName, this.config.csrfHash);
-            }
-
+            if (!formData.has(this.config.csrfName)) formData.append(this.config.csrfName, this.config.csrfHash);
             try {
                 const res = await fetch(url, {
                     method: 'POST',
@@ -624,16 +518,14 @@
                         'X-Requested-With': 'XMLHttpRequest'
                     }
                 });
-                const responseData = await res.json();
-
-                const newToken = responseData.token || responseData.csrf_token;
-                if (newToken) this.refreshCsrf(newToken);
-
-                return responseData;
-            } catch (err) {
-                console.error('AJAX Error:', err);
-                this.ui.showToast('Network error occurred.');
-                throw err;
+                const d = await res.json();
+                const token = d.token || d.csrf_token;
+                if (token) this.refreshCsrf(token);
+                return d;
+            } catch (e) {
+                console.error('AJAX Error:', e);
+                this.ui.showToast('Network error.');
+                throw e;
             }
         }
     }
@@ -643,9 +535,7 @@
             this.app = app;
             this.generateBtn = document.getElementById('generateBtn');
         }
-
         init() {
-            // setupTabs and AutoTextarea
             this.handleResponsiveSidebar();
             this.setupTabs();
             this.setupSettings();
@@ -654,19 +544,14 @@
             this.setupDownloads();
             this.initTinyMCE();
         }
-
         handleResponsiveSidebar() {
             if (window.innerWidth < 992) {
-                const sidebar = document.getElementById('geminiSidebar');
-                if (sidebar && sidebar.classList.contains('show')) {
-                    sidebar.classList.remove('show');
-                }
+                const sb = document.getElementById('geminiSidebar');
+                if (sb && sb.classList.contains('show')) sb.classList.remove('show');
             }
         }
-
         initTinyMCE() {
             if (typeof tinymce === 'undefined') return;
-
             tinymce.init({
                 selector: '#prompt',
                 menubar: false,
@@ -677,28 +562,21 @@
                 autoresize_bottom_margin: 0,
                 autoresize_overflow_padding: 0,
                 min_height: 40,
-                max_height: 120, // Approx 4-5 lines
-
+                max_height: 120,
                 setup: (editor) => {
                     editor.on('keydown', (e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
                             if (editor.getContent().trim()) {
-                                editor.save(); // Sync content to textarea
+                                editor.save();
                                 document.getElementById('geminiForm').requestSubmit();
                             }
                         }
                     });
-
-                    // Update model placeholder
-                    editor.on('init', () => {
-                        const currentType = document.getElementById('generationType').value;
-                        this.updateModelSelectionUI(currentType);
-                    });
+                    editor.on('init', () => this.updateModelSelectionUI(document.getElementById('generationType').value));
                 }
             });
         }
-
         showToast(msg) {
             const t = document.getElementById('liveToast');
             if (t) {
@@ -706,214 +584,206 @@
                 new bootstrap.Toast(t).show();
             }
         }
-
-        // Helper to inject error messages into the flash container (for Consistency)
-        injectFlashError(message) {
-            const container = document.getElementById('flash-messages-container');
-            if (container) {
-                container.innerHTML = `<div class="alert alert-danger alert-dismissible fade show">
-                    ${message}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>`;
-            }
+        injectFlashError(msg) {
+            const c = document.getElementById('flash-messages-container');
+            if (c) c.innerHTML = `<div class="alert alert-danger alert-dismissible fade show">${msg}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
         }
-
         setupTabs() {
-            const tabButtons = document.querySelectorAll('#generationTabs button[data-bs-toggle="tab"]');
-            const modelInput = document.getElementById('selectedModelId');
-            const typeInput = document.getElementById('generationType');
-            const modelCards = document.querySelectorAll('.model-card');
-
-            tabButtons.forEach(btn => {
+            document.querySelectorAll('#generationTabs button').forEach(btn => {
                 btn.addEventListener('shown.bs.tab', (e) => {
                     const type = e.target.dataset.type;
-                    typeInput.value = type;
+                    document.getElementById('generationType').value = type;
                     this.updateModelSelectionUI(type);
                 });
             });
-
-            modelCards.forEach(card => {
+            document.querySelectorAll('.model-card').forEach(card => {
                 card.addEventListener('click', () => {
-                    modelCards.forEach(c => c.classList.remove('active'));
+                    document.querySelectorAll('.model-card').forEach(c => c.classList.remove('active'));
                     card.classList.add('active');
-                    modelInput.value = card.dataset.model;
+                    document.getElementById('selectedModelId').value = card.dataset.model;
                 });
             });
         }
-
         updateModelSelectionUI(type) {
             const area = document.getElementById('model-selection-area');
             const imgGrid = document.getElementById('image-models-grid');
             const vidGrid = document.getElementById('video-models-grid');
-            const editor = document.getElementById('prompt');
-            const modelInput = document.getElementById('selectedModelId');
+            const mInput = document.getElementById('selectedModelId');
 
             area.classList.add('d-none');
             imgGrid.classList.add('d-none');
             vidGrid.classList.add('d-none');
 
             if (type === 'text') {
-                modelInput.value = 'gemini-2.0-flash';
-                if (tinymce.activeEditor) tinymce.activeEditor.getBody().setAttribute('data-mce-placeholder', 'Message Gemini...');
-                else editor?.setAttribute('placeholder', 'Message Gemini...');
+                mInput.value = 'gemini-2.0-flash';
+                this.setPlaceholder('Message Gemini...');
             } else {
                 area.classList.remove('d-none');
                 if (type === 'image') {
                     imgGrid.classList.remove('d-none');
-                    imgGrid.classList.remove('d-none');
-                    if (tinymce.activeEditor) tinymce.activeEditor.getBody().setAttribute('data-mce-placeholder', 'Describe the image you want to generate...');
-                    else editor?.setAttribute('placeholder', 'Describe the image you want to generate...');
-                    // Auto-select first
-                    const first = imgGrid.querySelector('.model-card');
-                    if (first) first.click();
+                    this.setPlaceholder('Describe the image...');
+                    imgGrid.querySelector('.model-card')?.click();
                 } else if (type === 'video') {
                     vidGrid.classList.remove('d-none');
-                    vidGrid.classList.remove('d-none');
-                    if (tinymce.activeEditor) tinymce.activeEditor.getBody().setAttribute('data-mce-placeholder', 'Describe the video you want to create...');
-                    else editor?.setAttribute('placeholder', 'Describe the video you want to create...');
-                    const first = vidGrid.querySelector('.model-card');
-                    if (first) first.click();
+                    this.setPlaceholder('Describe the video...');
+                    vidGrid.querySelector('.model-card')?.click();
                 }
             }
         }
-
+        setPlaceholder(txt) {
+            if (tinymce.activeEditor) tinymce.activeEditor.getBody().setAttribute('data-mce-placeholder', txt);
+            else document.getElementById('prompt')?.setAttribute('placeholder', txt);
+        }
         setupSettings() {
-            document.querySelectorAll('.setting-toggle').forEach(toggle => {
-                toggle.addEventListener('change', async (e) => {
+            document.querySelectorAll('.setting-toggle').forEach(t => {
+                t.addEventListener('change', async (e) => {
                     const fd = new FormData();
                     fd.append('setting_key', e.target.dataset.key);
                     fd.append('enabled', e.target.checked);
                     try {
-                        const data = await this.app.sendAjax(this.app.config.endpoints.settings, fd);
-                        // Using Toast for settings toggle confirmation (Consistency Requirement)
-                        this.showToast(data.status === 'success' ? 'Setting saved.' : 'Failed to save.');
+                        const d = await this.app.sendAjax(this.app.config.endpoints.settings, fd);
+                        this.showToast(d.status === 'success' ? 'Saved.' : 'Error.');
                     } catch (e) {}
                 });
             });
         }
-
         setupCodeHighlighting() {
             if (typeof hljs !== 'undefined') hljs.highlightAll();
-
-            document.querySelectorAll('pre code').forEach((block) => {
-                if (block.parentElement.querySelector('.copy-code-btn')) return; // Avoid duplicates
+            document.querySelectorAll('pre code').forEach((b) => {
+                if (b.parentElement.querySelector('.copy-code-btn')) return;
                 const btn = document.createElement('button');
                 btn.className = 'btn btn-sm btn-dark copy-code-btn';
                 btn.innerHTML = '<i class="bi bi-clipboard"></i>';
-                btn.addEventListener('click', (e) => {
+                btn.onclick = (e) => {
                     e.preventDefault();
-                    navigator.clipboard.writeText(block.innerText).then(() => {
-                        btn.innerHTML = '<i class="bi bi-check-lg text-success"></i>';
-                        setTimeout(() => btn.innerHTML = '<i class="bi bi-clipboard"></i>', 2000);
-                    });
-                });
-                block.parentElement.appendChild(btn);
+                    navigator.clipboard.writeText(b.innerText);
+                };
+                b.parentElement.appendChild(btn);
             });
         }
 
+        /**
+         * Fix 1: Ensure we have the correct card type for Text.
+         * If the current card is a Media card (missing #ai-response-body), remove it.
+         */
         ensureResultCardExists() {
+            const existing = document.getElementById('results-card');
+            const hasText = document.getElementById('ai-response-body');
+
+            if (existing && !hasText) existing.remove(); // Remove Media card if switching to text
+
             if (document.getElementById('results-card')) return;
 
-            const container = document.querySelector('.gemini-view-container');
-            const cardHtml = `
-            <div class="card blueprint-card mt-5 shadow-lg border-primary" id="results-card">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <span class="fw-bold">Studio Output</span>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-sm btn-light" id="copyFullResponseBtn" title="Copy Full Text">
-                            <i class="bi bi-clipboard"></i> Copy
-                        </button>
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">Export</button>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item download-action" href="#" data-format="pdf">PDF</a></li>
-                                <li><a class="dropdown-item download-action" href="#" data-format="docx">Word</a></li>
-                            </ul>
-                        </div>
+            const container = document.getElementById('response-area-wrapper');
+            const emptyState = document.getElementById('empty-state');
+            if (emptyState) emptyState.remove();
+
+            const html = `
+        <div class="card blueprint-card shadow-sm border-primary" id="results-card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <span class="fw-bold"><i class="bi bi-stars me-2"></i>Studio Output</span>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-light" id="copyFullResponseBtn"><i class="bi bi-clipboard"></i> Copy</button>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown">Export</button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item download-action" href="#" data-format="pdf">PDF</a></li>
+                            <li><a class="dropdown-item download-action" href="#" data-format="docx">Word</a></li>
+                        </ul>
                     </div>
                 </div>
-                <div class="card-body response-content" id="ai-response-body"></div>
-                <textarea id="raw-response" class="d-none"></textarea>
-                <div class="card-footer bg-transparent border-0 text-center">
-                    <small class="text-muted fst-italic"><i class="bi bi-info-circle me-1"></i> AI can make mistakes. Please verify important information.</small>
+            </div>
+            <div class="card-body response-content" id="ai-response-body"></div>
+            <textarea id="raw-response" class="d-none"></textarea>
+            <div class="card-footer bg-body border-top text-center py-2">
+                <div class="d-flex flex-column gap-1">
+                    <small class="text-muted fw-medium">Generated by Google Gemini / Imagen / Veo</small>
+                    <small class="text-muted fst-italic" style="font-size: 0.75rem;">
+                        <i class="bi bi-info-circle me-1"></i> AI-generated content may be inaccurate. Please verify important information.
+                    </small>
                 </div>
-            </div>`;
-
-            const row = document.getElementById('response-area-wrapper');
-            row.insertAdjacentHTML('beforeend', cardHtml);
-
+            </div>
+        </div>`;
+            container.insertAdjacentHTML('beforeend', html);
             this.setupDownloads();
         }
 
         setupAutoScroll() {
-            const resultsCard = document.getElementById('results-card');
-            if (resultsCard) {
-                setTimeout(() => resultsCard.scrollIntoView({
-                    behavior: 'smooth'
-                }), 100);
-            }
+            setTimeout(() => document.getElementById('results-card')?.scrollIntoView({
+                behavior: 'smooth'
+            }), 100);
         }
 
         setupDownloads() {
             document.querySelectorAll('.download-action').forEach(btn => {
-                btn.addEventListener('click', (e) => {
+                btn.onclick = (e) => {
                     e.preventDefault();
                     document.getElementById('dl_raw').value = document.getElementById('raw-response').value;
                     document.getElementById('dl_format').value = e.target.dataset.format;
                     document.getElementById('downloadForm').submit();
-                });
+                };
             });
-            const copyFull = document.getElementById('copyFullResponseBtn');
-            if (copyFull) {
-                copyFull.addEventListener('click', () => {
-                    navigator.clipboard.writeText(document.getElementById('raw-response').value)
-                        .then(() => this.showToast('Copied!'));
-                });
-            }
+            const cp = document.getElementById('copyFullResponseBtn');
+            if (cp) cp.onclick = () => navigator.clipboard.writeText(document.getElementById('raw-response').value).then(() => this.showToast('Copied!'));
+        }
+        setLoading(l) {
+            this.generateBtn.disabled = l;
+            this.generateBtn.innerHTML = l ? '<span class="spinner-border spinner-border-sm text-white"></span>' : '<i class="bi bi-arrow-up text-white fs-5"></i>';
         }
 
-        setLoading(isLoading, text = 'Processing...') {
-            if (isLoading) {
-                this.generateBtn.disabled = true;
-                this.generateBtn.innerHTML = `<span class="spinner-border spinner-border-sm text-white" role="status" aria-hidden="true"></span>`;
-            } else {
-                this.generateBtn.disabled = false;
-                this.generateBtn.innerHTML = '<i class="bi bi-arrow-up text-white fs-5"></i>';
+        /**
+         * Fix 2: Robust Download Logic for Media.
+         * Uses <a> tag with target="_blank" for reliable downloading.
+         */
+        renderMediaCard(contentHtml, downloadUrl = null, isProcessing = false) {
+            const row = document.getElementById('response-area-wrapper');
+            const existing = document.getElementById('results-card');
+            if (existing) existing.remove();
+
+            const emptyState = document.getElementById('empty-state');
+            if (emptyState) emptyState.remove();
+
+            const processingClass = isProcessing ? 'polling-pulse' : '';
+            const title = isProcessing ? 'Generating Content...' : 'Studio Output';
+
+            let actions = '';
+            if (downloadUrl && !isProcessing) {
+                const safeUrl = encodeURI(downloadUrl);
+                const finalUrl = safeUrl.includes('serve') ? `${safeUrl}${safeUrl.includes('?')?'&':'?'}download=1` : safeUrl;
+                actions = `<a href="${finalUrl}" target="_blank" class="btn btn-sm btn-light text-primary fw-bold text-decoration-none"><i class="bi bi-download me-1"></i> Download</a>`;
             }
+
+            const html = `
+        <div class="card blueprint-card mt-4 shadow-sm border-primary ${processingClass}" id="results-card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <span class="fw-bold"><i class="bi bi-stars me-2"></i>${title}</span>
+                <div>${actions}</div>
+            </div>
+            <div class="card-body p-0">
+                <div class="media-output-container">${contentHtml}</div>
+            </div>
+            ${!isProcessing ? `
+            <div class="card-footer bg-body border-top text-center py-2">
+                <div class="d-flex flex-column gap-1">
+                    <small class="text-muted fw-medium">Generated by Google Gemini / Imagen / Veo</small>
+                    <small class="text-muted fst-italic" style="font-size: 0.75rem;">
+                        <i class="bi bi-info-circle me-1"></i> AI-generated content may be inaccurate. Please verify important information.
+                    </small>
+                </div>
+            </div>` : ''}
+        </div>`;
+            row.insertAdjacentHTML('beforeend', html);
+            document.getElementById('results-card').scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
         }
 
         showMediaResult(url, type) {
-            let container = document.getElementById('media-result-container');
-            if (!container) {
-                container = document.createElement('div');
-                container.id = 'media-result-container';
-                container.className = 'card blueprint-card mt-5 shadow-lg border-primary';
-                document.getElementById('response-area-wrapper').appendChild(container);
-            }
-
-            // Internal logic for download check
-            const isInternal = url.includes('gemini/media/serve');
-            const downloadAttr = isInternal ? `onclick="window.location.href='${url}${url.includes('?') ? '&' : '?'}download=1'"` : `onclick="geminiApp.interaction.mockDownload('${url}', '${type}')"`;
-
-            container.innerHTML = `
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <span class="fw-bold">Studio Output</span>
-                    <div>
-                        <button ${downloadAttr} class="btn btn-sm btn-light" id="mediaDownloadBtn">
-                            <i class="bi bi-download me-1"></i> Download
-                        </button>
-                    </div>
-                </div>
-                <div class="card-body text-center p-4">
-                    ${type === 'image' 
-                        ? `<img src="${url}" class="img-fluid rounded shadow-sm" alt="Generated Image">` 
-                        : `<video controls autoplay loop class="w-100 rounded shadow-sm"><source src="${url}" type="video/mp4"></video>`
-                    }
-                </div>
-            `;
-            container.scrollIntoView({
-                behavior: 'smooth'
-            });
+            let html = '';
+            if (type === 'image') html = `<img src="${url}" class="generated-media-item img-fluid" onclick="window.open('${url}','_blank')">`;
+            else if (type === 'video') html = `<div class="video-wrapper"><video controls autoplay loop playsinline><source src="${url}" type="video/mp4"></video></div>`;
+            this.renderMediaCard(html, url, false);
         }
     }
 
@@ -923,213 +793,110 @@
             this.queue = [];
             this.isUploading = false;
         }
-
         init() {
             const area = document.getElementById('mediaUploadArea');
-            const input = document.getElementById('media-input-trigger');
-
-            if (area && input) {
-                ['dragenter', 'dragover'].forEach(e => area.addEventListener(e, (ev) => {
-                    ev.preventDefault();
-                    area.classList.add('dragover');
-                }));
-                ['dragleave', 'drop'].forEach(e => area.addEventListener(e, (ev) => {
-                    ev.preventDefault();
-                    area.classList.remove('dragover');
-                }));
-
-                area.addEventListener('drop', (e) => this.handleFiles(e.dataTransfer.files));
-                input.addEventListener('change', (e) => {
-                    this.handleFiles(e.target.files);
-                    input.value = ''; // Allow re-upload
-                });
-
-                const listWrapper = document.getElementById('upload-list-wrapper');
-                if (listWrapper) {
-                    listWrapper.addEventListener('click', (e) => {
-                        if (e.target.closest('.remove-btn')) this.removeFile(e.target.closest('.remove-btn'));
-                    });
-                }
-            }
-        }
-
-        handleFiles(files) {
-            const currentCount = document.querySelectorAll('input[name="uploaded_media[]"]').length + this.queue.length;
-
-            let accepted = 0;
-            let rejected = {
-                limit: 0,
-                type: 0,
-                size: 0
-            };
-
-            Array.from(files).forEach(file => {
-                // 1. Check file limit
-                if (currentCount + accepted >= this.app.config.maxFiles) {
-                    rejected.limit++;
-                    if (files.length === 1) {
-                        this.app.ui.showToast(`Max ${this.app.config.maxFiles} files allowed`);
-                    }
-                    return;
-                }
-
-                // 2. Check MIME type
-                if (!this.app.config.supportedMimeTypes.includes(file.type)) {
-                    rejected.type++;
-                    this.app.ui.showToast(`${file.name}: Unsupported file type`);
-                    return;
-                }
-
-                // 3. Check file size
-                if (file.size > this.app.config.maxFileSize) {
-                    rejected.size++;
-                    this.app.ui.showToast(`${file.name} exceeds ${(this.app.config.maxFileSize / 1024 / 1024).toFixed(1)}MB limit`);
-                    return;
-                }
-
-                // Queue valid file
-                const id = Math.random().toString(36).substr(2, 9);
-                const ui = this.createProgressBar(file, id);
-                this.queue.push({
-                    file,
-                    ui,
-                    id
-                });
-                accepted++;
+            const inp = document.getElementById('media-input-trigger');
+            if (!area) return;
+            ['dragenter', 'dragover'].forEach(e => area.addEventListener(e, ev => {
+                ev.preventDefault();
+                area.classList.add('dragover');
+            }));
+            ['dragleave', 'drop'].forEach(e => area.addEventListener(e, ev => {
+                ev.preventDefault();
+                area.classList.remove('dragover');
+            }));
+            area.addEventListener('drop', e => this.handleFiles(e.dataTransfer.files));
+            inp.addEventListener('change', e => {
+                this.handleFiles(e.target.files);
+                inp.value = '';
             });
-
-            // Show summary for batch uploads
-            if (files.length > 1) {
-                const total = rejected.limit + rejected.type + rejected.size;
-                if (total > 0) {
-                    this.app.ui.showToast(`${accepted} uploaded, ${total} rejected`);
-                }
-            }
-
-            if (this.queue.length > 0) {
-                this.processQueue();
-            }
+            document.getElementById('upload-list-wrapper')?.addEventListener('click', e => {
+                if (e.target.closest('.remove-btn')) this.removeFile(e.target.closest('.remove-btn'));
+            });
         }
-
-        createProgressBar(file, id) {
-            const div = document.createElement('div');
-            div.id = `file-item-${id}`;
-            div.className = 'file-chip fade show';
-            div.innerHTML = `
-                <div class="progress-ring"></div>
-                <span class="file-name" title=""></span>
-                <button type="button" class="btn-close p-1 remove-btn disabled" style="width: 0.75rem; height: 0.75rem; opacity: 0.6;" data-id="${id}"></button>
-            `;
-            const span = div.querySelector('.file-name');
-            span.textContent = file.name;
-            span.title = file.name;
-            document.getElementById('upload-list-wrapper').appendChild(div);
-            return div;
+        handleFiles(files) {
+            let acc = 0;
+            Array.from(files).forEach(f => {
+                if (this.app.config.supportedMimeTypes.includes(f.type) && f.size <= this.app.config.maxFileSize) {
+                    const id = Math.random().toString(36).substr(2, 9);
+                    this.queue.push({
+                        file: f,
+                        ui: this.createBar(f, id),
+                        id: id
+                    });
+                    acc++;
+                } else this.app.ui.showToast('Invalid file');
+            });
+            if (acc > 0) this.processQueue();
         }
-
+        createBar(f, id) {
+            const d = document.createElement('div');
+            d.id = `file-item-${id}`;
+            d.className = 'file-chip fade show';
+            d.innerHTML = `<div class="progress-ring"></div><span class="file-name">${f.name}</span><button type="button" class="btn-close p-1 remove-btn disabled" data-id="${id}"></button>`;
+            document.getElementById('upload-list-wrapper').appendChild(d);
+            return d;
+        }
         processQueue() {
             if (this.isUploading || this.queue.length === 0) return;
             this.isUploading = true;
-            this.performUpload(this.queue.shift());
+            this.perform(this.queue.shift());
         }
-
-        performUpload(job) {
-            // job.ui is the .file-chip div
+        perform(job) {
             const fd = new FormData();
             fd.append(this.app.config.csrfName, this.app.config.csrfHash);
             fd.append('file', job.file);
-
             const xhr = new XMLHttpRequest();
             xhr.open('POST', this.app.config.endpoints.upload, true);
             xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-
             xhr.onreadystatechange = () => {
                 if (xhr.readyState === 4) {
                     try {
-                        const res = JSON.parse(xhr.responseText);
-                        if (res.csrf_token) this.app.refreshCsrf(res.csrf_token);
-
-                        if (xhr.status === 200 && res.status === 'success') {
+                        const r = JSON.parse(xhr.responseText);
+                        if (r.csrf_token) this.app.refreshCsrf(r.csrf_token);
+                        if (xhr.status === 200 && r.status === 'success') {
                             this.updateUI(job.ui, 'success');
-                            const removeBtn = job.ui.querySelector('.remove-btn');
-                            removeBtn.dataset.serverFileId = res.file_id;
-                            removeBtn.dataset.id = job.id;
-
-                            const input = document.createElement('input');
-                            input.type = 'hidden';
-                            input.name = 'uploaded_media[]';
-                            input.value = res.file_id;
-                            input.id = `input-${job.id}`;
-                            document.getElementById('uploaded-files-container').appendChild(input);
-                        } else {
-                            this.updateUI(job.ui, 'error', res.message);
-                        }
+                            job.ui.querySelector('.remove-btn').dataset.serverFileId = r.file_id;
+                            const i = document.createElement('input');
+                            i.type = 'hidden';
+                            i.name = 'uploaded_media[]';
+                            i.value = r.file_id;
+                            i.id = `input-${job.id}`;
+                            document.getElementById('uploaded-files-container').appendChild(i);
+                        } else this.updateUI(job.ui, 'error', r.message);
                     } catch (e) {
-                        this.updateUI(job.ui, 'error', 'JSON Error');
+                        this.updateUI(job.ui, 'error');
                     }
-
                     this.isUploading = false;
                     this.processQueue();
                 }
             };
             xhr.send(fd);
         }
-
         updateUI(ui, status, msg = '') {
-            const spinner = ui.querySelector('.progress-ring');
-            const btn = ui.querySelector('.remove-btn');
-
-            if (spinner) spinner.remove();
-            btn.classList.remove('disabled');
-
-            if (status === 'success') {
-                // Add checkmark icon
-                const icon = document.createElement('i');
-                icon.className = 'bi bi-check-circle-fill text-success me-2';
-                ui.insertBefore(icon, ui.firstChild);
-                ui.style.borderColor = 'var(--bs-success)';
-            } else {
-                const icon = document.createElement('i');
-                icon.className = 'bi bi-exclamation-circle-fill text-danger me-2';
-                ui.insertBefore(icon, ui.firstChild);
-                ui.style.borderColor = 'var(--bs-danger)';
-                ui.title = msg;
-            }
+            ui.querySelector('.progress-ring').remove();
+            ui.querySelector('.remove-btn').classList.remove('disabled');
+            const i = document.createElement('i');
+            i.className = status === 'success' ? 'bi bi-check-circle-fill text-success me-2' : 'bi bi-exclamation-circle-fill text-danger me-2';
+            ui.insertBefore(i, ui.firstChild);
+            ui.style.borderColor = status === 'success' ? 'var(--bs-success)' : 'var(--bs-danger)';
         }
-
         async removeFile(btn) {
-            if (btn.classList.contains('disabled')) return;
             const ui = btn.closest('.file-chip');
-            const serverId = btn.dataset.serverFileId;
-
-            ui.style.opacity = '0.5';
-            if (serverId) {
+            const fid = btn.dataset.serverFileId;
+            if (fid) {
                 const fd = new FormData();
-                fd.append('file_id', serverId);
+                fd.append('file_id', fid);
                 try {
-                    const res = await this.app.sendAjax(this.app.config.endpoints.deleteMedia, fd);
-                    if (res.status === 'success') {
-                        ui.remove();
-                        document.getElementById(`input-${btn.dataset.id}`)?.remove();
-                    } else ui.style.opacity = '1';
-                } catch (e) {
-                    ui.style.opacity = '1';
-                }
-            } else {
-                ui.remove();
-            }
+                    await this.app.sendAjax(this.app.config.endpoints.deleteMedia, fd);
+                    ui.remove();
+                    document.getElementById(`input-${btn.dataset.id}`)?.remove();
+                } catch (e) {}
+            } else ui.remove();
         }
-
         clearUploads() {
-            // Remove all chips
-            const wrapper = document.getElementById('upload-list-wrapper');
-            if (wrapper) wrapper.innerHTML = '';
-
-            // Remove hidden inputs
-            const container = document.getElementById('uploaded-files-container');
-            if (container) container.innerHTML = '';
-
-            // Reset queue
+            document.getElementById('upload-list-wrapper').innerHTML = '';
+            document.getElementById('uploaded-files-container').innerHTML = '';
             this.queue = [];
         }
     }
@@ -1138,96 +905,80 @@
         constructor(app) {
             this.app = app;
         }
-
         init() {
-            const select = document.getElementById('savedPrompts');
-            const loadBtn = document.getElementById('usePromptBtn');
-            const deleteBtn = document.getElementById('deletePromptBtn');
-
-            if (loadBtn) loadBtn.addEventListener('click', () => {
-                if (select && select.value) {
-                    const el = document.getElementById('prompt');
-                    // Check for TinyMCE instance
-                    if (typeof tinymce !== 'undefined' && tinymce.get('prompt')) {
-                        tinymce.get('prompt').setContent(select.value);
-                    } else {
-                        // Fallback for standard textarea
-                        el.value = select.value;
+            const sel = document.getElementById('savedPrompts');
+            const load = document.getElementById('usePromptBtn');
+            const del = document.getElementById('deletePromptBtn');
+            if (load) load.onclick = () => {
+                if (sel && sel.value) {
+                    if (tinymce.get('prompt')) tinymce.get('prompt').setContent(sel.value);
+                    else {
+                        const el = document.getElementById('prompt');
+                        el.value = sel.value;
                         el.focus();
                     }
-                    el.dispatchEvent(new Event('input')); // Trigger resize if any
                 }
-            });
+            };
+            if (sel) sel.onchange = () => {
+                if (del) del.disabled = !sel.value;
+            };
+            if (del) del.onclick = () => this.deletePrompt();
 
-            if (select) select.addEventListener('change', () => {
-                if (deleteBtn) deleteBtn.disabled = !select.value;
-            });
-
-            if (deleteBtn) deleteBtn.addEventListener('click', () => this.deletePrompt());
-
-            // Save Prompt Modal
             const form = document.querySelector('#savePromptModal form');
             if (form) {
                 document.getElementById('savePromptModal').addEventListener('show.bs.modal', () => {
-                    const currentVal = (typeof tinymce !== 'undefined' && tinymce.get('prompt')) ?
-                        tinymce.get('prompt').getContent() :
-                        document.getElementById('prompt').value;
-                    document.getElementById('modalPromptText').value = currentVal;
+                    document.getElementById('modalPromptText').value = tinymce.get('prompt') ? tinymce.get('prompt').getContent() : document.getElementById('prompt').value;
                 });
-
-                form.addEventListener('submit', (e) => {
+                form.onsubmit = (e) => {
                     e.preventDefault();
-                    this.savePrompt(new FormData(form));
-                });
+                    this.savePrompt(new FormData(form), form.action);
+                };
             }
         }
-
-        async savePrompt(formData) {
-            const modalEl = document.getElementById('savePromptModal');
-            const modal = bootstrap.Modal.getInstance(modalEl);
-            const title = formData.get('title');
-
+        async savePrompt(fd, action) {
+            const m = bootstrap.Modal.getInstance(document.getElementById('savePromptModal'));
             try {
-                const data = await this.app.sendAjax(formData.get('action') || modalEl.querySelector('form').action, formData);
-
-                if (data.status === 'success') {
+                const d = await this.app.sendAjax(action || fd.get('action'), fd);
+                if (d.status === 'success') {
                     this.app.ui.showToast('Saved!');
-                    modal.hide();
+                    m.hide();
 
-                    // Dynamic UI Update (No Reload)
-                    if (data.prompt && data.prompt.id) {
-                        const select = document.getElementById('savedPrompts');
-                        const option = document.createElement('option');
-                        option.value = data.prompt.prompt_text;
-                        option.textContent = data.prompt.title;
-                        option.dataset.id = data.prompt.id;
-                        select.appendChild(option);
-                        select.value = data.prompt.prompt_text;
+                    const container = document.getElementById('savedPromptsContainer');
+                    const alert = document.getElementById('no-prompts-alert');
+                    if (container) container.classList.remove('d-none');
+                    if (alert) alert.classList.add('d-none');
 
-                        // Enable delete button
-                        const deleteBtn = document.getElementById('deletePromptBtn');
-                        if (deleteBtn) deleteBtn.disabled = false;
+                    const opt = document.createElement('option');
+                    opt.value = d.prompt.prompt_text;
+                    opt.textContent = d.prompt.title;
+                    opt.dataset.id = d.prompt.id;
+                    const sel = document.getElementById('savedPrompts');
+                    if (sel) {
+                        sel.appendChild(opt);
+                        sel.value = d.prompt.prompt_text;
                     }
-                } else {
-                    this.app.ui.showToast(data.message || 'Failed');
-                }
+                    const delBtn = document.getElementById('deletePromptBtn');
+                    if (delBtn) delBtn.disabled = false;
+                } else this.app.ui.showToast(d.message || 'Failed');
             } catch (e) {
-                console.error(e);
-                this.app.ui.showToast('Error saving prompt');
+                console.error('Save Prompt Error:', e);
+                this.app.ui.showToast('Error saving prompt: ' + (e.message || 'System error'));
             }
         }
-
         async deletePrompt() {
-            const select = document.getElementById('savedPrompts');
-            const id = select.options[select.selectedIndex].dataset.id;
-            if (confirm('Delete this prompt?')) {
+            const sel = document.getElementById('savedPrompts');
+            if (sel && sel.selectedIndex !== -1 && confirm('Delete?')) {
                 try {
-                    const data = await this.app.sendAjax(this.app.config.endpoints.deletePromptBase + id);
-                    if (data.status === 'success') {
-                        this.app.ui.showToast('Deleted');
-                        select.options[select.selectedIndex].remove();
-                        select.value = '';
-                        select.dispatchEvent(new Event('change'));
+                    const id = sel.options[sel.selectedIndex].dataset.id;
+                    const d = await this.app.sendAjax(this.app.config.endpoints.deletePromptBase + id);
+                    if (d.status === 'success') {
+                        sel.options[sel.selectedIndex].remove();
+                        if (sel.options.length <= 1) { // Only "Select..." left
+                            document.getElementById('savedPromptsContainer')?.classList.add('d-none');
+                            document.getElementById('no-prompts-alert')?.classList.remove('d-none');
+                        }
+                        sel.value = '';
+                        document.getElementById('deletePromptBtn').disabled = true;
                     }
                 } catch (e) {}
             }
@@ -1238,333 +989,168 @@
         constructor(app) {
             this.app = app;
         }
-
         init() {
-            const form = document.getElementById('geminiForm');
-            if (form) form.addEventListener('submit', (e) => this.handleSubmit(e));
+            document.getElementById('geminiForm')?.addEventListener('submit', e => this.handleSubmit(e));
         }
 
         async handleSubmit(e) {
             e.preventDefault();
             const type = document.getElementById('generationType').value;
-            const useStreaming = document.getElementById('streamOutput')?.checked;
-
             if (typeof tinymce !== 'undefined') tinymce.triggerSave();
             const prompt = document.getElementById('prompt').value.trim();
             if (!prompt && type === 'text') {
-                this.app.ui.showToast('Please enter a prompt.');
+                this.app.ui.showToast('Enter a prompt.');
                 return;
             }
 
             this.app.ui.setLoading(true);
             const fd = new FormData(document.getElementById('geminiForm'));
 
-            // Text Generation: Determine flow based on Streaming setting
             if (type === 'text') {
-                if (useStreaming) {
-                    await this.handleStreaming(fd);
-                } else {
-                    await this.handleStandardGeneration(fd);
-                }
-                return;
+                if (document.getElementById('streamOutput')?.checked) await this.handleStreaming(fd);
+                else await this.handleStandard(fd);
+            } else {
+                if (this.mock(prompt, type)) return;
+                await this.handleMedia(fd);
             }
-
-            // Media Generation
-            if (this.handleMock(prompt, type)) return;
-            await this.handleMedia(fd);
         }
 
-        /**
-         * Handles standard (non-streaming) text generation via Fetch.
-         * Updates content and injects flash messages via AJAX.
-         * Explicitly handles audio rendering if audio_url is present.
-         */
-        async handleStandardGeneration(formData) {
+        async handleStandard(fd) {
             this.app.ui.ensureResultCardExists();
-
             try {
-                const data = await this.app.sendAjax(this.app.config.endpoints.generate, formData);
-
-                if (data.status === 'success') {
-                    // Update Content
-                    document.getElementById('ai-response-body').innerHTML = data.result;
-                    document.getElementById('raw-response').value = data.raw_result;
+                const d = await this.app.sendAjax(this.app.config.endpoints.generate, fd);
+                if (d.status === 'success') {
+                    document.getElementById('ai-response-body').innerHTML = d.result;
+                    document.getElementById('raw-response').value = d.raw_result;
                     this.app.ui.setupCodeHighlighting();
                     this.app.ui.setupAutoScroll();
-
-                    // Inject Flash Messages (Standardized)
-                    if (data.flash_html) {
-                        const flashContainer = document.getElementById('flash-messages-container');
-                        if (flashContainer) {
-                            flashContainer.innerHTML = data.flash_html;
-                        }
-                    }
-
-                    // FIX: Handle Audio URL injection dynamically for visibility
-                    const audioContainer = document.getElementById('audio-player-container');
-                    if (data.audio_url) {
-                        if (audioContainer) {
-                            audioContainer.innerHTML = `
-                                <div class="alert alert-info d-flex align-items-center mb-4">
-                                    <i class="bi bi-volume-up-fill fs-4 me-3"></i>
-                                    <audio controls autoplay class="w-100">
-                                        <source src="${data.audio_url}" type="audio/mpeg">
-                                    </audio>
-                                </div>
-                            `;
-                        }
-                    } else {
-                        // Clear audio container if no audio in this response
-                        if (audioContainer) audioContainer.innerHTML = '';
-                    }
-
-                } else if (data.status === 'error') {
-                    // REFACTOR: Correctly handle empty errors array vs global message
-                    let errorHtml = '<div class="alert alert-danger alert-dismissible fade show">';
-
-                    if (data.errors && Object.keys(data.errors).length > 0) {
-                        // Handle Validation Errors
-                        if (Array.isArray(data.errors)) {
-                            errorHtml += data.errors.join('<br>');
-                        } else {
-                            errorHtml += Object.values(data.errors).join('<br>');
-                        }
-                    } else {
-                        // Handle Single Global Message (e.g. Quota Exceeded)
-                        errorHtml += data.message;
-                    }
-
-                    errorHtml += '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
-
-                    const flashContainer = document.getElementById('flash-messages-container');
-                    if (flashContainer) {
-                        flashContainer.innerHTML = errorHtml;
-                    }
-                }
-
+                    if (d.flash_html) document.getElementById('flash-messages-container').innerHTML = d.flash_html;
+                    if (d.audio_url) document.getElementById('audio-player-container').innerHTML = `<div class="alert alert-info d-flex align-items-center mb-4"><i class="bi bi-volume-up-fill fs-4 me-3"></i><audio controls autoplay class="w-100"><source src="${d.audio_url}" type="audio/mpeg"></audio></div>`;
+                    else document.getElementById('audio-player-container').innerHTML = '';
+                } else this.app.ui.injectFlashError(d.message || 'Error');
             } catch (e) {
-                console.error(e);
-                this.app.ui.injectFlashError('Generation failed due to a system error.');
-            } finally {
-                this.app.ui.setLoading(false);
-                // Clear uploads on success to sync with backend deletion
-                this.app.uploader.clearUploads();
+                this.app.ui.injectFlashError('System Error');
             }
+            this.app.ui.setLoading(false);
+            this.app.uploader.clearUploads();
         }
 
-        async handleStreaming(formData) {
+        async handleStreaming(fd) {
             this.app.ui.ensureResultCardExists();
-
-            // Reset UI for new stream
-            const resBody = document.getElementById('ai-response-body');
-            const rawRes = document.getElementById('raw-response');
-            // Clear audio container on new stream start
-            const audioContainer = document.getElementById('audio-player-container');
-            if (audioContainer) audioContainer.innerHTML = '';
-
-            resBody.innerHTML = '';
-            rawRes.value = '';
-            this.app.ui.setupAutoScroll();
-
-            let streamAccumulator = '';
-
+            document.getElementById('ai-response-body').innerHTML = '';
+            document.getElementById('audio-player-container').innerHTML = '';
+            let accum = '';
             try {
-                const response = await fetch(this.app.config.endpoints.stream, {
+                const res = await fetch(this.app.config.endpoints.stream, {
                     method: 'POST',
-                    body: formData
+                    body: fd
                 });
-
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
+                const reader = res.body.getReader();
+                const dec = new TextDecoder();
                 let buffer = '';
-
-                // Read stream chunks
                 while (true) {
                     const {
                         value,
                         done
                     } = await reader.read();
                     if (done) break;
-
-                    buffer += decoder.decode(value, {
+                    buffer += dec.decode(value, {
                         stream: true
                     });
-
-                    // Split by double newline which standard SSE uses to separate messages
                     const parts = buffer.split('\n\n');
-                    buffer = parts.pop(); // Keep incomplete message in buffer
-
+                    buffer = parts.pop();
                     for (const part of parts) {
-                        // Handle potential multiple lines within a single message block
-                        // This handles cases where 'event: close' arrives in the same block as 'data: ...'
-                        const lines = part.split('\n');
-
-                        for (const line of lines) {
-                            if (line.trim().startsWith('data: ')) {
+                        part.split('\n').forEach(line => {
+                            if (line.startsWith('data: ')) {
                                 try {
-                                    const jsonStr = line.trim().substring(6);
-                                    const data = JSON.parse(jsonStr);
-
-                                    if (data.text) {
-                                        // Append text chunk and update UI
-                                        streamAccumulator += data.text;
-                                        resBody.innerHTML = marked.parse(streamAccumulator);
-                                        rawRes.value += data.text;
-                                    } else if (data.error) {
-                                        // CRITICAL FIX: Refresh token if server sent one with the error
-                                        if (data.csrf_token) {
-                                            this.app.refreshCsrf(data.csrf_token);
-                                        }
-                                        this.app.ui.injectFlashError(data.error);
-                                    } else if (typeof data.cost !== 'undefined' && parseFloat(data.cost) > 0) {
-                                        // Final Cost Packet: Show success flash message
-                                        const costHtml = `<div class="alert alert-success alert-dismissible fade show" role="alert">
-                                            <i class="bi bi-check-circle-fill me-2"></i>
-                                            KSH ${parseFloat(data.cost).toFixed(2)} deducted.
-                                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                                        </div>`;
-
-                                        const flashContainer = document.getElementById('flash-messages-container');
-                                        if (flashContainer) {
-                                            flashContainer.innerHTML = costHtml;
-                                        }
-
-                                        // FIX: Handle Audio URL from final packet in Streaming
-                                        if (data.audio_url) {
-                                            if (audioContainer) {
-                                                audioContainer.innerHTML = `
-                                                    <div class="alert alert-info d-flex align-items-center mb-4">
-                                                        <i class="bi bi-volume-up-fill fs-4 me-3"></i>
-                                                        <audio controls autoplay class="w-100">
-                                                            <source src="${data.audio_url}" type="audio/mpeg">
-                                                        </audio>
-                                                    </div>
-                                                `;
-                                            }
-                                        }
-
-                                    } else if (data.csrf_token) {
-                                        // Update CSRF for subsequent requests
-                                        this.app.refreshCsrf(data.csrf_token);
-                                    }
-                                } catch (e) {
-                                    console.warn('JSON Parse Error in Stream:', e);
-                                    this.app.ui.injectFlashError('JSON Parse Error in Stream: ' + e.message);
-                                }
+                                    const d = JSON.parse(line.substring(6));
+                                    if (d.text) {
+                                        accum += d.text;
+                                        document.getElementById('ai-response-body').innerHTML = marked.parse(accum);
+                                        document.getElementById('raw-response').value += d.text;
+                                    } else if (d.error) {
+                                        if (d.csrf_token) this.app.refreshCsrf(d.csrf_token);
+                                        this.app.ui.injectFlashError(d.error);
+                                    } else if (d.cost) document.getElementById('flash-messages-container').innerHTML = `<div class="alert alert-success alert-dismissible fade show">KSH ${parseFloat(d.cost).toFixed(2)} deducted.<button class="btn-close" data-bs-dismiss="alert"></button></div>`;
+                                    if (d.audio_url) document.getElementById('audio-player-container').innerHTML = `<div class="alert alert-info d-flex align-items-center mb-4"><i class="bi bi-volume-up-fill fs-4 me-3"></i><audio controls autoplay class="w-100"><source src="${d.audio_url}" type="audio/mpeg"></audio></div>`;
+                                    if (d.csrf_token) this.app.refreshCsrf(d.csrf_token);
+                                } catch (e) {}
                             }
-                        }
+                        });
                     }
                 }
-
                 this.app.ui.setupCodeHighlighting();
-
             } catch (e) {
-                console.error(e);
-                this.app.ui.injectFlashError('Stream error occurred.');
-            } finally {
-                this.app.ui.setLoading(false);
-                // Clear uploads on success to sync with backend deletion
-                this.app.uploader.clearUploads();
+                this.app.ui.injectFlashError('Stream Error');
             }
+            this.app.ui.setLoading(false);
+            this.app.uploader.clearUploads();
         }
 
-        async handleMedia(formData) {
+        async handleMedia(fd) {
             try {
                 const res = await fetch(this.app.config.endpoints.generateMedia, {
                     method: 'POST',
+                    body: fd,
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: formData
+                    }
                 });
-                const data = await res.json();
-                if (data.token) this.app.refreshCsrf(data.token);
-
-                if (data.status === 'error') {
-                    // REFACTOR: Use Flash Message for Media Generation Errors
-                    this.app.ui.injectFlashError(data.message);
-                } else if (data.type === 'image') {
-                    this.app.ui.showMediaResult(data.url, 'image');
-                } else if (data.type === 'video') {
-                    this.pollVideo(data.op_id);
-                    return; // Don't reset loading yet
+                const d = await res.json();
+                if (d.token) this.app.refreshCsrf(d.token);
+                if (d.status === 'error') {
+                    this.app.ui.injectFlashError(d.message);
+                    this.app.ui.setLoading(false);
+                } else if (d.type === 'image') {
+                    this.app.ui.showMediaResult(d.url, 'image');
+                    this.app.ui.setLoading(false);
+                } else if (d.type === 'video') {
+                    this.app.ui.renderMediaCard(`<div class="text-center p-4"><div class="spinner-border text-primary mb-3"></div><h5>Synthesizing Video</h5><p class="text-muted">10-20 seconds...</p></div>`, null, true);
+                    this.pollVideo(d.op_id);
                 }
             } catch (e) {
-                console.error(e);
-                this.app.ui.injectFlashError('Media generation failed.');
+                this.app.ui.injectFlashError('Media Failed');
+                this.app.ui.setLoading(false);
             }
-            this.app.ui.setLoading(false);
         }
 
         pollVideo(opId) {
-            this.app.ui.generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm text-white"></span>';
-            const timer = setInterval(async () => {
+            const t = setInterval(async () => {
                 const fd = new FormData();
                 fd.append('op_id', opId);
                 try {
-                    const res = await this.app.sendAjax(this.app.config.endpoints.pollMedia, fd);
-                    if (res.status === 'completed') {
-                        clearInterval(timer);
-                        this.app.ui.showMediaResult(res.url, 'video');
+                    const d = await this.app.sendAjax(this.app.config.endpoints.pollMedia, fd);
+                    if (d.status === 'completed') {
+                        clearInterval(t);
+                        this.app.ui.showMediaResult(d.url, 'video');
                         this.app.ui.setLoading(false);
-                    } else if (res.status === 'failed') {
-                        clearInterval(timer);
-                        // REFACTOR: Use Flash Message for Polling Errors
-                        this.app.ui.injectFlashError(res.message);
+                    } else if (d.status === 'failed') {
+                        clearInterval(t);
+                        this.app.ui.injectFlashError(d.message);
                         this.app.ui.setLoading(false);
                     }
                 } catch (e) {
-                    clearInterval(timer);
-                    this.app.ui.injectFlashError('Polling failed: ' + e.message);
+                    clearInterval(t);
                     this.app.ui.setLoading(false);
                 }
             }, 5000);
         }
 
-        handleMock(prompt, type) {
-            const p = prompt.toLowerCase();
-            if (p === '<p>test image</p>' && type === 'image') {
-                setTimeout(() => {
-                    this.app.ui.showMediaResult('https://picsum.photos/200/300?random=' + Date.now(), 'image');
-                    this.app.ui.setLoading(false);
-                }, 1000);
+        mock(p, t) {
+            const lp = p.toLowerCase();
+            if (lp === '<p>test image</p>' && t === 'image') {
+                setTimeout(() => this.app.ui.showMediaResult('https://picsum.photos/300/300', 'image'), 1000);
+                this.app.ui.setLoading(false);
                 return true;
             }
-            if (p === '<p>test video</p>' && type === 'video') {
-                setTimeout(() => {
-                    this.app.ui.showMediaResult('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', 'video');
-                    this.app.ui.setLoading(false);
-                }, 1500);
+            if (lp === '<p>test video</p>' && t === 'video') {
+                setTimeout(() => this.app.ui.showMediaResult('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', 'video'), 1000);
+                this.app.ui.setLoading(false);
                 return true;
             }
             return false;
         }
-
-        async mockDownload(url, type) {
-            const btn = document.getElementById('mediaDownloadBtn');
-            if (!btn) return;
-            const original = btn.innerHTML;
-            btn.innerHTML = 'Downloading...';
-
-            try {
-                const resp = await fetch(url);
-                const blob = await resp.blob();
-                const u = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = u;
-                a.download = `mock_${type}_${Date.now()}.${type==='video'?'mp4':'jpg'}`;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-            } catch (e) {
-                this.app.ui.showToast('Download failed');
-            }
-            btn.innerHTML = original;
-        }
     }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        new GeminiApp().init();
-    });
+    document.addEventListener('DOMContentLoaded', () => new GeminiApp().init());
 </script>
 <?= $this->endSection() ?>

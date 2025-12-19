@@ -39,6 +39,7 @@ class DocumentService
 
         // 2. Prepare HTML
         $parsedown = new Parsedown();
+        $parsedown->setSafeMode(true);
         $parsedown->setBreaksEnabled(true);
         $htmlContent = $parsedown->text($markdownContent);
         $styledHtml = $this->_getStyledHtml($htmlContent, $metadata['title'] ?? 'Document');
@@ -141,8 +142,8 @@ class DocumentService
 
             // Convert Markdown to HTML locally for PHPWord
             $parsedown = new Parsedown();
-            $parsedown->setBreaksEnabled(true);
             $parsedown->setSafeMode(true);
+            $parsedown->setBreaksEnabled(true);
             $htmlContent = $parsedown->text($markdownContent);
 
             $phpWord = new \PhpOffice\PhpWord\PhpWord();

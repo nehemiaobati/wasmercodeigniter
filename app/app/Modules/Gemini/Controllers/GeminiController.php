@@ -52,8 +52,8 @@ class GeminiController extends BaseController
         'application/pdf',
         'text/plain'
     ];
-    private const MAX_FILE_SIZE = 10 * 1024 * 1024;
-    private const MAX_FILES = 5;
+    private const MAX_FILE_SIZE = 100 * 1024 * 1024;
+    private const MAX_FILES = 10;
 
     public function __construct(
         protected ?UserModel $userModel = null,

@@ -40,7 +40,7 @@ class ModelPayloadService
         // Match expression returns structured config with method + payload
         $config = match ($modelId) {
             // Advanced Thinking Models (Pro) - Standard API
-            'gemini-3-pro-preview' => [
+            'gemini-3-pro-preview', 'gemini-3-flash-preview' => [
                 'method' => $isStream ? 'streamGenerateContent' : 'generateContent',
                 'payload' => [
                     "contents" => [["role" => "user", "parts" => $parts]],
@@ -48,6 +48,7 @@ class ModelPayloadService
                         "thinkingConfig" => ["thinkingLevel" => "HIGH"],
                         "temperature" => 1,
                         "topP" => 0.95,
+                        "maxOutputTokens" => 64000,
                     ],
                     "tools" => [["googleSearch" => new stdClass()]],
                 ]
@@ -60,6 +61,7 @@ class ModelPayloadService
                         "thinkingConfig" => ["thinkingBudget" => 32768],
                         "temperature" => 1,
                         "topP" => 0.95,
+                        "maxOutputTokens" => 64000,
                     ],
                     "tools" => [["googleSearch" => new stdClass()]],
                 ]
@@ -74,6 +76,7 @@ class ModelPayloadService
                         "thinkingConfig" => ["thinkingBudget" => -1],
                         "temperature" => 1,
                         "topP" => 0.95,
+                        "maxOutputTokens" => 64000,
                     ],
                     "tools" => [["googleSearch" => new stdClass()]],
                 ]
@@ -86,6 +89,7 @@ class ModelPayloadService
                         "thinkingConfig" => ["thinkingBudget" => 0],
                         "temperature" => 1,
                         "topP" => 0.95,
+                        "maxOutputTokens" => 64000,
                     ],
                     "tools" => [["googleSearch" => new stdClass()]],
                 ]
@@ -99,6 +103,7 @@ class ModelPayloadService
                     "generationConfig" => [
                         "temperature" => 1,
                         "topP" => 0.95,
+                        "maxOutputTokens" => 64000,
                     ],
                     "tools" => [["googleSearch" => new stdClass()]],
                 ]
@@ -110,6 +115,7 @@ class ModelPayloadService
                     "generationConfig" => [
                         "temperature" => 1,
                         "topP" => 0.95,
+                        "maxOutputTokens" => 64000,
                     ],
                 ]
             ],
@@ -124,6 +130,7 @@ class ModelPayloadService
                         "imageConfig" => ["image_size" => "1K"],
                         "temperature" => 1,
                         "topP" => 0.95,
+                        "maxOutputTokens" => 64000,
                     ],
                     "tools" => [["googleSearch" => new stdClass()]],
                 ]
@@ -136,6 +143,7 @@ class ModelPayloadService
                         "responseModalities" => ["IMAGE", "TEXT"],
                         "temperature" => 1,
                         "topP" => 0.95,
+                        "maxOutputTokens" => 64000,
                     ],
                 ]
             ],
