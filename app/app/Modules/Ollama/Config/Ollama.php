@@ -12,6 +12,12 @@ class Ollama extends BaseConfig
      */
     public string $baseUrl = 'http://localhost:11434';
 
+    public function __construct()
+    {
+        parent::__construct();
+        $this->baseUrl = env('OLLAMA_BASE_URL', $this->baseUrl);
+    }
+
     /**
      * The default model to use for generation.
      * Default: llama3

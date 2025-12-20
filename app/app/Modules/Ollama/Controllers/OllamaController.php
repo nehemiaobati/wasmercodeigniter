@@ -123,21 +123,18 @@ class OllamaController extends BaseController
         }
 
         $file = $this->request->getFile('file');
-        $userTempPath = WRITEPATH . 'uploads/ollama_temp/' . $userId . '/';
 
-        if (!is_dir($userTempPath)) {
-            mkdir($userTempPath, 0755, true);
-        }
+        // Delegate storage to Service
+        $result = $this->ollamaService->storeTempMedia($file, $userId);
 
-        $fileName = $file->getRandomName();
-        if (!$file->move($userTempPath, $fileName)) {
-            return $this->response->setStatusCode(500)->setJSON(['status' => 'error', 'message' => 'Save failed.', 'csrf_token' => csrf_hash()]);
+        if (!$result['status']) {
+            return $this->response->setStatusCode(500)->setJSON(['status' => 'error', 'message' => $result['error'], 'csrf_token' => csrf_hash()]);
         }
 
         return $this->response->setJSON([
             'status'        => 'success',
-            'file_id'       => $fileName,
-            'original_name' => $file->getClientName(),
+            'file_id'       => $result['filename'],
+            'original_name' => $result['original_name'],
             'csrf_token'    => csrf_hash(),
         ]);
     }
@@ -319,6 +316,9 @@ class OllamaController extends BaseController
 
         $this->response->sendHeaders();
         if (ob_get_level() > 0) ob_end_flush();
+
+        // Send CSRF token immediately to ensure client has it even if stream fails later
+        echo "data: " . json_encode(['csrf_token' => csrf_hash()]) . "\n\n";
         flush();
 
         // 3. Call Stream Service
@@ -338,27 +338,14 @@ class OllamaController extends BaseController
                 if (ob_get_level() > 0) ob_flush();
                 flush();
             },
-            function ($fullText, $usageMetadata) use ($userId, $user) {
-                // 1. Calculate and Deduct Cost (Simplified for Ollama fixed cost)
-                // Re-open DB connection/transaction if needed, but for now strict mirror of logic flow
-
-                // Gemini wraps this in transaction, so we should too if possible, 
-                // but OllamaController simple logic used direct calls. 
-                // We will mirror the transaction block from Gemini for safety.
-                $this->db->transStart();
-
-                $this->userModel->deductBalance((int)$user->id, (string)self::COST_PER_REQUEST);
-
-                // Update Memory (If implemented in Ollama similarly)
-                // For now, we just perform the deduction as per original Ollama logic but in the completion callback
-
-                $this->db->transComplete();
+            function ($fullText, $usageMetadata) use ($userId, $inputText) {
+                // Delegate business logic to Service
+                $result = $this->ollamaService->finalizeStreamInteraction($userId, $inputText, $fullText);
 
                 // 3. Send Final Status Event
-                // Mirrors Gemini's `event: close` payload structure
                 $finalPayload = [
                     'csrf_token' => csrf_hash(),
-                    'cost' => self::COST_PER_REQUEST
+                    'cost'       => $result['cost']
                 ];
 
                 echo "event: close\n";

@@ -100,17 +100,11 @@ class AdminController extends BaseController
      * @param int $id The unique identifier of the user whose balance is to be updated.
      * @return \CodeIgniter\HTTP\ResponseInterface Redirects back with status messages or errors.
      */
+    /**
+     * Updates a user's balance via WalletService.
+     */
     public function updateBalance($id)
     {
-        $userModel = new UserModel();
-
-        /** @var User|null $user */
-        $user = $userModel->find($id);
-
-        if (!$user) {
-            return redirect()->back()->with('error', 'User not found.');
-        }
-
         $rules = [
             'amount' => 'required|numeric|greater_than[0]',
             'action' => 'required|in_list[deposit,withdraw]',
@@ -120,38 +114,18 @@ class AdminController extends BaseController
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
-        $amount = $this->request->getPost('amount');
-        $action = $this->request->getPost('action');
+        $walletService = new \App\Libraries\WalletService();
+        $result = $walletService->updateBalance(
+            (int) $id,
+            (float) $this->request->getPost('amount'),
+            $this->request->getPost('action')
+        );
 
-        $db = \Config\Database::connect();
-        $db->transStart();
-
-        // Re-fetch user within transaction to ensure we have the latest data and lock the row
-        $userInTransaction = $userModel->find($id);
-        if (!$userInTransaction) {
-            $db->transComplete();
-            return redirect()->back()->with('error', 'User not found during transaction.');
+        if (!$result['success']) {
+            return redirect()->back()->withInput()->with('error', $result['message']);
         }
 
-        if ($action === 'deposit') {
-            $userModel->addBalance($id, (string)$amount);
-        } elseif ($action === 'withdraw') {
-            if (bccomp((string) $userInTransaction->balance, (string) $amount, 2) < 0) {
-                // End transaction before redirecting
-                $db->transComplete();
-                return redirect()->back()->withInput()->with('error', 'Insufficient balance.');
-            }
-            $userModel->deductBalance($id, (string)$amount);
-        }
-
-        $db->transComplete();
-
-        if ($db->transStatus() === false) {
-            log_message('error', "Admin balance update transaction failed for user ID: {$id}");
-            return redirect()->back()->withInput()->with('error', 'A database error occurred. Failed to update balance.');
-        }
-
-        return redirect()->to(url_to('admin.users.show', $id))->with('success', 'Balance updated successfully.');
+        return redirect()->to(url_to('admin.users.show', $id))->with('success', $result['message']);
     }
 
 
@@ -190,42 +164,20 @@ class AdminController extends BaseController
      *
      * @return \CodeIgniter\HTTP\ResponseInterface|string
      */
+    /**
+     * Displays the application log files.
+     */
     public function logs()
     {
-        // Security check: Ensure only administrators can access this page.
         if (!session()->get('is_admin')) {
-            return redirect()->to(url_to('home'))->with('error', 'You do not have permission to access this page.');
+            return redirect()->to(url_to('home'))->with('error', 'Permission denied.');
         }
 
-        helper('filesystem');
+        $logViewer = new \App\Libraries\LogViewer();
+        $logFiles = $logViewer->getLogFiles();
 
-        $logPath = WRITEPATH . 'logs/';
-        $logFiles = get_filenames($logPath);
-
-        // Sort files by name to get the latest one (log-YYYY-MM-DD.log)
-        if ($logFiles) {
-            rsort($logFiles);
-        } else {
-            $logFiles = [];
-        }
-
-        $logContent = '';
         $selectedFile = $this->request->getGet('file') ?? ($logFiles[0] ?? null);
-
-        if ($selectedFile && in_array($selectedFile, $logFiles)) {
-            // Sanitize filename to prevent directory traversal
-            $safeFile = basename($selectedFile);
-            $fullFilePath = $logPath . $safeFile;
-            if (file_exists($fullFilePath)) {
-                $content = file_get_contents($fullFilePath);
-                if ($content === false) {
-                    $logContent = "Error: Could not read the selected log file. Please check file permissions on the server.";
-                    log_message('error', "AdminController: Failed to read log file '{$fullFilePath}' due to permissions or other issue.");
-                } else {
-                    $logContent = $content;
-                }
-            }
-        }
+        $logContent = ($selectedFile) ? $logViewer->getLogContent($selectedFile) : '';
 
         $data = [
             'pageTitle'    => 'Application Logs | Admin',

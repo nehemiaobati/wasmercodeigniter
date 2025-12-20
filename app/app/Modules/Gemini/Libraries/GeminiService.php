@@ -101,6 +101,7 @@ class GeminiService
             $contextData['memoryService']->updateMemory(
                 $prompt,
                 $apiResponse['result'],
+                $apiResponse['raw'] ?? '',
                 $contextData['usedInteractionIds'] ?? []
             );
         }
@@ -178,12 +179,21 @@ class GeminiService
                 }
 
                 $data = json_decode($response->getBody(), true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    log_message('error', "[GeminiService] JSON Decode Error: " . json_last_error_msg());
+                    return ['error' => 'Failed to decode API response.'];
+                }
+
                 $text = '';
                 foreach ($data['candidates'][0]['content']['parts'] ?? [] as $part) {
                     $text .= $part['text'] ?? '';
                 }
 
-                return ['result' => $text, 'usage' => $data['usageMetadata'] ?? null];
+                return [
+                    'result' => $text,
+                    'usage' => $data['usageMetadata'] ?? null,
+                    'raw' => $data
+                ];
             } catch (\Exception $e) {
                 log_message('error', "[GeminiService] Exception for model: {$model}, attempt {$i}/{$maxRetries} - {$e->getMessage()}");
                 if ($i === $maxRetries) {
@@ -210,6 +220,7 @@ class GeminiService
             $buffer = '';
             $fullText = '';
             $usage = null;
+            $rawChunks = [];
 
             $ch = curl_init();
             curl_setopt_array($ch, [
@@ -217,12 +228,15 @@ class GeminiService
                 CURLOPT_POST => true,
                 CURLOPT_POSTFIELDS => $config['body'],
                 CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-                CURLOPT_WRITEFUNCTION => function ($ch, $chunk) use (&$buffer, &$fullText, &$usage, $chunkCallback) {
+                CURLOPT_WRITEFUNCTION => function ($ch, $chunk) use (&$buffer, &$fullText, &$usage, &$rawChunks, $chunkCallback) {
                     $buffer .= $chunk;
                     $parsed = $this->_processStreamBuffer($buffer);
                     foreach ($parsed['chunks'] as $text) {
                         $fullText .= $text;
                         $chunkCallback($text);
+                    }
+                    if (!empty($parsed['raw_chunks'])) {
+                        $rawChunks = array_merge($rawChunks, $parsed['raw_chunks']);
                     }
                     if ($parsed['usage']) $usage = $parsed['usage'];
                     return strlen($chunk);
@@ -233,7 +247,7 @@ class GeminiService
             $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
             if ($code === 200) {
-                $completeCallback($fullText, $usage);
+                $completeCallback($fullText, $usage, $rawChunks);
                 return;
             }
         }
@@ -242,7 +256,7 @@ class GeminiService
 
     private function _processStreamBuffer(string &$buffer): array
     {
-        $result = ['chunks' => [], 'usage' => null];
+        $result = ['chunks' => [], 'usage' => null, 'raw_chunks' => []];
 
         // 1. Clean framing characters
         $buffer = ltrim($buffer, ", \n\r\t[");
@@ -274,6 +288,7 @@ class GeminiService
                     if (isset($data['usageMetadata'])) {
                         $result['usage'] = $data['usageMetadata'];
                     }
+                    $result['raw_chunks'][] = $data;
 
                     // Advance buffer past this object
                     $buffer = substr($buffer, $pos + 1);
@@ -473,5 +488,88 @@ class GeminiService
             log_message('error', 'Gemini TTS Exception: ' . $e->getMessage());
             return ['status' => false, 'error' => 'Could not connect to the speech synthesis service.'];
         }
+    }
+    /**
+     * Finalizes the streaming interaction by handling billing, memory updates, and audio generation.
+     * Use this to keep the Controller 'skinny'.
+     */
+    public function finalizeStreamInteraction(
+        int $userId,
+        string $inputText,
+        string $fullText,
+        ?array $usageMetadata,
+        array $rawChunks,
+        array $contextData,
+        bool $isVoiceEnabled
+    ): array {
+        $audioUsage = null;
+        $audioData = null;
+
+        // 1. Audio Generation (Optional)
+        if ($isVoiceEnabled && !empty($fullText)) {
+            $audioResult = $this->generateSpeech($fullText);
+            if ($audioResult['status']) {
+                $audioUsage = $audioResult['usage'] ?? null;
+                $audioData = $audioResult['audioData'];
+            }
+        }
+
+        $costData = ['costKSH' => 0];
+
+        // 2. Transaction: Billing & Memory
+        $this->db->transStart();
+
+        // Calculate & Deduct Cost
+        if ($usageMetadata) {
+            $costData = $this->calculateCost($usageMetadata, $audioUsage);
+            $deduction = number_format($costData['costKSH'], 4, '.', '');
+            $this->userModel->deductBalance($userId, $deduction);
+        }
+
+        // Update Memory
+        if (isset($contextData['memoryService'])) {
+            $contextData['memoryService']->updateMemory(
+                $inputText,
+                $fullText,
+                $rawChunks,
+                $contextData['usedInteractionIds'] ?? []
+            );
+        }
+
+        $this->db->transComplete();
+
+        if ($this->db->transStatus() === false) {
+            log_message('error', "[GeminiService] Transaction failed for User ID: {$userId}");
+            // We don't throw here to avoid crashing the stream close, but we log critically
+        }
+
+        return [
+            'costKSH' => $costData['costKSH'],
+            'audioData' => $audioData
+        ];
+    }
+    /**
+     * Stores a temporary file for Gemini multimodal context.
+     *
+     * @param \CodeIgniter\HTTP\Files\UploadedFile $file
+     * @param int $userId
+     * @return array [status => bool, filename => string, error => string|null]
+     */
+    public function storeTempMedia($file, int $userId): array
+    {
+        $userTempPath = WRITEPATH . 'uploads/gemini_temp/' . $userId . '/';
+
+        if (!is_dir($userTempPath)) {
+            if (!mkdir($userTempPath, 0755, true)) {
+                return ['status' => false, 'error' => 'Failed to create directory.'];
+            }
+        }
+
+        $fileName = $file->getRandomName();
+        if (!$file->move($userTempPath, $fileName)) {
+            return ['status' => false, 'error' => $file->getErrorString()];
+        }
+
+        return ['status' => true, 'filename' => $fileName, 'original_name' => $file->getClientName()];
     }
 }

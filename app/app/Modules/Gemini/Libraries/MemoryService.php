@@ -14,9 +14,7 @@ use App\Modules\Gemini\Libraries\EmbeddingService;
 use CodeIgniter\I18n\Time;
 
 /**
- * Gem
-
-ini Memory Service
+ * Gemini Memory Service
  *
  * Manages AI memory including storage, retrieval, relevance scoring, and contextual prompt construction.
  * Implements hybrid search (vector + keyword) and temporal decay mechanisms.
@@ -232,10 +230,11 @@ class MemoryService
      *
      * @param string $userInput The user's input.
      * @param string $aiOutput The AI's response.
+     * @param array|string $aiOutputRaw The raw AI response body (complete response).
      * @param array $usedInteractionIds IDs of interactions used as context.
      * @return string The unique ID of the new interaction.
      */
-    public function updateMemory(string $userInput, string $aiOutput, array $usedInteractionIds): string
+    public function updateMemory(string $userInput, string $aiOutput, array|string $aiOutputRaw, array $usedInteractionIds): string
     {
         // 1. Reward used interactions
         if (!empty($usedInteractionIds)) {
@@ -303,6 +302,7 @@ class MemoryService
             'timestamp' => date('Y-m-d H:i:s'),
             'user_input_raw' => $userInput,
             'ai_output' => $aiOutput,
+            'ai_output_raw' => $aiOutputRaw,
             'relevance_score' => $this->config->initialScore,
             'last_accessed' => date('Y-m-d H:i:s'),
             'context_used_ids' => $usedInteractionIds,

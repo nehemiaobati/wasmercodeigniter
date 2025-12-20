@@ -22,6 +22,7 @@ class InteractionModel extends Model
         'timestamp',
         'user_input_raw',
         'ai_output',
+        'ai_output_raw',
         'relevance_score',
         'last_accessed',
         'context_used_ids',

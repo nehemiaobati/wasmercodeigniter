@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Gemini\Entities;
 
@@ -11,6 +13,7 @@ use CodeIgniter\Entity\Entity;
  * @property string $timestamp
  * @property string $user_input_raw
  * @property string $ai_output
+ * @property array|null $ai_output_raw
  * @property float $relevance_score
  * @property string $last_accessed
  * @property string|null $context_used_ids
@@ -25,6 +28,7 @@ class Interaction extends Entity
         'user_id' => 'integer',
         'relevance_score' => 'float',
         'context_used_ids' => 'json-array',
+        'ai_output_raw' => 'json-array',
         'embedding' => 'json-array',
         'keywords' => 'json-array',
     ];

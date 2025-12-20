@@ -490,4 +490,59 @@ class OllamaService
             ];
         }
     }
+    /**
+     * Finalizes the streaming interaction by handling billing and memory updates.
+     * Use this to keep the Controller 'skinny'.
+     */
+    public function finalizeStreamInteraction(int $userId, string $inputText, string $fullText): array
+    {
+        $cost = 1.00; // Fixed cost for now
+
+        $db = \Config\Database::connect();
+        $userModel = new \App\Models\UserModel();
+
+        // Transaction: Billing & Memory
+        $db->transStart();
+
+        // Deduct Cost
+        $userModel->deductBalance($userId, (string)$cost);
+
+        // Update Memory (future implementation if needed here, currently handled strictly by controller flow in some aspects, 
+        // but ideally should be here. For now, we mirror the controller's logic which was just deduction).
+
+        $db->transComplete();
+
+        if ($db->transStatus() === false) {
+            log_message('error', "[OllamaService] Transaction failed for User ID: {$userId}");
+        }
+
+        return [
+            'cost' => $cost
+        ];
+    }
+
+    /**
+     * Stores a temporary file for Ollama multimodal context.
+     *
+     * @param \CodeIgniter\HTTP\Files\UploadedFile $file
+     * @param int $userId
+     * @return array [status => bool, filename => string, error => string|null]
+     */
+    public function storeTempMedia($file, int $userId): array
+    {
+        $userTempPath = WRITEPATH . 'uploads/ollama_temp/' . $userId . '/';
+
+        if (!is_dir($userTempPath)) {
+            if (!mkdir($userTempPath, 0755, true)) {
+                return ['status' => false, 'error' => 'Failed to create directory.'];
+            }
+        }
+
+        $fileName = $file->getRandomName();
+        if (!$file->move($userTempPath, $fileName)) {
+            return ['status' => false, 'error' => $file->getErrorString()];
+        }
+
+        return ['status' => true, 'filename' => $fileName, 'original_name' => $file->getClientName()];
+    }
 }
