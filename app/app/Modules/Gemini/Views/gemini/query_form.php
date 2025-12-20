@@ -150,8 +150,21 @@
     }
 
     /* Fix malformed border radius */
+    /* Fix malformed border radius without clipping dropdowns */
     #results-card {
-        overflow: hidden;
+        overflow: visible;
+        /* Allow dropdowns to spill out */
+        border-radius: var(--bs-border-radius);
+    }
+
+    #results-card .card-header {
+        border-top-left-radius: calc(var(--bs-border-radius) - 1px);
+        border-top-right-radius: calc(var(--bs-border-radius) - 1px);
+    }
+
+    #results-card .card-footer {
+        border-bottom-left-radius: calc(var(--bs-border-radius) - 1px);
+        border-bottom-right-radius: calc(var(--bs-border-radius) - 1px);
     }
 
     .file-chip {

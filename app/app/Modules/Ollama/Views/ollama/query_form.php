@@ -245,7 +245,18 @@
     }
 
     #results-card {
-        overflow: hidden;
+        overflow: visible;
+        border-radius: var(--bs-border-radius);
+    }
+
+    #results-card .card-header {
+        border-top-left-radius: calc(var(--bs-border-radius) - 1px);
+        border-top-right-radius: calc(var(--bs-border-radius) - 1px);
+    }
+
+    #results-card .card-footer {
+        border-bottom-left-radius: calc(var(--bs-border-radius) - 1px);
+        border-bottom-right-radius: calc(var(--bs-border-radius) - 1px);
     }
 
     /* Drag & Drop */
