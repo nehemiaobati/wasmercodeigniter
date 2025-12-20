@@ -789,6 +789,10 @@
                     this.app.ui.setupCodeHighlighting();
                     this.app.ui.setupAutoScroll();
                     if (d.flash_html) document.getElementById('flash-messages-container').innerHTML = d.flash_html;
+                    if (d.audio_url) {
+                        const ac = document.getElementById('audio-player-container');
+                        if (ac) ac.innerHTML = `<div class="alert alert-info d-flex align-items-center mb-4"><i class="bi bi-volume-up-fill fs-4 me-3"></i><audio controls autoplay class="w-100"><source src="${d.audio_url}" type="audio/mpeg"></audio></div>`;
+                    }
                 } else this.app.ui.injectFlashError(d.message || 'Generation failed.');
             } catch (e) {
                 this.app.ui.injectFlashError('An error occurred during generation.');
@@ -839,6 +843,13 @@
                                         rawRes.value += d.text;
                                     } else if (d.error) {
                                         this.app.ui.injectFlashError(d.error);
+                                    } else if (typeof d.cost !== 'undefined') {
+                                        if (parseFloat(d.cost) > 0) {
+                                            document.getElementById('flash-messages-container').innerHTML = `<div class="alert alert-success alert-dismissible fade show">KSH ${parseFloat(d.cost).toFixed(2)} deducted.<button class="btn-close" data-bs-dismiss="alert"></button></div>`;
+                                        }
+                                    } else if (d.audio_url) {
+                                        const ac = document.getElementById('audio-player-container');
+                                        if (ac) ac.innerHTML = `<div class="alert alert-info d-flex align-items-center mb-4"><i class="bi bi-volume-up-fill fs-4 me-3"></i><audio controls autoplay class="w-100"><source src="${d.audio_url}" type="audio/mpeg"></audio></div>`;
                                     }
                                     if (d.csrf_token) this.app.refreshCsrf(d.csrf_token);
                                 } catch (e) {}

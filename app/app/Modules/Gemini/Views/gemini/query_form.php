@@ -1068,6 +1068,8 @@
                                         rawRes.value += d.text;
                                     } else if (d.error) {
                                         this.app.ui.injectFlashError(d.error);
+                                    } else if (d.cost) {
+                                        document.getElementById('flash-messages-container').innerHTML = `<div class="alert alert-success alert-dismissible fade show">KSH ${parseFloat(d.cost).toFixed(2)} deducted.<button class="btn-close" data-bs-dismiss="alert"></button></div>`;
                                     } else if (d.audio_url) {
                                         this.renderAudio(d.audio_url);
                                     }
