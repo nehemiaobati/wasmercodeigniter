@@ -1,9 +1,18 @@
 <?= $this->extend('layouts/default') ?>
 
 <?= $this->section('styles') ?>
+<!-- External Styles -->
 <link rel="stylesheet" href="<?= base_url('public/assets/highlight/styles/atom-one-dark.min.css') ?>">
+
 <style>
-    /* --- Layout Overrides --- */
+    /* 
+    |--------------------------------------------------------------------------
+    | AI Studio Implementation - Internal Styles
+    |--------------------------------------------------------------------------
+    | Scoped styles for the AI Studio interface.
+    */
+
+    /* --- Global Layout Overrides --- */
     #mainNavbar,
     .footer,
     .container.my-4 {
@@ -15,7 +24,7 @@
         padding: 0 !important;
     }
 
-    /* --- Gemini Scoped Layout --- */
+    /* --- Main Container & Layout --- */
     .gemini-view-container {
         --code-bg: #282c34;
         position: fixed;
@@ -28,6 +37,7 @@
         display: flex;
         overflow: hidden;
         z-index: 1000;
+        background-color: var(--bs-body-bg);
     }
 
     .gemini-main {
@@ -40,6 +50,17 @@
         overflow: hidden;
     }
 
+    /* --- Header --- */
+    .gemini-header {
+        position: sticky;
+        top: 0;
+        z-index: 1020;
+        background: var(--bs-body-bg);
+        border-bottom: 1px solid var(--bs-border-color);
+        padding: 0.5rem 1.5rem;
+    }
+
+    /* --- Response Area --- */
     .gemini-response-area {
         flex: 1;
         overflow-y: auto;
@@ -48,13 +69,7 @@
         min-height: 0;
     }
 
-    .gemini-header {
-        position: sticky;
-        top: 0;
-        z-index: 1020;
-        background: var(--bs-body-bg);
-    }
-
+    /* --- Prompt Area --- */
     .gemini-prompt-area {
         width: 100%;
         background: var(--bs-body-bg);
@@ -62,6 +77,22 @@
         padding: 1rem 1.5rem calc(1rem + env(safe-area-inset-bottom));
         z-index: 10;
         box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    .prompt-textarea {
+        resize: none;
+        overflow-y: hidden;
+        min-height: 40px;
+        max-height: 120px;
+        border-radius: 1.5rem;
+        padding: 0.6rem 1rem;
+        line-height: 1.5;
+        transition: border-color 0.2s;
+    }
+
+    .prompt-textarea:focus {
+        box-shadow: none;
+        border-color: var(--bs-primary);
     }
 
     /* --- Sidebar --- */
@@ -90,118 +121,12 @@
         }
     }
 
-    /* --- Components --- */
-    .prompt-textarea {
-        resize: none;
-        overflow-y: hidden;
-        min-height: 40px;
-        max-height: 120px;
-        border-radius: 1.5rem;
-        padding: 0.6rem 1rem;
-        line-height: 1.5;
-        transition: border-color 0.2s;
-    }
-
-    .prompt-textarea:focus {
-        box-shadow: none;
-        border-color: var(--bs-primary);
-    }
-
-    pre {
-        background: var(--code-bg);
-        color: #fff;
-        padding: 1rem;
-        border-radius: 5px;
-        position: relative;
-        margin-top: 1rem;
-    }
-
-    /* Enhanced Copy Buttons */
-    .copy-code-btn {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        opacity: 0;
-        transition: all 0.2s ease;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        backdrop-filter: blur(5px);
-        background: rgba(0, 0, 0, 0.2) !important;
-        font-size: 0.85rem;
-        padding: 0.25rem 0.5rem;
-    }
-
-    pre:hover .copy-code-btn {
-        opacity: 1;
-    }
-
-    .copy-code-btn:hover {
-        background: rgba(0, 0, 0, 0.4) !important;
-        border-color: rgba(255, 255, 255, 0.5);
-        transform: translateY(-1px);
-    }
-
-    .copy-code-btn.copied {
-        background: rgba(40, 167, 69, 0.8) !important;
-        border-color: rgba(40, 167, 69, 1);
-    }
-
-    /* Copy button animations */
-    @keyframes copySuccess {
-        0% {
-            transform: scale(1);
-        }
-
-        50% {
-            transform: scale(1.1);
-        }
-
-        100% {
-            transform: scale(1);
-        }
-    }
-
-    .copy-btn.success {
-        animation: copySuccess 0.3s ease;
-    }
-
-    /* Tooltip styling */
-    .copy-tooltip {
-        position: absolute;
-        top: -30px;
-        right: 0;
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        white-space: nowrap;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.2s ease;
-        z-index: 1000;
-    }
-
-    .copy-tooltip.show {
-        opacity: 1;
-    }
-
-    .copy-tooltip::after {
-        content: '';
-        position: absolute;
-        bottom: -4px;
-        right: 10px;
-        width: 0;
-        height: 0;
-        border-left: 4px solid transparent;
-        border-right: 4px solid transparent;
-        border-top: 4px solid rgba(0, 0, 0, 0.8);
-    }
-
-    /* Model Cards */
+    /* --- Cards & Chips --- */
     .model-card {
         cursor: pointer;
         transition: 0.2s;
         border: 2px solid transparent;
+        background-color: var(--bs-body-bg);
     }
 
     .model-card:hover {
@@ -214,7 +139,7 @@
         background-color: var(--bs-primary-bg-subtle);
     }
 
-    /* Upload Chips */
+    /* Upload List */
     #upload-list-wrapper {
         display: flex;
         flex-wrap: wrap;
@@ -222,6 +147,11 @@
         max-height: 100px;
         overflow-y: auto;
         margin-bottom: 0.5rem;
+    }
+
+    /* Fix malformed border radius */
+    #results-card {
+        overflow: hidden;
     }
 
     .file-chip {
@@ -264,7 +194,79 @@
         }
     }
 
-    /* Media Output */
+    /* --- Code Blocks & Copy --- */
+    pre {
+        background: var(--code-bg);
+        color: #fff;
+        padding: 1rem;
+        border-radius: 5px;
+        position: relative;
+        margin-top: 1rem;
+    }
+
+    .copy-code-btn {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        opacity: 0;
+        transition: all 0.2s ease;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        backdrop-filter: blur(5px);
+        background: rgba(0, 0, 0, 0.2) !important;
+        font-size: 0.85rem;
+        padding: 0.25rem 0.5rem;
+        z-index: 5;
+    }
+
+    pre:hover .copy-code-btn {
+        opacity: 1;
+    }
+
+    .copy-code-btn:hover {
+        background: rgba(0, 0, 0, 0.4) !important;
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-1px);
+    }
+
+    .copy-code-btn.copied {
+        background: rgba(40, 167, 69, 0.8) !important;
+        border-color: rgba(40, 167, 69, 1);
+    }
+
+    /* Tooltip styling */
+    .copy-tooltip {
+        position: absolute;
+        top: -30px;
+        right: 0;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+        z-index: 1000;
+    }
+
+    .copy-tooltip.show {
+        opacity: 1;
+    }
+
+    .copy-tooltip::after {
+        content: '';
+        position: absolute;
+        bottom: -4px;
+        right: 10px;
+        width: 0;
+        height: 0;
+        border-left: 4px solid transparent;
+        border-right: 4px solid transparent;
+        border-top: 4px solid rgba(0, 0, 0, 0.8);
+    }
+
+    /* --- Media Output --- */
     .media-output-container {
         background-color: var(--bs-tertiary-bg);
         border-radius: 0.5rem;
@@ -283,7 +285,6 @@
         object-fit: contain;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         border-radius: 4px;
-        transition: transform 0.2s;
     }
 
     .video-wrapper {
@@ -296,30 +297,24 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
 
-    .video-wrapper video {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-
     .polling-pulse {
         animation: pulse-border 2s infinite;
     }
 
     @keyframes pulse-border {
         0% {
-            border-color: var(--bs-primary);
             box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.4);
+            border-color: var(--bs-primary);
         }
 
         70% {
-            border-color: var(--bs-primary);
             box-shadow: 0 0 0 10px rgba(13, 110, 253, 0);
+            border-color: var(--bs-primary);
         }
 
         100% {
-            border-color: var(--bs-primary);
             box-shadow: 0 0 0 0 rgba(13, 110, 253, 0);
+            border-color: var(--bs-primary);
         }
     }
 </style>
@@ -330,14 +325,14 @@
 
     <!-- Main Content -->
     <div class="gemini-main">
-        <!-- Toolbar -->
-        <div class="d-flex justify-content-between align-items-center px-4 py-2 border-bottom bg-body gemini-header">
+        <!-- Header / Toolbar -->
+        <div class="gemini-header d-flex justify-content-between align-items-center">
             <a href="<?= url_to('home') ?>" class="d-flex align-items-center gap-2 text-decoration-none text-reset">
                 <i class="bi bi-stars text-primary fs-4"></i>
                 <span class="fw-bold fs-5">AI Studio</span>
             </a>
             <div class="d-flex gap-2">
-                <button class="btn btn-outline-secondary btn-sm theme-toggle"><i class="bi bi-circle-half"></i></button>
+                <button class="btn btn-outline-secondary btn-sm theme-toggle" title="Toggle Theme"><i class="bi bi-circle-half"></i></button>
                 <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#geminiSidebar">
                     <i class="bi bi-layout-sidebar-reverse"></i> Settings
                 </button>
@@ -360,18 +355,18 @@
             </div>
 
             <?php if ($result = session()->getFlashdata('result')): ?>
-                <!-- Server-Side Rendered Text Result -->
+                <!-- Server-Side Rendered Result -->
                 <div class="card blueprint-card shadow-sm border-primary" id="results-card">
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <span class="fw-bold"><i class="bi bi-stars me-2"></i>Studio Output</span>
+                        <!-- Actions -->
                         <div class="d-flex gap-2">
-                            <!-- Enhanced Copy Button with Dropdown -->
                             <div class="btn-group" role="group">
                                 <button class="btn btn-sm btn-light copy-btn" id="copyFullResponseBtn" data-format="text">
                                     <i class="bi bi-clipboard me-1"></i> Copy
                                 </button>
                                 <button type="button" class="btn btn-sm btn-light dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <span class="visually-hidden">Toggle Dropdown</span>
+                                    <span class="visually-hidden">Toggle</span>
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end">
                                     <li>
@@ -395,12 +390,8 @@
                     <div class="card-body response-content" id="ai-response-body"><?= $result ?></div>
                     <textarea id="raw-response" class="d-none"><?= esc(session()->getFlashdata('raw_result')) ?></textarea>
                     <div class="card-footer bg-body border-top text-center py-2">
-                        <div class="d-flex flex-column gap-1">
-                            <small class="text-muted fw-medium">Generated by Google Gemini / Imagen / Veo</small>
-                            <small class="text-muted fst-italic" style="font-size: 0.75rem;">
-                                <i class="bi bi-info-circle me-1"></i> AI-generated content may be inaccurate. Please verify important information.
-                            </small>
-                        </div>
+                        <small class="text-muted fw-medium d-block">Generated by Google Gemini / Imagen / Veo</small>
+                        <small class="text-muted" style="font-size: 0.7rem;">AI may make mistakes. Verify important information.</small>
                     </div>
                 </div>
             <?php else: ?>
@@ -413,17 +404,19 @@
             <?php endif; ?>
         </div>
 
-        <!-- Prompt Input Area -->
+        <!-- Prompt Area -->
         <div class="gemini-prompt-area">
             <form id="geminiForm" action="<?= url_to('gemini.generate') ?>" method="post" enctype="multipart/form-data">
                 <?= csrf_field() ?>
 
+                <!-- Generation Tabs -->
                 <ul class="nav nav-pills nav-sm mb-2" id="generationTabs" role="tablist">
                     <li class="nav-item"><button type="button" class="nav-link active py-2 px-3" data-bs-toggle="tab" data-type="text" data-model="gemini-2.5-flash"><i class="bi bi-chat-text me-2"></i>Text</button></li>
                     <li class="nav-item"><button type="button" class="nav-link py-2 px-3" data-bs-toggle="tab" data-type="image"><i class="bi bi-image me-2"></i>Image</button></li>
                     <li class="nav-item"><button type="button" class="nav-link py-2 px-3" data-bs-toggle="tab" data-type="video"><i class="bi bi-camera-video me-2"></i>Video</button></li>
                 </ul>
 
+                <!-- Model Selection (Conditionally Visible) -->
                 <div id="model-selection-area" class="mb-2 d-none">
                     <div id="image-models-grid" class="d-flex gap-2 d-none overflow-auto py-2">
                         <?php foreach ($mediaConfigs as $modelId => $config): ?>
@@ -449,22 +442,30 @@
                     </div>
                 </div>
 
+                <!-- Input Zone -->
                 <div id="upload-list-wrapper"></div>
                 <div id="uploaded-files-container"></div>
 
                 <div class="d-flex align-items-end gap-2 bg-body-tertiary p-2 rounded-4 border">
+                    <!-- Media Upload Trigger -->
                     <div id="mediaUploadArea" class="d-inline-block p-0 border-0 bg-transparent mb-1">
                         <input type="file" id="media-input-trigger" multiple class="d-none">
-                        <label for="media-input-trigger" class="btn btn-link text-secondary p-1"><i class="bi bi-paperclip fs-4"></i></label>
+                        <label for="media-input-trigger" class="btn btn-link text-secondary p-1" title="Attach files">
+                            <i class="bi bi-paperclip fs-4"></i>
+                        </label>
                     </div>
+
+                    <!-- Input Fields -->
                     <div class="flex-grow-1">
                         <input type="hidden" name="model_id" id="selectedModelId" value="gemini-2.0-flash">
                         <input type="hidden" name="generation_type" id="generationType" value="text">
                         <textarea id="prompt" name="prompt" class="form-control border-0 bg-transparent prompt-textarea shadow-none" placeholder="Message Gemini..." rows="1"><?= old('prompt') ?></textarea>
                     </div>
+
+                    <!-- Actions -->
                     <div class="d-flex align-items-center gap-1 mb-1">
-                        <button type="button" class="btn btn-link text-secondary p-1" data-bs-toggle="modal" data-bs-target="#savePromptModal"><i class="bi bi-bookmark-plus fs-5"></i></button>
-                        <button type="submit" id="generateBtn" class="btn btn-primary rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;"><i class="bi bi-arrow-up text-white fs-5"></i></button>
+                        <button type="button" class="btn btn-link text-secondary p-1" data-bs-toggle="modal" data-bs-target="#savePromptModal" title="Save Prompt"><i class="bi bi-bookmark-plus fs-5"></i></button>
+                        <button type="submit" id="generateBtn" class="btn btn-primary rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" title="Generate"><i class="bi bi-arrow-up text-white fs-5"></i></button>
                     </div>
                 </div>
             </form>
@@ -513,6 +514,10 @@
         <form action="<?= url_to('gemini.memory.clear') ?>" method="post" onsubmit="return confirm('Clear all history?');">
             <?= csrf_field() ?><button type="submit" class="btn btn-outline-danger w-100 btn-sm"><i class="bi bi-trash me-2"></i> Clear History</button>
         </form>
+
+        <div class="mt-auto pt-4 text-center">
+            <small class="text-muted">AFRIKENKID AI Studio v2</small>
+        </div>
     </div>
 </div>
 
@@ -539,6 +544,7 @@
     </div>
 </div>
 
+<!-- Toast Container -->
 <div class="toast-container position-fixed top-0 start-50 translate-middle-x p-3 gemini-toast-container">
     <div id="liveToast" class="toast text-bg-dark" role="alert">
         <div class="toast-body"></div>
@@ -552,14 +558,18 @@
 <script src="<?= base_url('public/assets/tinymce/tinymce.min.js') ?>"></script>
 <script src="<?= base_url('public/assets/marked/marked.min.js') ?>"></script>
 <script>
+    /**
+     * Gemini Application Controller
+     * Handles UI states, AJAX interactions, and event delegation.
+     */
     class GeminiApp {
         constructor() {
             this.config = {
                 csrfName: '<?= csrf_token() ?>',
                 csrfHash: document.querySelector('input[name="<?= csrf_token() ?>"]').value,
-                maxFileSize: <?= $maxFileSize ?>,
-                maxFiles: <?= $maxFiles ?>,
-                supportedMimeTypes: <?= $supportedMimeTypes ?>,
+                maxFileSize: <?= $maxFileSize ?? 10 * 1024 * 1024 ?>,
+                maxFiles: <?= $maxFiles ?? 5 ?>,
+                supportedMimeTypes: <?= $supportedMimeTypes ?? '[]' ?>,
                 endpoints: {
                     upload: '<?= url_to('gemini.upload_media') ?>',
                     deleteMedia: '<?= url_to('gemini.delete_media') ?>',
@@ -571,30 +581,47 @@
                     pollMedia: '<?= url_to('gemini.media.poll') ?>'
                 }
             };
+
+            // Initialize Modules
             this.ui = new UIManager(this);
             this.uploader = new MediaUploader(this);
             this.prompts = new PromptManager(this);
             this.interaction = new InteractionHandler(this);
         }
+
         init() {
+            // Configure Marked
             if (typeof marked !== 'undefined') marked.use({
                 breaks: true,
                 gfm: true
             });
+
+            // Start Modules
             this.ui.init();
             this.uploader.init();
             this.prompts.init();
             this.interaction.init();
+
+            // Global Reference
             window.geminiApp = this;
         }
+
+        /**
+         * Refreshes the CSRF token across the DOM and internal config.
+         */
         refreshCsrf(hash) {
             if (!hash) return;
             this.config.csrfHash = hash;
             document.querySelectorAll(`input[name="${this.config.csrfName}"]`).forEach(el => el.value = hash);
         }
+
+        /**
+         * Generic AJAX Handler with CSRF protection and JSON parsing.
+         */
         async sendAjax(url, data = null) {
             const formData = data instanceof FormData ? data : new FormData();
             if (!formData.has(this.config.csrfName)) formData.append(this.config.csrfName, this.config.csrfHash);
+
             try {
                 const res = await fetch(url, {
                     method: 'POST',
@@ -603,23 +630,34 @@
                         'X-Requested-With': 'XMLHttpRequest'
                     }
                 });
+
+                if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+
                 const d = await res.json();
-                const token = d.token || d.csrf_token;
+
+                // Refresh CSRF if provided in response
+                const token = d.token || d.csrf_token || res.headers.get('X-CSRF-TOKEN');
                 if (token) this.refreshCsrf(token);
+
                 return d;
             } catch (e) {
                 console.error('AJAX Error:', e);
-                this.ui.showToast('Network error.');
-                throw e;
+                this.ui.showToast('Network error occurred.');
+                throw e; // Propagate for specific handling
             }
         }
     }
 
+    /**
+     * UI Manager
+     * Handles visual updates, tabs, sidebars, and library initialization.
+     */
     class UIManager {
         constructor(app) {
             this.app = app;
             this.generateBtn = document.getElementById('generateBtn');
         }
+
         init() {
             this.handleResponsiveSidebar();
             this.setupTabs();
@@ -629,12 +667,14 @@
             this.setupDownloads();
             this.initTinyMCE();
         }
+
         handleResponsiveSidebar() {
             if (window.innerWidth < 992) {
                 const sb = document.getElementById('geminiSidebar');
                 if (sb && sb.classList.contains('show')) sb.classList.remove('show');
             }
         }
+
         initTinyMCE() {
             if (typeof tinymce === 'undefined') return;
             tinymce.init({
@@ -648,6 +688,8 @@
                 autoresize_overflow_padding: 0,
                 min_height: 40,
                 max_height: 120,
+                highlight_on_focus: false, // Prevents TinyMCE's specific focus highlighting
+                content_style: 'body { outline: none !important; }',
                 setup: (editor) => {
                     editor.on('keydown', (e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
@@ -662,6 +704,7 @@
                 }
             });
         }
+
         showToast(msg) {
             const t = document.getElementById('liveToast');
             if (t) {
@@ -669,10 +712,12 @@
                 new bootstrap.Toast(t).show();
             }
         }
+
         injectFlashError(msg) {
             const c = document.getElementById('flash-messages-container');
             if (c) c.innerHTML = `<div class="alert alert-danger alert-dismissible fade show">${msg}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
         }
+
         setupTabs() {
             document.querySelectorAll('#generationTabs button').forEach(btn => {
                 btn.addEventListener('shown.bs.tab', (e) => {
@@ -689,6 +734,7 @@
                 });
             });
         }
+
         updateModelSelectionUI(type) {
             const area = document.getElementById('model-selection-area');
             const imgGrid = document.getElementById('image-models-grid');
@@ -715,10 +761,12 @@
                 }
             }
         }
+
         setPlaceholder(txt) {
             if (tinymce.activeEditor) tinymce.activeEditor.getBody().setAttribute('data-mce-placeholder', txt);
             else document.getElementById('prompt')?.setAttribute('placeholder', txt);
         }
+
         setupSettings() {
             document.querySelectorAll('.setting-toggle').forEach(t => {
                 t.addEventListener('change', async (e) => {
@@ -727,35 +775,31 @@
                     fd.append('enabled', e.target.checked);
                     try {
                         const d = await this.app.sendAjax(this.app.config.endpoints.settings, fd);
-                        this.showToast(d.status === 'success' ? 'Saved.' : 'Error.');
-                    } catch (e) {}
+                        if (d.status !== 'success') this.showToast('Failed to save setting.');
+                    } catch (e) {
+                        /* Error handled in sendAjax */
+                    }
                 });
             });
         }
+
         setupCodeHighlighting() {
             if (typeof hljs !== 'undefined') hljs.highlightAll();
+
             document.querySelectorAll('pre code').forEach((b) => {
                 if (b.parentElement.querySelector('.copy-code-btn')) return;
+
                 const btn = document.createElement('button');
                 btn.className = 'btn btn-sm btn-dark copy-code-btn';
                 btn.innerHTML = '<i class="bi bi-clipboard"></i>';
                 btn.onclick = (e) => {
                     e.preventDefault();
-                    const code = b.innerText;
-                    navigator.clipboard.writeText(code).then(() => {
-                        // Visual feedback
+                    navigator.clipboard.writeText(b.innerText).then(() => {
                         btn.classList.add('copied');
-                        const originalHtml = btn.innerHTML;
-                        btn.innerHTML = '<i class="bi bi-check-lg"></i> Copied';
-                        setTimeout(() => {
-                            btn.innerHTML = originalHtml;
-                            btn.classList.remove('copied');
-                        }, 2000);
-                    }).catch(err => {
-                        console.error('Copy failed:', err);
-                        btn.innerHTML = '<i class="bi bi-x-lg"></i> Failed';
+                        btn.innerHTML = '<i class="bi bi-check-lg"></i>';
                         setTimeout(() => {
                             btn.innerHTML = '<i class="bi bi-clipboard"></i>';
+                            btn.classList.remove('copied');
                         }, 2000);
                     });
                 };
@@ -763,61 +807,46 @@
             });
         }
 
-        /**
-         * Fix 1: Ensure we have the correct card type for Text.
-         * If the current card is a Media card (missing #ai-response-body), remove it.
-         */
         ensureResultCardExists() {
             const existing = document.getElementById('results-card');
             const hasText = document.getElementById('ai-response-body');
 
-            if (existing && !hasText) existing.remove(); // Remove Media card if switching to text
-
+            // Reset logic: Remove if strictly media and we need text, or just ensure existence
+            if (existing && !hasText) existing.remove();
             if (document.getElementById('results-card')) return;
 
-            const container = document.getElementById('response-area-wrapper');
-            const emptyState = document.getElementById('empty-state');
-            if (emptyState) emptyState.remove();
+            document.getElementById('empty-state')?.remove();
 
             const html = `
-        <div class="card blueprint-card shadow-sm border-primary" id="results-card">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <span class="fw-bold"><i class="bi bi-stars me-2"></i>Studio Output</span>
-                <div class="d-flex gap-2">
-                    <!-- Enhanced Copy Button with Dropdown -->
-                    <div class="btn-group" role="group">
-                        <button class="btn btn-sm btn-light copy-btn" id="copyFullResponseBtn" data-format="text">
-                            <i class="bi bi-clipboard me-1"></i> Copy
-                        </button>
-                        <button type="button" class="btn btn-sm btn-light dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
-                            <span class="visually-hidden">Toggle Dropdown</span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><h6 class="dropdown-header"><i class="bi bi-clipboard me-1"></i> Copy As</h6></li>
-                            <li><a class="dropdown-item copy-format-action" href="#" data-format="text"><i class="bi bi-file-text me-2"></i> Plain Text</a></li>
-                            <li><a class="dropdown-item copy-format-action" href="#" data-format="markdown"><i class="bi bi-markdown me-2"></i> Markdown</a></li>
-                            <li><a class="dropdown-item copy-format-action" href="#" data-format="html"><i class="bi bi-code-square me-2"></i> HTML</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><h6 class="dropdown-header"><i class="bi bi-download me-1"></i> Export As</h6></li>
-                            <li><a class="dropdown-item download-action" href="#" data-format="pdf"><i class="bi bi-file-pdf me-2"></i> PDF Document</a></li>
-                            <li><a class="dropdown-item download-action" href="#" data-format="docx"><i class="bi bi-file-word me-2"></i> Word Document</a></li>
-                        </ul>
+                <div class="card blueprint-card shadow-sm border-primary" id="results-card">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <span class="fw-bold"><i class="bi bi-stars me-2"></i>Studio Output</span>
+                         <div class="d-flex gap-2">
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-sm btn-light copy-btn" id="copyFullResponseBtn" data-format="text"><i class="bi bi-clipboard me-1"></i> Copy</button>
+                                <button type="button" class="btn btn-sm btn-light dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false"><span class="visually-hidden">Toggle</span></button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><h6 class="dropdown-header"><i class="bi bi-clipboard me-1"></i> Copy As</h6></li>
+                                    <li><a class="dropdown-item copy-format-action" href="#" data-format="text"><i class="bi bi-file-text me-2"></i> Plain Text</a></li>
+                                    <li><a class="dropdown-item copy-format-action" href="#" data-format="markdown"><i class="bi bi-markdown me-2"></i> Markdown</a></li>
+                                    <li><a class="dropdown-item copy-format-action" href="#" data-format="html"><i class="bi bi-code-square me-2"></i> HTML</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><h6 class="dropdown-header"><i class="bi bi-download me-1"></i> Export As</h6></li>
+                                    <li><a class="dropdown-item download-action" href="#" data-format="pdf"><i class="bi bi-file-pdf me-2"></i> PDF Document</a></li>
+                                    <li><a class="dropdown-item download-action" href="#" data-format="docx"><i class="bi bi-file-word me-2"></i> Word Document</a></li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-            <div class="card-body response-content" id="ai-response-body"></div>
-            <textarea id="raw-response" class="d-none"></textarea>
-            <div class="card-footer bg-body border-top text-center py-2">
-                <div class="d-flex flex-column gap-1">
-                    <small class="text-muted fw-medium">Generated by Google Gemini / Imagen / Veo</small>
-                    <small class="text-muted fst-italic" style="font-size: 0.75rem;">
-                        <i class="bi bi-info-circle me-1"></i> AI-generated content may be inaccurate. Please verify important information.
-                    </small>
-                </div>
-            </div>
-        </div>`;
-            container.insertAdjacentHTML('beforeend', html);
-            this.setupDownloads();
+                    <div class="card-body response-content" id="ai-response-body"></div>
+                    <textarea id="raw-response" class="d-none"></textarea>
+                    <div class="card-footer bg-body border-top text-center py-2">
+                        <small class="text-muted fw-medium d-block">Generated by Google Gemini / Imagen / Veo</small>
+                        <small class="text-muted" style="font-size: 0.7rem;">AI may make mistakes. Verify important information.</small>
+                    </div>
+                </div>`;
+            document.getElementById('response-area-wrapper').insertAdjacentHTML('beforeend', html);
+            this.setupDownloads(); // Bind events to new elements
         }
 
         setupAutoScroll() {
@@ -827,7 +856,7 @@
         }
 
         setupDownloads() {
-            // Setup download actions
+            // Bind Download Actions
             document.querySelectorAll('.download-action').forEach(btn => {
                 btn.onclick = (e) => {
                     e.preventDefault();
@@ -837,161 +866,85 @@
                 };
             });
 
-            // Enhanced copy functionality with multiple formats
-            const setupCopyButton = (btnId) => {
-                const cp = document.getElementById(btnId);
-                if (!cp) return;
+            // Bind Copy Actions
+            const mainCopyBtn = document.getElementById('copyFullResponseBtn');
+            if (mainCopyBtn) mainCopyBtn.onclick = () => this.copyContent('text', mainCopyBtn);
 
-                // Create tooltip element
-                const tooltip = document.createElement('div');
-                tooltip.className = 'copy-tooltip';
-                cp.parentElement.style.position = 'relative';
-                cp.parentElement.appendChild(tooltip);
-
-                // Main copy button click
-                cp.onclick = () => this.copyToClipboard('text', cp, tooltip);
-            };
-
-            setupCopyButton('copyFullResponseBtn');
-
-            // Copy format dropdown actions
             document.querySelectorAll('.copy-format-action').forEach(btn => {
                 btn.onclick = (e) => {
                     e.preventDefault();
-                    const format = e.target.dataset.format || e.target.closest('[data-format]').dataset.format;
-                    const mainBtn = document.getElementById('copyFullResponseBtn');
-                    const tooltip = mainBtn?.parentElement.querySelector('.copy-tooltip');
-                    this.copyToClipboard(format, mainBtn, tooltip);
+                    this.copyContent(e.target.dataset.format, mainCopyBtn);
                 };
             });
         }
 
-        copyToClipboard(format, button, tooltip) {
-            const rawResponse = document.getElementById('raw-response');
-            const responseBody = document.getElementById('ai-response-body');
-            if (!rawResponse || !responseBody) return;
+        copyContent(format, btn) {
+            const raw = document.getElementById('raw-response');
+            const body = document.getElementById('ai-response-body');
+            if (!raw || !body) return;
 
-            let contentToCopy = '';
-            let successMessage = 'Copied!';
-
+            let content = '';
             switch (format) {
-                case 'text':
-                    // Get plain text by using innerText which strips all HTML
-                    // This gives us the rendered text as it appears visually
-                    contentToCopy = responseBody.innerText || responseBody.textContent || '';
-                    console.log('Copying as plain text:', contentToCopy.substring(0, 200));
-                    successMessage = 'Copied as plain text';
-                    break;
                 case 'markdown':
-                    // Get raw markdown content from the hidden textarea
-                    contentToCopy = rawResponse.value || '';
-                    console.log('Copying as markdown:', contentToCopy.substring(0, 200));
-                    successMessage = 'Copied as markdown';
+                    content = raw.value;
                     break;
                 case 'html':
-                    // Get rendered HTML
-                    contentToCopy = responseBody.innerHTML || '';
-                    console.log('Copying as HTML:', contentToCopy.substring(0, 200));
-                    successMessage = 'Copied as HTML';
+                    content = body.innerHTML;
                     break;
                 default:
-                    contentToCopy = responseBody.innerText || responseBody.textContent || '';
+                    content = body.innerText;
             }
 
-            // Ensure we have content to copy
-            if (!contentToCopy.trim()) {
-                this.showToast('No content to copy');
+            if (!content.trim()) {
+                this.showToast('Nothing to copy.');
                 return;
             }
 
-            navigator.clipboard.writeText(contentToCopy).then(() => {
-                // Show success animation
-                if (button) {
-                    button.classList.add('success');
-                    const originalHtml = button.innerHTML;
-                    button.innerHTML = '<i class="bi bi-check-lg me-1"></i> Copied!';
-
-                    setTimeout(() => {
-                        button.innerHTML = originalHtml;
-                        button.classList.remove('success');
-                    }, 2000);
+            navigator.clipboard.writeText(content).then(() => {
+                this.showToast('Copied!');
+                if (btn) {
+                    const original = btn.innerHTML;
+                    btn.innerHTML = '<i class="bi bi-check-lg"></i> Copied';
+                    setTimeout(() => btn.innerHTML = original, 2000);
                 }
-
-                // Show tooltip
-                if (tooltip) {
-                    tooltip.textContent = successMessage;
-                    tooltip.classList.add('show');
-                    setTimeout(() => {
-                        tooltip.classList.remove('show');
-                    }, 2000);
-                }
-
-                // Also show toast
-                this.showToast(successMessage);
-            }).catch(err => {
-                console.error('Copy failed:', err);
-                this.showToast('Copy failed');
-
-                if (tooltip) {
-                    tooltip.textContent = 'Copy failed';
-                    tooltip.classList.add('show');
-                    setTimeout(() => {
-                        tooltip.classList.remove('show');
-                    }, 2000);
-                }
-            });
-        }
-        setLoading(l) {
-            this.generateBtn.disabled = l;
-            this.generateBtn.innerHTML = l ? '<span class="spinner-border spinner-border-sm text-white"></span>' : '<i class="bi bi-arrow-up text-white fs-5"></i>';
+            }).catch(() => this.showToast('Copy failed.'));
         }
 
-        /**
-         * Fix 2: Robust Download Logic for Media.
-         * Uses <a> tag with target="_blank" for reliable downloading.
-         */
+        setLoading(loading) {
+            if (loading) {
+                this.generateBtn.disabled = true;
+                this.generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm text-white"></span>';
+            } else {
+                this.generateBtn.disabled = false;
+                this.generateBtn.innerHTML = '<i class="bi bi-arrow-up text-white fs-5"></i>';
+            }
+        }
+
         renderMediaCard(contentHtml, downloadUrl = null, isProcessing = false) {
-            const row = document.getElementById('response-area-wrapper');
             const existing = document.getElementById('results-card');
             if (existing) existing.remove();
+            document.getElementById('empty-state')?.remove();
 
-            const emptyState = document.getElementById('empty-state');
-            if (emptyState) emptyState.remove();
+            const actions = (downloadUrl && !isProcessing) ?
+                `<a href="${encodeURI(downloadUrl)}" target="_blank" class="btn btn-sm btn-light text-primary fw-bold text-decoration-none"><i class="bi bi-download me-1"></i> Download</a>` :
+                '';
 
             const processingClass = isProcessing ? 'polling-pulse' : '';
             const title = isProcessing ? 'Generating Content...' : 'Studio Output';
 
-            let actions = '';
-            if (downloadUrl && !isProcessing) {
-                const safeUrl = encodeURI(downloadUrl);
-                const finalUrl = safeUrl.includes('serve') ? `${safeUrl}${safeUrl.includes('?')?'&':'?'}download=1` : safeUrl;
-                actions = `<a href="${finalUrl}" target="_blank" class="btn btn-sm btn-light text-primary fw-bold text-decoration-none"><i class="bi bi-download me-1"></i> Download</a>`;
-            }
-
             const html = `
-        <div class="card blueprint-card mt-4 shadow-sm border-primary ${processingClass}" id="results-card">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <span class="fw-bold"><i class="bi bi-stars me-2"></i>${title}</span>
-                <div>${actions}</div>
-            </div>
-            <div class="card-body p-0">
-                <div class="media-output-container">${contentHtml}</div>
-            </div>
-            ${!isProcessing ? `
-            <div class="card-footer bg-body border-top text-center py-2">
-                <div class="d-flex flex-column gap-1">
-                    <small class="text-muted fw-medium">Generated by Google Gemini / Imagen / Veo</small>
-                    <small class="text-muted fst-italic" style="font-size: 0.75rem;">
-                        <i class="bi bi-info-circle me-1"></i> AI-generated content may be inaccurate. Please verify important information.
-                    </small>
-                </div>
-            </div>` : ''}
-        </div>`;
-            row.insertAdjacentHTML('beforeend', html);
-            document.getElementById('results-card').scrollIntoView({
-                behavior: 'smooth',
-                block: 'center'
-            });
+                <div class="card blueprint-card mt-4 shadow-sm border-primary ${processingClass}" id="results-card">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <span class="fw-bold"><i class="bi bi-stars me-2"></i>${title}</span>
+                        <div>${actions}</div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="media-output-container">${contentHtml}</div>
+                    </div>
+                </div>`;
+
+            document.getElementById('response-area-wrapper').insertAdjacentHTML('beforeend', html);
+            this.setupAutoScroll();
         }
 
         showMediaResult(url, type) {
@@ -1002,208 +955,15 @@
         }
     }
 
-    class MediaUploader {
-        constructor(app) {
-            this.app = app;
-            this.queue = [];
-            this.isUploading = false;
-        }
-        init() {
-            const area = document.getElementById('mediaUploadArea');
-            const inp = document.getElementById('media-input-trigger');
-            if (!area) return;
-            ['dragenter', 'dragover'].forEach(e => area.addEventListener(e, ev => {
-                ev.preventDefault();
-                area.classList.add('dragover');
-            }));
-            ['dragleave', 'drop'].forEach(e => area.addEventListener(e, ev => {
-                ev.preventDefault();
-                area.classList.remove('dragover');
-            }));
-            area.addEventListener('drop', e => this.handleFiles(e.dataTransfer.files));
-            inp.addEventListener('change', e => {
-                this.handleFiles(e.target.files);
-                inp.value = '';
-            });
-            document.getElementById('upload-list-wrapper')?.addEventListener('click', e => {
-                if (e.target.closest('.remove-btn')) this.removeFile(e.target.closest('.remove-btn'));
-            });
-        }
-        handleFiles(files) {
-            let acc = 0;
-            Array.from(files).forEach(f => {
-                if (this.app.config.supportedMimeTypes.includes(f.type) && f.size <= this.app.config.maxFileSize) {
-                    const id = Math.random().toString(36).substr(2, 9);
-                    this.queue.push({
-                        file: f,
-                        ui: this.createBar(f, id),
-                        id: id
-                    });
-                    acc++;
-                } else this.app.ui.showToast('Invalid file');
-            });
-            if (acc > 0) this.processQueue();
-        }
-        createBar(f, id) {
-            const d = document.createElement('div');
-            d.id = `file-item-${id}`;
-            d.className = 'file-chip fade show';
-            d.innerHTML = `<div class="progress-ring"></div><span class="file-name">${f.name}</span><button type="button" class="btn-close p-1 remove-btn disabled" data-id="${id}"></button>`;
-            document.getElementById('upload-list-wrapper').appendChild(d);
-            return d;
-        }
-        processQueue() {
-            if (this.isUploading || this.queue.length === 0) return;
-            this.isUploading = true;
-            this.perform(this.queue.shift());
-        }
-        perform(job) {
-            const fd = new FormData();
-            fd.append(this.app.config.csrfName, this.app.config.csrfHash);
-            fd.append('file', job.file);
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', this.app.config.endpoints.upload, true);
-            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-            xhr.onreadystatechange = () => {
-                if (xhr.readyState === 4) {
-                    try {
-                        const r = JSON.parse(xhr.responseText);
-                        if (r.csrf_token) this.app.refreshCsrf(r.csrf_token);
-                        if (xhr.status === 200 && r.status === 'success') {
-                            this.updateUI(job.ui, 'success');
-                            job.ui.querySelector('.remove-btn').dataset.serverFileId = r.file_id;
-                            const i = document.createElement('input');
-                            i.type = 'hidden';
-                            i.name = 'uploaded_media[]';
-                            i.value = r.file_id;
-                            i.id = `input-${job.id}`;
-                            document.getElementById('uploaded-files-container').appendChild(i);
-                        } else this.updateUI(job.ui, 'error', r.message);
-                    } catch (e) {
-                        this.updateUI(job.ui, 'error');
-                    }
-                    this.isUploading = false;
-                    this.processQueue();
-                }
-            };
-            xhr.send(fd);
-        }
-        updateUI(ui, status, msg = '') {
-            ui.querySelector('.progress-ring').remove();
-            ui.querySelector('.remove-btn').classList.remove('disabled');
-            const i = document.createElement('i');
-            i.className = status === 'success' ? 'bi bi-check-circle-fill text-success me-2' : 'bi bi-exclamation-circle-fill text-danger me-2';
-            ui.insertBefore(i, ui.firstChild);
-            ui.style.borderColor = status === 'success' ? 'var(--bs-success)' : 'var(--bs-danger)';
-        }
-        async removeFile(btn) {
-            const ui = btn.closest('.file-chip');
-            const fid = btn.dataset.serverFileId;
-            if (fid) {
-                const fd = new FormData();
-                fd.append('file_id', fid);
-                try {
-                    await this.app.sendAjax(this.app.config.endpoints.deleteMedia, fd);
-                    ui.remove();
-                    document.getElementById(`input-${btn.dataset.id}`)?.remove();
-                } catch (e) {}
-            } else ui.remove();
-        }
-        clearUploads() {
-            document.getElementById('upload-list-wrapper').innerHTML = '';
-            document.getElementById('uploaded-files-container').innerHTML = '';
-            this.queue = [];
-        }
-    }
-
-    class PromptManager {
-        constructor(app) {
-            this.app = app;
-        }
-        init() {
-            const sel = document.getElementById('savedPrompts');
-            const load = document.getElementById('usePromptBtn');
-            const del = document.getElementById('deletePromptBtn');
-            if (load) load.onclick = () => {
-                if (sel && sel.value) {
-                    if (tinymce.get('prompt')) tinymce.get('prompt').setContent(sel.value);
-                    else {
-                        const el = document.getElementById('prompt');
-                        el.value = sel.value;
-                        el.focus();
-                    }
-                }
-            };
-            if (sel) sel.onchange = () => {
-                if (del) del.disabled = !sel.value;
-            };
-            if (del) del.onclick = () => this.deletePrompt();
-
-            const form = document.querySelector('#savePromptModal form');
-            if (form) {
-                document.getElementById('savePromptModal').addEventListener('show.bs.modal', () => {
-                    document.getElementById('modalPromptText').value = tinymce.get('prompt') ? tinymce.get('prompt').getContent() : document.getElementById('prompt').value;
-                });
-                form.onsubmit = (e) => {
-                    e.preventDefault();
-                    this.savePrompt(new FormData(form), form.action);
-                };
-            }
-        }
-        async savePrompt(fd, action) {
-            const m = bootstrap.Modal.getInstance(document.getElementById('savePromptModal'));
-            try {
-                const d = await this.app.sendAjax(action || fd.get('action'), fd);
-                if (d.status === 'success') {
-                    this.app.ui.showToast('Saved!');
-                    m.hide();
-
-                    const container = document.getElementById('savedPromptsContainer');
-                    const alert = document.getElementById('no-prompts-alert');
-                    if (container) container.classList.remove('d-none');
-                    if (alert) alert.classList.add('d-none');
-
-                    const opt = document.createElement('option');
-                    opt.value = d.prompt.prompt_text;
-                    opt.textContent = d.prompt.title;
-                    opt.dataset.id = d.prompt.id;
-                    const sel = document.getElementById('savedPrompts');
-                    if (sel) {
-                        sel.appendChild(opt);
-                        sel.value = d.prompt.prompt_text;
-                    }
-                    const delBtn = document.getElementById('deletePromptBtn');
-                    if (delBtn) delBtn.disabled = false;
-                } else this.app.ui.showToast(d.message || 'Failed');
-            } catch (e) {
-                console.error('Save Prompt Error:', e);
-                this.app.ui.showToast('Error saving prompt: ' + (e.message || 'System error'));
-            }
-        }
-        async deletePrompt() {
-            const sel = document.getElementById('savedPrompts');
-            if (sel && sel.selectedIndex !== -1 && confirm('Delete?')) {
-                try {
-                    const id = sel.options[sel.selectedIndex].dataset.id;
-                    const d = await this.app.sendAjax(this.app.config.endpoints.deletePromptBase + id);
-                    if (d.status === 'success') {
-                        sel.options[sel.selectedIndex].remove();
-                        if (sel.options.length <= 1) { // Only "Select..." left
-                            document.getElementById('savedPromptsContainer')?.classList.add('d-none');
-                            document.getElementById('no-prompts-alert')?.classList.remove('d-none');
-                        }
-                        sel.value = '';
-                        document.getElementById('deletePromptBtn').disabled = true;
-                    }
-                } catch (e) {}
-            }
-        }
-    }
-
+    /**
+     * Interaction Handler
+     * Manages form submission and text/media generation logic.
+     */
     class InteractionHandler {
         constructor(app) {
             this.app = app;
         }
+
         init() {
             document.getElementById('geminiForm')?.addEventListener('submit', e => this.handleSubmit(e));
         }
@@ -1212,9 +972,10 @@
             e.preventDefault();
             const type = document.getElementById('generationType').value;
             if (typeof tinymce !== 'undefined') tinymce.triggerSave();
+
             const prompt = document.getElementById('prompt').value.trim();
             if (!prompt && type === 'text') {
-                this.app.ui.showToast('Enter a prompt.');
+                this.app.ui.showToast('Please enter a prompt.');
                 return;
             }
 
@@ -1225,7 +986,6 @@
                 if (document.getElementById('streamOutput')?.checked) await this.handleStreaming(fd);
                 else await this.handleStandard(fd);
             } else {
-                if (this.mock(prompt, type)) return;
                 await this.handleMedia(fd);
             }
         }
@@ -1234,46 +994,56 @@
             this.app.ui.ensureResultCardExists();
             try {
                 const d = await this.app.sendAjax(this.app.config.endpoints.generate, fd);
+
                 if (d.status === 'success') {
                     document.getElementById('ai-response-body').innerHTML = d.result;
                     document.getElementById('raw-response').value = d.raw_result;
                     this.app.ui.setupCodeHighlighting();
                     this.app.ui.setupAutoScroll();
                     if (d.flash_html) document.getElementById('flash-messages-container').innerHTML = d.flash_html;
-                    if (d.audio_url) document.getElementById('audio-player-container').innerHTML = `<div class="alert alert-info d-flex align-items-center mb-4"><i class="bi bi-volume-up-fill fs-4 me-3"></i><audio controls autoplay class="w-100"><source src="${d.audio_url}" type="audio/mpeg"></audio></div>`;
-                    else document.getElementById('audio-player-container').innerHTML = '';
-                } else this.app.ui.injectFlashError(d.message || 'Error');
+                    this.renderAudio(d.audio_url);
+                } else {
+                    this.app.ui.injectFlashError(d.message || 'Generation failed.');
+                }
             } catch (e) {
-                this.app.ui.injectFlashError('System Error');
+                this.app.ui.injectFlashError('An error occurred during generation.');
+            } finally {
+                this.app.ui.setLoading(false);
+                this.app.uploader.clearUploads();
             }
-            this.app.ui.setLoading(false);
-            this.app.uploader.clearUploads();
         }
 
         async handleStreaming(fd) {
             this.app.ui.ensureResultCardExists();
-            document.getElementById('ai-response-body').innerHTML = '';
+            const resBody = document.getElementById('ai-response-body');
+            const rawRes = document.getElementById('raw-response');
+            resBody.innerHTML = '';
+            rawRes.value = '';
             document.getElementById('audio-player-container').innerHTML = '';
-            let accum = '';
+
             try {
-                const res = await fetch(this.app.config.endpoints.stream, {
+                const response = await fetch(this.app.config.endpoints.stream, {
                     method: 'POST',
                     body: fd
                 });
-                const reader = res.body.getReader();
-                const dec = new TextDecoder();
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
                 let buffer = '';
+                let accum = '';
+
                 while (true) {
                     const {
                         value,
                         done
                     } = await reader.read();
                     if (done) break;
-                    buffer += dec.decode(value, {
+
+                    buffer += decoder.decode(value, {
                         stream: true
                     });
                     const parts = buffer.split('\n\n');
                     buffer = parts.pop();
+
                     for (const part of parts) {
                         part.split('\n').forEach(line => {
                             if (line.startsWith('data: ')) {
@@ -1281,13 +1051,13 @@
                                     const d = JSON.parse(line.substring(6));
                                     if (d.text) {
                                         accum += d.text;
-                                        document.getElementById('ai-response-body').innerHTML = marked.parse(accum);
-                                        document.getElementById('raw-response').value += d.text;
+                                        resBody.innerHTML = marked.parse(accum);
+                                        rawRes.value += d.text;
                                     } else if (d.error) {
-                                        if (d.csrf_token) this.app.refreshCsrf(d.csrf_token);
                                         this.app.ui.injectFlashError(d.error);
-                                    } else if (d.cost) document.getElementById('flash-messages-container').innerHTML = `<div class="alert alert-success alert-dismissible fade show">KSH ${parseFloat(d.cost).toFixed(2)} deducted.<button class="btn-close" data-bs-dismiss="alert"></button></div>`;
-                                    if (d.audio_url) document.getElementById('audio-player-container').innerHTML = `<div class="alert alert-info d-flex align-items-center mb-4"><i class="bi bi-volume-up-fill fs-4 me-3"></i><audio controls autoplay class="w-100"><source src="${d.audio_url}" type="audio/mpeg"></audio></div>`;
+                                    } else if (d.audio_url) {
+                                        this.renderAudio(d.audio_url);
+                                    }
                                     if (d.csrf_token) this.app.refreshCsrf(d.csrf_token);
                                 } catch (e) {}
                             }
@@ -1296,35 +1066,28 @@
                 }
                 this.app.ui.setupCodeHighlighting();
             } catch (e) {
-                this.app.ui.injectFlashError('Stream Error');
+                this.app.ui.injectFlashError('Stream Connection Lost.');
+            } finally {
+                this.app.ui.setLoading(false);
+                this.app.uploader.clearUploads();
             }
-            this.app.ui.setLoading(false);
-            this.app.uploader.clearUploads();
         }
 
         async handleMedia(fd) {
             try {
-                const res = await fetch(this.app.config.endpoints.generateMedia, {
-                    method: 'POST',
-                    body: fd,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
-                const d = await res.json();
-                if (d.token) this.app.refreshCsrf(d.token);
-                if (d.status === 'error') {
-                    this.app.ui.injectFlashError(d.message);
-                    this.app.ui.setLoading(false);
-                } else if (d.type === 'image') {
+                const d = await this.app.sendAjax(this.app.config.endpoints.generateMedia, fd);
+
+                if (d.status === 'error') throw new Error(d.message);
+
+                if (d.type === 'image') {
                     this.app.ui.showMediaResult(d.url, 'image');
                     this.app.ui.setLoading(false);
                 } else if (d.type === 'video') {
-                    this.app.ui.renderMediaCard(`<div class="text-center p-4"><div class="spinner-border text-primary mb-3"></div><h5>Synthesizing Video</h5><p class="text-muted">10-20 seconds...</p></div>`, null, true);
+                    this.app.ui.renderMediaCard('<div class="text-center p-4"><div class="spinner-border text-primary mb-3"></div><h5>Synthesizing Video</h5><p class="text-muted">Processing...</p></div>', null, true);
                     this.pollVideo(d.op_id);
                 }
             } catch (e) {
-                this.app.ui.injectFlashError('Media Failed');
+                this.app.ui.injectFlashError(e.message || 'Media Generation Failed');
                 this.app.ui.setLoading(false);
             }
         }
@@ -1340,32 +1103,240 @@
                         this.app.ui.showMediaResult(d.url, 'video');
                         this.app.ui.setLoading(false);
                     } else if (d.status === 'failed') {
-                        clearInterval(t);
-                        this.app.ui.injectFlashError(d.message);
-                        this.app.ui.setLoading(false);
+                        throw new Error(d.message);
                     }
                 } catch (e) {
                     clearInterval(t);
+                    this.app.ui.injectFlashError(e.message || 'Video processing failed.');
                     this.app.ui.setLoading(false);
                 }
             }, 5000);
         }
 
-        mock(p, t) {
-            const lp = p.toLowerCase();
-            if (lp === '<p>test image</p>' && t === 'image') {
-                setTimeout(() => this.app.ui.showMediaResult('https://picsum.photos/300/300', 'image'), 1000);
-                this.app.ui.setLoading(false);
-                return true;
-            }
-            if (lp === '<p>test video</p>' && t === 'video') {
-                setTimeout(() => this.app.ui.showMediaResult('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', 'video'), 1000);
-                this.app.ui.setLoading(false);
-                return true;
-            }
-            return false;
+        renderAudio(url) {
+            if (!url) return;
+            document.getElementById('audio-player-container').innerHTML = `
+                <div class="alert alert-info d-flex align-items-center mb-4">
+                    <i class="bi bi-volume-up-fill fs-4 me-3"></i>
+                    <audio controls autoplay class="w-100"><source src="${url}" type="audio/mpeg"></audio>
+                </div>`;
         }
     }
+
+    /**
+     * Media Uploader
+     * Handles file selection, drag & drop, and server upload/delete.
+     */
+    class MediaUploader {
+        constructor(app) {
+            this.app = app;
+            this.queue = [];
+            this.isUploading = false;
+        }
+
+        init() {
+            const area = document.getElementById('mediaUploadArea');
+            const inp = document.getElementById('media-input-trigger');
+            if (!area) return;
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => {
+                area.addEventListener(e, ev => {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                });
+            });
+            ['dragenter', 'dragover'].forEach(e => area.addEventListener(e, () => area.classList.add('dragover')));
+            ['dragleave', 'drop'].forEach(e => area.addEventListener(e, () => area.classList.remove('dragover')));
+
+            area.addEventListener('drop', e => this.handleFiles(e.dataTransfer.files));
+            inp.addEventListener('change', e => {
+                this.handleFiles(e.target.files);
+                inp.value = '';
+            });
+
+            document.getElementById('upload-list-wrapper')?.addEventListener('click', e => {
+                if (e.target.closest('.remove-btn')) this.removeFile(e.target.closest('.remove-btn'));
+            });
+        }
+
+        handleFiles(files) {
+            const currentCount = document.querySelectorAll('.file-chip').length;
+            const queueCount = this.queue.length;
+            const availableSlots = this.app.config.maxFiles - (currentCount + queueCount);
+
+            if (files.length > availableSlots) {
+                this.app.ui.showToast(`Limit reached: Max ${this.app.config.maxFiles} files.`);
+                return;
+            }
+
+            Array.from(files).forEach(f => {
+                if (this.app.config.supportedMimeTypes.includes(f.type) && f.size <= this.app.config.maxFileSize) {
+                    const id = Math.random().toString(36).substr(2, 9);
+                    this.queue.push({
+                        file: f,
+                        ui: this.createBar(f, id),
+                        id: id
+                    });
+                } else {
+                    let msg = `Invalid file: ${f.name}`;
+                    if (!this.app.config.supportedMimeTypes.includes(f.type)) msg += ' (Unsupported type)';
+                    else if (f.size > this.app.config.maxFileSize) msg += ' (File too large)';
+                    this.app.ui.showToast(msg);
+                }
+            });
+            if (this.queue.length > 0) this.processQueue();
+        }
+
+        createBar(f, id) {
+            const d = document.createElement('div');
+            d.innerHTML = `<div class="file-chip fade show" id="file-item-${id}"><div class="progress-ring"></div><span class="file-name">${f.name}</span><button type="button" class="btn-close p-1 remove-btn disabled" data-id="${id}"></button></div>`;
+            document.getElementById('upload-list-wrapper').appendChild(d.firstChild);
+            return document.getElementById(`file-item-${id}`);
+        }
+
+        processQueue() {
+            if (this.isUploading || this.queue.length === 0) return;
+            this.isUploading = true;
+            this.perform(this.queue.shift());
+        }
+
+        perform(job) {
+            const fd = new FormData();
+            fd.append(this.app.config.csrfName, this.app.config.csrfHash);
+            fd.append('file', job.file);
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', this.app.config.endpoints.upload, true);
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+            xhr.onload = () => {
+                try {
+                    const r = JSON.parse(xhr.responseText);
+                    if (r.csrf_token) this.app.refreshCsrf(r.csrf_token);
+
+                    if (xhr.status === 200 && r.status === 'success') {
+                        this.updateUI(job.ui, 'success');
+                        job.ui.querySelector('.remove-btn').dataset.serverFileId = r.file_id;
+                        const hidden = document.createElement('input');
+                        hidden.type = 'hidden';
+                        hidden.name = 'uploaded_media[]';
+                        hidden.value = r.file_id;
+                        hidden.id = `input-${job.id}`;
+                        document.getElementById('uploaded-files-container').appendChild(hidden);
+                    } else {
+                        throw new Error(r.message);
+                    }
+                } catch (e) {
+                    this.updateUI(job.ui, 'error');
+                }
+                this.isUploading = false;
+                this.processQueue();
+            };
+            xhr.send(fd);
+        }
+
+        updateUI(ui, status) {
+            ui.querySelector('.progress-ring').remove();
+            ui.querySelector('.remove-btn').classList.remove('disabled');
+            const i = document.createElement('i');
+            i.className = status === 'success' ? 'bi bi-check-circle-fill text-success me-2' : 'bi bi-exclamation-circle-fill text-danger me-2';
+            ui.prepend(i);
+            ui.style.borderColor = status === 'success' ? 'var(--bs-success)' : 'var(--bs-danger)';
+        }
+
+        async removeFile(btn) {
+            const ui = btn.closest('.file-chip');
+            const fid = btn.dataset.serverFileId;
+            if (fid) {
+                const fd = new FormData();
+                fd.append('file_id', fid);
+                try {
+                    await this.app.sendAjax(this.app.config.endpoints.deleteMedia, fd);
+                } catch (e) {}
+            }
+            ui.remove();
+            document.getElementById(`input-${btn.dataset.id}`)?.remove();
+        }
+
+        clearUploads() {
+            document.getElementById('upload-list-wrapper').innerHTML = '';
+            document.getElementById('uploaded-files-container').innerHTML = '';
+            this.queue = [];
+        }
+    }
+
+    /**
+     * Prompt Manager
+     * Handles saving, loading, and deleting prompts.
+     */
+    class PromptManager {
+        constructor(app) {
+            this.app = app;
+        }
+
+        init() {
+            const sel = document.getElementById('savedPrompts');
+            const load = document.getElementById('usePromptBtn');
+            const del = document.getElementById('deletePromptBtn');
+
+            if (load && sel) load.onclick = () => {
+                if (!sel.value) return;
+                if (tinymce.get('prompt')) tinymce.get('prompt').setContent(sel.value);
+                else {
+                    const el = document.getElementById('prompt');
+                    el.value = sel.value;
+                    el.focus();
+                }
+            };
+
+            if (sel) sel.onchange = () => del.disabled = !sel.value;
+            if (del) del.onclick = () => this.deletePrompt();
+
+            const form = document.querySelector('#savePromptModal form');
+            if (form) {
+                document.getElementById('savePromptModal').addEventListener('show.bs.modal', () => {
+                    const val = tinymce.get('prompt') ? tinymce.get('prompt').getContent() : document.getElementById('prompt').value;
+                    document.getElementById('modalPromptText').value = val;
+                });
+                form.onsubmit = (e) => {
+                    e.preventDefault();
+                    this.savePrompt(new FormData(form), form.action);
+                };
+            }
+        }
+
+        async savePrompt(fd, action) {
+            const m = bootstrap.Modal.getInstance(document.getElementById('savePromptModal'));
+            try {
+                const d = await this.app.sendAjax(action, fd);
+                if (d.status === 'success') {
+                    this.app.ui.showToast('Saved!');
+                    m.hide();
+                    location.reload(); // Simple reload to refresh list for now
+                } else this.app.ui.showToast('Failed to save.');
+            } catch (e) {
+                this.app.ui.showToast('Error saving.');
+            }
+        }
+
+        async deletePrompt() {
+            const sel = document.getElementById('savedPrompts');
+            if (sel && sel.value && confirm('Delete?')) {
+                try {
+                    const id = sel.options[sel.selectedIndex].dataset.id;
+                    const d = await this.app.sendAjax(this.app.config.endpoints.deletePromptBase + id);
+                    if (d.status === 'success') {
+                        sel.options[sel.selectedIndex].remove();
+                        if (sel.options.length <= 1) {
+                            sel.value = '';
+                            document.getElementById('deletePromptBtn').disabled = true;
+                        }
+                    }
+                } catch (e) {}
+            }
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', () => new GeminiApp().init());
 </script>
 <?= $this->endSection() ?>
