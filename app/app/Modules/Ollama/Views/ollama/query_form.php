@@ -127,17 +127,85 @@
         margin-top: 1rem;
     }
 
+    /* Enhanced Copy Buttons */
     .copy-code-btn {
         position: absolute;
-        top: 5px;
-        right: 5px;
-        opacity: 0.4;
-        transition: opacity 0.2s;
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        top: 8px;
+        right: 8px;
+        opacity: 0;
+        transition: all 0.2s ease;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        backdrop-filter: blur(5px);
+        background: rgba(0, 0, 0, 0.2) !important;
+        font-size: 0.85rem;
+        padding: 0.25rem 0.5rem;
     }
 
     pre:hover .copy-code-btn {
         opacity: 1;
+    }
+
+    .copy-code-btn:hover {
+        background: rgba(0, 0, 0, 0.4) !important;
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-1px);
+    }
+
+    .copy-code-btn.copied {
+        background: rgba(40, 167, 69, 0.8) !important;
+        border-color: rgba(40, 167, 69, 1);
+    }
+
+    /* Copy button animations */
+    @keyframes copySuccess {
+        0% {
+            transform: scale(1);
+        }
+
+        50% {
+            transform: scale(1.1);
+        }
+
+        100% {
+            transform: scale(1);
+        }
+    }
+
+    .copy-btn.success {
+        animation: copySuccess 0.3s ease;
+    }
+
+    /* Tooltip styling */
+    .copy-tooltip {
+        position: absolute;
+        top: -30px;
+        right: 0;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+        z-index: 1000;
+    }
+
+    .copy-tooltip.show {
+        opacity: 1;
+    }
+
+    .copy-tooltip::after {
+        content: '';
+        position: absolute;
+        bottom: -4px;
+        right: 10px;
+        width: 0;
+        height: 0;
+        border-left: 4px solid transparent;
+        border-right: 4px solid transparent;
+        border-top: 4px solid rgba(0, 0, 0, 0.8);
     }
 
     /* Upload Area */
@@ -306,14 +374,29 @@
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <span class="fw-bold"><i class="bi bi-stars me-2"></i>Studio Output</span>
                         <div class="d-flex gap-2">
-                            <button class="btn btn-sm btn-light" id="copyFullResponseBtn" title="Copy Full Text">
-                                <i class="bi bi-clipboard"></i> Copy
-                            </button>
-                            <div class="dropdown">
-                                <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">Export</button>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item download-action" href="#" data-format="pdf">PDF</a></li>
-                                    <li><a class="dropdown-item download-action" href="#" data-format="docx">Word</a></li>
+                            <!-- Enhanced Copy Button with Dropdown -->
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-sm btn-light copy-btn" id="copyFullResponseBtn" data-format="text">
+                                    <i class="bi bi-clipboard me-1"></i> Copy
+                                </button>
+                                <button type="button" class="btn btn-sm btn-light dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <span class="visually-hidden">Toggle Dropdown</span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <h6 class="dropdown-header"><i class="bi bi-clipboard me-1"></i> Copy As</h6>
+                                    </li>
+                                    <li><a class="dropdown-item copy-format-action" href="#" data-format="text"><i class="bi bi-file-text me-2"></i> Plain Text</a></li>
+                                    <li><a class="dropdown-item copy-format-action" href="#" data-format="markdown"><i class="bi bi-markdown me-2"></i> Markdown</a></li>
+                                    <li><a class="dropdown-item copy-format-action" href="#" data-format="html"><i class="bi bi-code-square me-2"></i> HTML</a></li>
+                                    <li>
+                                        <hr class="dropdown-divider">
+                                    </li>
+                                    <li>
+                                        <h6 class="dropdown-header"><i class="bi bi-download me-1"></i> Export As</h6>
+                                    </li>
+                                    <li><a class="dropdown-item download-action" href="#" data-format="pdf"><i class="bi bi-file-pdf me-2"></i> PDF Document</a></li>
+                                    <li><a class="dropdown-item download-action" href="#" data-format="docx"><i class="bi bi-file-word me-2"></i> Word Document</a></li>
                                 </ul>
                             </div>
                         </div>
@@ -692,20 +775,32 @@
 
         setupCodeHighlighting() {
             if (typeof hljs !== 'undefined') hljs.highlightAll();
-
-            document.querySelectorAll('pre code').forEach((block) => {
-                if (block.parentElement.querySelector('.copy-code-btn')) return; // Avoid duplicates
+            document.querySelectorAll('pre code').forEach((b) => {
+                if (b.parentElement.querySelector('.copy-code-btn')) return;
                 const btn = document.createElement('button');
                 btn.className = 'btn btn-sm btn-dark copy-code-btn';
                 btn.innerHTML = '<i class="bi bi-clipboard"></i>';
-                btn.addEventListener('click', (e) => {
+                btn.onclick = (e) => {
                     e.preventDefault();
-                    navigator.clipboard.writeText(block.innerText).then(() => {
-                        btn.innerHTML = '<i class="bi bi-check-lg text-success"></i>';
-                        setTimeout(() => btn.innerHTML = '<i class="bi bi-clipboard"></i>', 2000);
+                    const code = b.innerText;
+                    navigator.clipboard.writeText(code).then(() => {
+                        // Visual feedback
+                        btn.classList.add('copied');
+                        const originalHtml = btn.innerHTML;
+                        btn.innerHTML = '<i class="bi bi-check-lg"></i> Copied';
+                        setTimeout(() => {
+                            btn.innerHTML = originalHtml;
+                            btn.classList.remove('copied');
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Copy failed:', err);
+                        btn.innerHTML = '<i class="bi bi-x-lg"></i> Failed';
+                        setTimeout(() => {
+                            btn.innerHTML = '<i class="bi bi-clipboard"></i>';
+                        }, 2000);
                     });
-                });
-                block.parentElement.appendChild(btn);
+                };
+                b.parentElement.appendChild(btn);
             });
         }
 
@@ -719,25 +814,32 @@
         }
 
         setupDownloads() {
+            // Setup download actions  
             document.querySelectorAll('.download-action').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
                     e.preventDefault();
+                    // Ensure we target the button, not inner elements like icons
+                    const btnEl = e.target.closest('.download-action');
+                    if (!btnEl) return;
+
                     const rawDoc = document.getElementById('raw-response');
                     if (!rawDoc || !rawDoc.value) return;
 
-                    const format = e.target.dataset.format;
+                    const format = btnEl.dataset.format;
                     const content = rawDoc.value;
-                    const btnEl = e.target;
 
-                    // Visual Feedback
-                    const originalText = btnEl.textContent;
-                    btnEl.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Downloading...';
-                    btnEl.closest('.dropdown').querySelector('.dropdown-toggle').disabled = true;
+                    // Visual Feedback - Save HTML to preserve icons
+                    const originalHtml = btnEl.innerHTML;
+                    btnEl.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Downloading...';
+
+                    // Disable dropdown toggle
+                    const dropdown = btnEl.closest('.dropdown');
+                    const toggle = dropdown ? dropdown.querySelector('.dropdown-toggle') : null;
+                    if (toggle) toggle.disabled = true;
 
                     try {
                         const fd = new FormData();
                         fd.append(this.app.config.csrfName, this.app.config.csrfHash);
-                        // Handle legacy "content" vs new "raw_response" input expectation
                         fd.append('content', content);
                         fd.append('raw_response', content);
                         fd.append('format', format);
@@ -759,13 +861,11 @@
                             throw new Error(err.message || 'Download failed');
                         }
 
-                        // Handle Blob
                         const blob = await response.blob();
                         const url = window.URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.style.display = 'none';
                         a.href = url;
-                        // Get filename from header if possible, else default
                         const disposition = response.headers.get('Content-Disposition');
                         let filename = `ollama-export.${format}`;
                         if (disposition && disposition.indexOf('attachment') !== -1) {
@@ -788,21 +888,115 @@
                         console.error(err);
                         this.showToast(err.message);
                     } finally {
-                        btnEl.textContent = originalText;
-                        btnEl.closest('.dropdown').querySelector('.dropdown-toggle').disabled = false;
+                        // Restore original HTML (including icons)
+                        btnEl.innerHTML = originalHtml;
+                        if (toggle) toggle.disabled = false;
                     }
                 });
             });
-            const copyFull = document.getElementById('copyFullResponseBtn');
-            if (copyFull) {
-                copyFull.addEventListener('click', () => {
-                    const rawDoc = document.getElementById('raw-response');
-                    if (rawDoc) {
-                        navigator.clipboard.writeText(rawDoc.value)
-                            .then(() => this.showToast('Copied!'));
-                    }
-                });
+
+            // Enhanced copy functionality with multiple formats
+            const setupCopyButton = (btnId) => {
+                const cp = document.getElementById(btnId);
+                if (!cp) return;
+
+                // Create tooltip element
+                const tooltip = document.createElement('div');
+                tooltip.className = 'copy-tooltip';
+                cp.parentElement.style.position = 'relative';
+                cp.parentElement.appendChild(tooltip);
+
+                // Main copy button click
+                cp.onclick = () => this.copyToClipboard('text', cp, tooltip);
+            };
+
+            setupCopyButton('copyFullResponseBtn');
+
+            // Copy format dropdown actions
+            document.querySelectorAll('.copy-format-action').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.preventDefault();
+                    const format = e.target.dataset.format || e.target.closest('[data-format]').dataset.format;
+                    const mainBtn = document.getElementById('copyFullResponseBtn');
+                    const tooltip = mainBtn?.parentElement.querySelector('.copy-tooltip');
+                    this.copyToClipboard(format, mainBtn, tooltip);
+                };
+            });
+        }
+
+        copyToClipboard(format, button, tooltip) {
+            const rawResponse = document.getElementById('raw-response');
+            const responseBody = document.getElementById('ai-response-body');
+            if (!rawResponse || !responseBody) return;
+
+            let contentToCopy = '';
+            let successMessage = 'Copied!';
+
+            switch (format) {
+                case 'text':
+                    // Get plain text by using innerText which strips all HTML
+                    contentToCopy = responseBody.innerText || responseBody.textContent || '';
+                    console.log('Copying as plain text:', contentToCopy.substring(0, 200));
+                    successMessage = 'Copied as plain text';
+                    break;
+                case 'markdown':
+                    // Get raw markdown content from the hidden textarea
+                    contentToCopy = rawResponse.value || '';
+                    console.log('Copying as markdown:', contentToCopy.substring(0, 200));
+                    successMessage = 'Copied as markdown';
+                    break;
+                case 'html':
+                    // Get rendered HTML
+                    contentToCopy = responseBody.innerHTML || '';
+                    console.log('Copying as HTML:', contentToCopy.substring(0, 200));
+                    successMessage = 'Copied as HTML';
+                    break;
+                default:
+                    contentToCopy = responseBody.innerText || responseBody.textContent || '';
             }
+
+            // Ensure we have content to copy
+            if (!contentToCopy.trim()) {
+                this.showToast('No content to copy');
+                return;
+            }
+
+            navigator.clipboard.writeText(contentToCopy).then(() => {
+                // Show success animation
+                if (button) {
+                    button.classList.add('success');
+                    const originalHtml = button.innerHTML;
+                    button.innerHTML = '<i class="bi bi-check-lg me-1"></i> Copied!';
+
+                    setTimeout(() => {
+                        button.innerHTML = originalHtml;
+                        button.classList.remove('success');
+                    }, 2000);
+                }
+
+                // Show tooltip
+                if (tooltip) {
+                    tooltip.textContent = successMessage;
+                    tooltip.classList.add('show');
+                    setTimeout(() => {
+                        tooltip.classList.remove('show');
+                    }, 2000);
+                }
+
+                // Also show toast
+                this.showToast(successMessage);
+            }).catch(err => {
+                console.error('Copy failed:', err);
+                this.showToast('Copy failed');
+
+                if (tooltip) {
+                    tooltip.textContent = 'Copy failed';
+                    tooltip.classList.add('show');
+                    setTimeout(() => {
+                        tooltip.classList.remove('show');
+                    }, 2000);
+                }
+            });
         }
 
         setLoading(isLoading) {
@@ -828,14 +1022,23 @@
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <span class="fw-bold"><i class="bi bi-stars me-2"></i>Studio Output</span>
                         <div class="d-flex gap-2">
-                            <button class="btn btn-sm btn-light" id="copyFullResponseBtn" title="Copy Full Text" type="button">
-                                <i class="bi bi-clipboard"></i> Copy
-                            </button>
-                            <div class="dropdown">
-                                <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">Export</button>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item download-action" href="#" data-format="pdf">PDF</a></li>
-                                    <li><a class="dropdown-item download-action" href="#" data-format="docx">Word</a></li>
+                            <!-- Enhanced Copy Button with Dropdown -->
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-sm btn-light copy-btn" id="copyFullResponseBtn" data-format="text">
+                                    <i class="bi bi-clipboard me-1"></i> Copy
+                                </button>
+                                <button type="button" class="btn btn-sm btn-light dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <span class="visually-hidden">Toggle Dropdown</span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><h6 class="dropdown-header"><i class="bi bi-clipboard me-1"></i> Copy As</h6></li>
+                                    <li><a class="dropdown-item copy-format-action" href="#" data-format="text"><i class="bi bi-file-text me-2"></i> Plain Text</a></li>
+                                    <li><a class="dropdown-item copy-format-action" href="#" data-format="markdown"><i class="bi bi-markdown me-2"></i> Markdown</a></li>
+                                    <li><a class="dropdown-item copy-format-action" href="#" data-format="html"><i class="bi bi-code-square me-2"></i> HTML</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><h6 class="dropdown-header"><i class="bi bi-download me-1"></i> Export As</h6></li>
+                                    <li><a class="dropdown-item download-action" href="#" data-format="pdf"><i class="bi bi-file-pdf me-2"></i> PDF Document</a></li>
+                                    <li><a class="dropdown-item download-action" href="#" data-format="docx"><i class="bi bi-file-word me-2"></i> Word Document</a></li>
                                 </ul>
                             </div>
                         </div>
