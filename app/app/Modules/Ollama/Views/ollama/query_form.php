@@ -688,7 +688,8 @@
 
         setupAutoScroll() {
             setTimeout(() => document.getElementById('results-card')?.scrollIntoView({
-                behavior: 'smooth'
+                behavior: 'smooth',
+                block: 'nearest'
             }), 100);
         }
 
@@ -791,7 +792,7 @@
                     if (d.flash_html) document.getElementById('flash-messages-container').innerHTML = d.flash_html;
                     if (d.audio_url) {
                         const ac = document.getElementById('audio-player-container');
-                        if (ac) ac.innerHTML = `<div class="alert alert-info d-flex align-items-center mb-4"><i class="bi bi-volume-up-fill fs-4 me-3"></i><audio controls autoplay class="w-100"><source src="${d.audio_url}" type="audio/mpeg"></audio></div>`;
+                        if (ac) ac.innerHTML = `<div class="alert alert-info d-flex align-items-center mb-4"><i class="bi bi-volume-up-fill fs-4 me-3"></i><audio controls autoplay class="w-100"><source src="${d.audio_url}" type="audio/mpeg"><source src="${d.audio_url}" type="audio/wav">Your browser does not support the audio element.</audio></div>`;
                     }
                 } else this.app.ui.injectFlashError(d.message || 'Generation failed.');
             } catch (e) {
@@ -841,15 +842,18 @@
                                         accum += d.text;
                                         resBody.innerHTML = marked.parse(accum);
                                         rawRes.value += d.text;
-                                    } else if (d.error) {
+                                    }
+                                    if (d.error) {
                                         this.app.ui.injectFlashError(d.error);
-                                    } else if (typeof d.cost !== 'undefined') {
+                                    }
+                                    if (typeof d.cost !== 'undefined') {
                                         if (parseFloat(d.cost) > 0) {
                                             document.getElementById('flash-messages-container').innerHTML = `<div class="alert alert-success alert-dismissible fade show">KSH ${parseFloat(d.cost).toFixed(2)} deducted.<button class="btn-close" data-bs-dismiss="alert"></button></div>`;
                                         }
-                                    } else if (d.audio_url) {
+                                    }
+                                    if (d.audio_url) {
                                         const ac = document.getElementById('audio-player-container');
-                                        if (ac) ac.innerHTML = `<div class="alert alert-info d-flex align-items-center mb-4"><i class="bi bi-volume-up-fill fs-4 me-3"></i><audio controls autoplay class="w-100"><source src="${d.audio_url}" type="audio/mpeg"></audio></div>`;
+                                        if (ac) ac.innerHTML = `<div class="alert alert-info d-flex align-items-center mb-4"><i class="bi bi-volume-up-fill fs-4 me-3"></i><audio controls autoplay class="w-100"><source src="${d.audio_url}" type="audio/mpeg"><source src="${d.audio_url}" type="audio/wav">Your browser does not support the audio element.</audio></div>`;
                                     }
                                     if (d.csrf_token) this.app.refreshCsrf(d.csrf_token);
                                 } catch (e) {}
