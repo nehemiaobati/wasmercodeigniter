@@ -10,7 +10,6 @@
     | AI Studio Implementation - Internal Styles (Ollama)
     |--------------------------------------------------------------------------
     | Scoped styles for the AI Studio interface.
-    | Identical structure to Gemini view for consistency.
     */
 
     /* --- Global Layout Overrides --- */
@@ -23,6 +22,7 @@
     body {
         overflow: hidden;
         padding: 0 !important;
+        background-color: var(--bs-body-bg);
     }
 
     /* --- Main Container & Layout --- */
@@ -211,39 +211,7 @@
         border-color: rgba(40, 167, 69, 1);
     }
 
-    /* Tooltip styling */
-    .copy-tooltip {
-        position: absolute;
-        top: -30px;
-        right: 0;
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        white-space: nowrap;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.2s ease;
-        z-index: 1000;
-    }
-
-    .copy-tooltip.show {
-        opacity: 1;
-    }
-
-    .copy-tooltip::after {
-        content: '';
-        position: absolute;
-        bottom: -4px;
-        right: 10px;
-        width: 0;
-        height: 0;
-        border-left: 4px solid transparent;
-        border-right: 4px solid transparent;
-        border-top: 4px solid rgba(0, 0, 0, 0.8);
-    }
-
+    /* Results Card */
     #results-card {
         overflow: visible;
         border-radius: var(--bs-border-radius);
@@ -467,30 +435,41 @@
 <script src="<?= base_url('public/assets/marked/marked.min.js') ?>"></script>
 <script>
     /**
-     * Ollama Application Controller
+     * ==========================================
+     * Ollama AI Studio - Frontend Application
+     * ==========================================
+     */
+
+    const APP_CONFIG = {
+        csrfName: '<?= csrf_token() ?>',
+        csrfHash: document.querySelector('input[name="<?= csrf_token() ?>"]').value,
+        limits: {
+            maxFileSize: <?= $maxFileSize ?? 10 * 1024 * 1024 ?>,
+            maxFiles: <?= $maxFiles ?? 5 ?>,
+            supportedTypes: <?= $supportedMimeTypes ?? '[]' ?>,
+        },
+        endpoints: {
+            upload: '<?= url_to('ollama.upload_media') ?>',
+            deleteMedia: '<?= url_to('ollama.delete_media') ?>',
+            settings: '<?= url_to('ollama.settings.update') ?>',
+            deletePromptBase: '<?= url_to('ollama.prompts.delete', 0) ?>'.slice(0, -1),
+            stream: '<?= url_to('ollama.stream') ?>',
+            generate: '<?= url_to('ollama.generate') ?>',
+            download: '<?= url_to('ollama.download_document') ?>',
+        }
+    };
+
+    /**
+     * 1. Core Application Controller
      */
     class OllamaApp {
         constructor() {
-            this.config = {
-                csrfName: '<?= csrf_token() ?>',
-                csrfHash: document.querySelector('input[name="<?= csrf_token() ?>"]').value,
-                maxFileSize: <?= $maxFileSize ?? 10 * 1024 * 1024 ?>,
-                maxFiles: <?= $maxFiles ?? 5 ?>,
-                supportedMimeTypes: <?= isset($supportedMimeTypes) ? $supportedMimeTypes : json_encode([]) ?>,
-                endpoints: {
-                    upload: '<?= url_to('ollama.upload_media') ?>',
-                    deleteMedia: '<?= url_to('ollama.delete_media') ?>',
-                    settings: '<?= url_to('ollama.settings.update') ?>',
-                    deletePromptBase: '<?= url_to('ollama.prompts.delete', 0) ?>'.slice(0, -1),
-                    stream: '<?= url_to('ollama.stream') ?>',
-                    generate: '<?= url_to('ollama.generate') ?>',
-                    download: '<?= url_to('ollama.download_document') ?>',
-                }
-            };
+            this.csrfHash = APP_CONFIG.csrfHash;
 
             this.ui = new UIManager(this);
             this.uploader = new MediaUploader(this);
             this.prompts = new PromptManager(this);
+            this.streamer = new StreamHandler(this);
             this.interaction = new InteractionHandler(this);
         }
 
@@ -499,22 +478,24 @@
                 breaks: true,
                 gfm: true
             });
+
             this.ui.init();
             this.uploader.init();
             this.prompts.init();
             this.interaction.init();
+
             window.ollamaApp = this;
         }
 
         refreshCsrf(hash) {
             if (!hash) return;
-            this.config.csrfHash = hash;
-            document.querySelectorAll(`input[name="${this.config.csrfName}"]`).forEach(el => el.value = hash);
+            this.csrfHash = hash;
+            document.querySelectorAll(`input[name="${APP_CONFIG.csrfName}"]`).forEach(el => el.value = hash);
         }
 
         async sendAjax(url, data = null) {
             const formData = data instanceof FormData ? data : new FormData();
-            if (!formData.has(this.config.csrfName)) formData.append(this.config.csrfName, this.config.csrfHash);
+            if (!formData.has(APP_CONFIG.csrfName)) formData.append(APP_CONFIG.csrfName, this.csrfHash);
 
             try {
                 const res = await fetch(url, {
@@ -526,21 +507,23 @@
                 });
 
                 if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+                const json = await res.json();
 
-                const d = await res.json();
-
-                const token = d.token || d.csrf_token || res.headers.get('X-CSRF-TOKEN');
+                const token = json.token || json.csrf_token || res.headers.get('X-CSRF-TOKEN');
                 if (token) this.refreshCsrf(token);
 
-                return d;
+                return json;
             } catch (e) {
-                console.error('AJAX Error:', e);
-                this.ui.showToast('Network error occurred.');
+                console.error("AJAX Failure", e);
+                this.ui.showToast('Communication error.');
                 throw e;
             }
         }
     }
 
+    /**
+     * 2. UI Manager
+     */
     class UIManager {
         constructor(app) {
             this.app = app;
@@ -555,6 +538,7 @@
             this.setupAutoScroll();
             this.setupDownloads();
             this.initTinyMCE();
+            this.setupAutoResize();
         }
 
         handleResponsiveSidebar() {
@@ -570,7 +554,18 @@
             if (sel && inp) sel.addEventListener('change', () => inp.value = sel.value);
         }
 
+        setupAutoResize() {
+            const textarea = document.getElementById('prompt');
+            if (textarea) {
+                textarea.addEventListener('input', function() {
+                    this.style.height = 'auto';
+                    this.style.height = (this.scrollHeight) + 'px';
+                });
+            }
+        }
+
         initTinyMCE() {
+            // TinyMCE setup for rich text input if used
             if (typeof tinymce === 'undefined') return;
             tinymce.init({
                 selector: '#prompt',
@@ -580,7 +575,6 @@
                 license_key: 'gpl',
                 plugins: 'autoresize',
                 autoresize_bottom_margin: 0,
-                autoresize_overflow_padding: 0,
                 min_height: 40,
                 max_height: 120,
                 highlight_on_focus: false, // Prevents TinyMCE's specific focus highlighting
@@ -619,7 +613,7 @@
                     fd.append('setting_key', e.target.dataset.key);
                     fd.append('enabled', e.target.checked);
                     try {
-                        const d = await this.app.sendAjax(this.app.config.endpoints.settings, fd);
+                        const d = await this.app.sendAjax(APP_CONFIG.endpoints.settings, fd);
                         if (d.status !== 'success') this.showToast('Failed to save setting.');
                     } catch (e) {}
                 });
@@ -704,6 +698,7 @@
             });
             const mainCopyBtn = document.getElementById('copyFullResponseBtn');
             if (mainCopyBtn) mainCopyBtn.onclick = () => this.copyContent('text', mainCopyBtn);
+
             document.querySelectorAll('.copy-format-action').forEach(btn => {
                 btn.onclick = (e) => {
                     e.preventDefault();
@@ -754,6 +749,314 @@
         }
     }
 
+    /**
+     * 3. Media Uploader
+     */
+    class MediaUploader {
+        constructor(app) {
+            this.app = app;
+            this.files = new Map();
+        }
+
+        init() {
+            const input = document.getElementById('media-input-trigger');
+            const area = document.getElementById('mediaUploadArea');
+            if (!input || !area) return;
+
+            input.onchange = (e) => this.handleFiles(e.target.files);
+
+            // Drag and drop
+            area.ondragover = (e) => {
+                e.preventDefault();
+                area.classList.add('dragover');
+            };
+            area.ondragleave = () => area.classList.remove('dragover');
+            area.ondrop = (e) => {
+                e.preventDefault();
+                area.classList.remove('dragover');
+                this.handleFiles(e.dataTransfer.files);
+            };
+        }
+
+        async handleFiles(fileList) {
+            if (this.files.size + fileList.length > APP_CONFIG.limits.maxFiles) {
+                this.app.ui.showToast(`Max ${APP_CONFIG.limits.maxFiles} files allowed.`);
+                return;
+            }
+
+            Array.from(fileList).forEach(file => {
+                if (file.size > APP_CONFIG.limits.maxFileSize) {
+                    this.app.ui.showToast(`File ${file.name} too large.`);
+                    return;
+                }
+                this.uploadFile(file);
+            });
+        }
+
+        async uploadFile(file) {
+            const id = Math.random().toString(36).substr(2, 9);
+            this.renderFileChip(id, file.name);
+
+            const fd = new FormData();
+            fd.append('file', file);
+
+            try {
+                const res = await this.app.sendAjax(APP_CONFIG.endpoints.upload, fd);
+                if (res.status === 'success') {
+                    this.files.set(id, res.file_id);
+                    this.updateFileChip(id, true);
+                    this.updateHiddenInputs();
+                } else {
+                    this.removeFile(id);
+                    this.app.ui.showToast(res.message || 'Upload failed');
+                }
+            } catch (e) {
+                this.removeFile(id);
+                this.app.ui.showToast('Upload error');
+            }
+        }
+
+        renderFileChip(id, name) {
+            const html = `
+                <div class="file-chip" id="file-${id}">
+                    <div class="progress-ring"></div>
+                    <span class="file-name" title="${name}">${name}</span>
+                    <button type="button" class="btn-close btn-close-white" style="font-size: 0.7rem;" onclick="ollamaApp.uploader.removeFile('${id}')"></button>
+                </div>`;
+            document.getElementById('upload-list-wrapper').insertAdjacentHTML('beforeend', html);
+        }
+
+        updateFileChip(id, success) {
+            const chip = document.getElementById(`file-${id}`);
+            if (chip) {
+                chip.querySelector('.progress-ring').remove();
+                chip.querySelector('.file-name').classList.add('text-success');
+            }
+        }
+
+        async removeFile(id) {
+            const serverId = this.files.get(id);
+            if (serverId) {
+                const fd = new FormData();
+                fd.append('file_id', serverId);
+                this.app.sendAjax(APP_CONFIG.endpoints.deleteMedia, fd).catch(() => {});
+            }
+            this.files.delete(id);
+            document.getElementById(`file-${id}`)?.remove();
+            this.updateHiddenInputs();
+        }
+
+        updateHiddenInputs() {
+            const container = document.getElementById('uploaded-files-container');
+            container.innerHTML = '';
+            this.files.forEach(serverId => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'uploaded_media[]';
+                input.value = serverId;
+                container.appendChild(input);
+            });
+        }
+    }
+
+    /**
+     * 4. Prompt Manager
+     */
+    class PromptManager {
+        constructor(app) {
+            this.app = app;
+        }
+
+        init() {
+            const select = document.getElementById('savedPrompts');
+            const loadBtn = document.getElementById('usePromptBtn');
+            const deleteBtn = document.getElementById('deletePromptBtn');
+
+            if (select) {
+                select.onchange = () => deleteBtn.disabled = !select.value;
+                loadBtn.onclick = () => {
+                    const txt = select.value;
+                    if (txt) {
+                        if (typeof tinymce !== 'undefined') tinymce.get('prompt')?.setContent(txt);
+                        else document.getElementById('prompt').value = txt;
+                    }
+                };
+                deleteBtn.onclick = () => this.deletePrompt(select.selectedOptions[0].dataset.id);
+            }
+
+            // Auto-populate Save Prompt Modal
+            const modal = document.getElementById('savePromptModal');
+            if (modal) {
+                modal.addEventListener('show.bs.modal', () => {
+                    const editor = (typeof tinymce !== 'undefined') ? tinymce.get('prompt') : null;
+                    const val = editor ? editor.getContent() : document.getElementById('prompt').value;
+                    document.getElementById('modalPromptText').value = val;
+                });
+            }
+
+            document.querySelector('#savePromptModal form')?.addEventListener('submit', (e) => this.inputSavePrompt(e));
+        }
+
+        async inputSavePrompt(e) {
+            e.preventDefault();
+            const fd = new FormData(e.target);
+            try {
+                const d = await this.app.sendAjax(e.target.action, fd);
+                if (d.status === 'success') {
+                    bootstrap.Modal.getInstance(document.getElementById('savePromptModal')).hide();
+                    this.app.ui.showToast('Prompt saved!');
+
+                    // Update UI dynamically
+                    if (d.prompt) {
+                        this.addPromptToUI(d.prompt);
+                    }
+
+                    // Clear form
+                    e.target.reset();
+                } else {
+                    this.app.ui.showToast(d.message || 'Save failed');
+                }
+            } catch (e) {
+                this.app.ui.showToast('Error saving prompt');
+            }
+        }
+
+        addPromptToUI(prompt) {
+            const select = document.getElementById('savedPrompts');
+            const container = document.getElementById('savedPromptsContainer');
+            const emptyAlert = document.getElementById('no-prompts-alert');
+
+            // Show container if it was hidden
+            if (container.classList.contains('d-none')) {
+                container.classList.remove('d-none');
+                emptyAlert.classList.add('d-none');
+            }
+
+            // Add new option to select
+            const option = document.createElement('option');
+            option.value = prompt.prompt_text;
+            option.dataset.id = prompt.id;
+            option.textContent = prompt.title;
+            select.appendChild(option);
+        }
+
+        async deletePrompt(id) {
+            if (!confirm('Delete this prompt?')) return;
+            try {
+                const d = await this.app.sendAjax(`${APP_CONFIG.endpoints.deletePromptBase}/${id}`);
+                if (d.status === 'success') {
+                    this.app.ui.showToast('Prompt deleted');
+                    this.removePromptFromUI(id);
+                } else {
+                    this.app.ui.showToast('Delete failed');
+                }
+            } catch (e) {
+                this.app.ui.showToast('Error deleting prompt');
+            }
+        }
+
+        removePromptFromUI(id) {
+            const select = document.getElementById('savedPrompts');
+            const option = select.querySelector(`option[data-id="${id}"]`);
+
+            if (option) {
+                option.remove();
+
+                // If no prompts left, show empty state
+                if (select.options.length <= 1) { // Only the "Select..." option remains
+                    document.getElementById('savedPromptsContainer').classList.add('d-none');
+                    document.getElementById('no-prompts-alert').classList.remove('d-none');
+                    document.getElementById('deletePromptBtn').disabled = true;
+                }
+
+                // Reset select
+                select.value = '';
+            }
+        }
+    }
+
+    /**
+     * 5. Stream Handler
+     */
+    class StreamHandler {
+        constructor(app) {
+            this.app = app;
+        }
+
+        async start(fd) {
+            this.app.ui.ensureResultCardExists();
+            const body = document.getElementById('ai-response-body');
+            const raw = document.getElementById('raw-response');
+            body.innerHTML = '';
+            raw.value = '';
+
+            try {
+                // Manually handle fetch for streaming
+                if (!fd.has(APP_CONFIG.csrfName)) fd.append(APP_CONFIG.csrfName, this.app.csrfHash);
+
+                const response = await fetch(APP_CONFIG.endpoints.stream, {
+                    method: 'POST',
+                    body: fd,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const {
+                        done,
+                        value
+                    } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, {
+                        stream: true
+                    });
+                    const lines = (buffer + chunk).split("\n\n");
+                    buffer = lines.pop(); // Keep last partial line
+
+                    for (const line of lines) {
+                        if (line.startsWith("data: ")) {
+                            const data = JSON.parse(line.substring(6));
+
+                            if (data.error) {
+                                this.app.ui.injectFlashError(data.error);
+                                if (data.csrf_token) this.app.refreshCsrf(data.csrf_token);
+                                return;
+                            }
+                            if (data.csrf_token) this.app.refreshCsrf(data.csrf_token);
+
+                            if (data.text) {
+                                const newText = (raw.value + data.text);
+                                raw.value = newText;
+                                body.innerHTML = marked.parse(newText);
+                                this.app.ui.setupAutoScroll();
+                            }
+                        }
+                        if (line.startsWith("event: close")) {
+                            // Stream finished
+                            this.app.ui.setLoading(false);
+                            this.app.ui.setupCodeHighlighting();
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+                this.app.ui.injectFlashError("Stream connection interrupted.");
+            } finally {
+                this.app.ui.setLoading(false);
+                this.app.ui.setupCodeHighlighting();
+            }
+        }
+    }
+
+    /**
+     * 6. Interaction Handler
+     */
     class InteractionHandler {
         constructor(app) {
             this.app = app;
@@ -767,8 +1070,8 @@
             e.preventDefault();
             if (typeof tinymce !== 'undefined') tinymce.triggerSave();
 
-            const prompt = document.getElementById('prompt').value.trim();
-            if (!prompt) {
+            const promptVal = document.getElementById('prompt').value.trim();
+            if (!promptVal) {
                 this.app.ui.showToast('Please enter a prompt.');
                 return;
             }
@@ -776,304 +1079,35 @@
             this.app.ui.setLoading(true);
             const fd = new FormData(document.getElementById('ollamaForm'));
 
-            if (document.getElementById('streamOutput')?.checked) await this.handleStreaming(fd);
-            else await this.handleStandard(fd);
+            if (document.getElementById('streamOutput')?.checked) {
+                await this.app.streamer.start(fd);
+            } else {
+                await this.handleStandard(fd);
+            }
         }
 
         async handleStandard(fd) {
             this.app.ui.ensureResultCardExists();
             try {
-                const d = await this.app.sendAjax(this.app.config.endpoints.generate, fd);
+                const d = await this.app.sendAjax(APP_CONFIG.endpoints.generate, fd);
                 if (d.status === 'success') {
                     document.getElementById('ai-response-body').innerHTML = d.result;
                     document.getElementById('raw-response').value = d.raw_result;
                     this.app.ui.setupCodeHighlighting();
                     this.app.ui.setupAutoScroll();
                     if (d.flash_html) document.getElementById('flash-messages-container').innerHTML = d.flash_html;
-                    if (d.audio_url) {
-                        const ac = document.getElementById('audio-player-container');
-                        if (ac) ac.innerHTML = `<div class="alert alert-info d-flex align-items-center mb-4"><i class="bi bi-volume-up-fill fs-4 me-3"></i><audio controls autoplay class="w-100"><source src="${d.audio_url}" type="audio/mpeg"><source src="${d.audio_url}" type="audio/wav">Your browser does not support the audio element.</audio></div>`;
-                    }
-                } else this.app.ui.injectFlashError(d.message || 'Generation failed.');
+                } else {
+                    this.app.ui.injectFlashError(d.message || 'Generation failed.');
+                }
             } catch (e) {
                 this.app.ui.injectFlashError('An error occurred during generation.');
             } finally {
                 this.app.ui.setLoading(false);
-                this.app.uploader.clearUploads();
-            }
-        }
-
-        async handleStreaming(fd) {
-            this.app.ui.ensureResultCardExists();
-            const resBody = document.getElementById('ai-response-body');
-            const rawRes = document.getElementById('raw-response');
-            resBody.innerHTML = '';
-            rawRes.value = '';
-
-            try {
-                const response = await fetch(this.app.config.endpoints.stream, {
-                    method: 'POST',
-                    body: fd
-                });
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = '';
-                let accum = '';
-
-                while (true) {
-                    const {
-                        value,
-                        done
-                    } = await reader.read();
-                    if (done) break;
-
-                    buffer += decoder.decode(value, {
-                        stream: true
-                    });
-                    const parts = buffer.split('\n\n');
-                    buffer = parts.pop();
-
-                    for (const part of parts) {
-                        part.split('\n').forEach(line => {
-                            if (line.startsWith('data: ')) {
-                                try {
-                                    const d = JSON.parse(line.substring(6));
-                                    if (d.text) {
-                                        accum += d.text;
-                                        resBody.innerHTML = marked.parse(accum);
-                                        rawRes.value += d.text;
-                                    }
-                                    if (d.error) {
-                                        this.app.ui.injectFlashError(d.error);
-                                    }
-                                    if (typeof d.cost !== 'undefined') {
-                                        if (parseFloat(d.cost) > 0) {
-                                            document.getElementById('flash-messages-container').innerHTML = `<div class="alert alert-success alert-dismissible fade show">KSH ${parseFloat(d.cost).toFixed(2)} deducted.<button class="btn-close" data-bs-dismiss="alert"></button></div>`;
-                                        }
-                                    }
-                                    if (d.audio_url) {
-                                        const ac = document.getElementById('audio-player-container');
-                                        if (ac) ac.innerHTML = `<div class="alert alert-info d-flex align-items-center mb-4"><i class="bi bi-volume-up-fill fs-4 me-3"></i><audio controls autoplay class="w-100"><source src="${d.audio_url}" type="audio/mpeg"><source src="${d.audio_url}" type="audio/wav">Your browser does not support the audio element.</audio></div>`;
-                                    }
-                                    if (d.csrf_token) this.app.refreshCsrf(d.csrf_token);
-                                } catch (e) {}
-                            }
-                        });
-                    }
-                }
-                this.app.ui.setupCodeHighlighting();
-            } catch (e) {
-                this.app.ui.injectFlashError('Stream Connection Lost.');
-            } finally {
-                this.app.ui.setLoading(false);
-                this.app.uploader.clearUploads();
             }
         }
     }
 
-    class MediaUploader {
-        constructor(app) {
-            this.app = app;
-            this.queue = [];
-            this.isUploading = false;
-        }
-
-        init() {
-            const area = document.getElementById('mediaUploadArea');
-            const inp = document.getElementById('media-input-trigger');
-            if (!area) return;
-
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => {
-                area.addEventListener(e, ev => {
-                    ev.preventDefault();
-                    ev.stopPropagation();
-                });
-            });
-            ['dragenter', 'dragover'].forEach(e => area.addEventListener(e, () => area.classList.add('dragover')));
-            ['dragleave', 'drop'].forEach(e => area.addEventListener(e, () => area.classList.remove('dragover')));
-
-            area.addEventListener('drop', e => this.handleFiles(e.dataTransfer.files));
-            inp.addEventListener('change', e => {
-                this.handleFiles(e.target.files);
-                inp.value = '';
-            });
-
-            document.getElementById('upload-list-wrapper')?.addEventListener('click', e => {
-                if (e.target.closest('.remove-btn')) this.removeFile(e.target.closest('.remove-btn'));
-            });
-        }
-
-        handleFiles(files) {
-            const currentCount = document.querySelectorAll('.file-chip').length;
-            const queueCount = this.queue.length;
-            const availableSlots = this.app.config.maxFiles - (currentCount + queueCount);
-
-            if (files.length > availableSlots) {
-                this.app.ui.showToast(`Limit reached: Max ${this.app.config.maxFiles} files.`);
-                return;
-            }
-
-            Array.from(files).forEach(f => {
-                if (this.app.config.supportedMimeTypes.includes(f.type) && f.size <= this.app.config.maxFileSize) {
-                    const id = Math.random().toString(36).substr(2, 9);
-                    this.queue.push({
-                        file: f,
-                        ui: this.createBar(f, id),
-                        id: id
-                    });
-                } else {
-                    let msg = `Invalid file: ${f.name}`;
-                    if (!this.app.config.supportedMimeTypes.includes(f.type)) msg += ' (Unsupported type)';
-                    else if (f.size > this.app.config.maxFileSize) msg += ' (File too large)';
-                    this.app.ui.showToast(msg);
-                }
-            });
-            if (this.queue.length > 0) this.processQueue();
-        }
-
-        createBar(f, id) {
-            const d = document.createElement('div');
-            d.innerHTML = `<div class="file-chip fade show" id="file-item-${id}"><div class="progress-ring"></div><span class="file-name">${f.name}</span><button type="button" class="btn-close p-1 remove-btn disabled" data-id="${id}"></button></div>`;
-            document.getElementById('upload-list-wrapper').appendChild(d.firstChild);
-            return document.getElementById(`file-item-${id}`);
-        }
-
-        processQueue() {
-            if (this.isUploading || this.queue.length === 0) return;
-            this.isUploading = true;
-            this.perform(this.queue.shift());
-        }
-
-        perform(job) {
-            const fd = new FormData();
-            fd.append(this.app.config.csrfName, this.app.config.csrfHash);
-            fd.append('file', job.file);
-
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', this.app.config.endpoints.upload, true);
-            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-
-            xhr.onload = () => {
-                try {
-                    const r = JSON.parse(xhr.responseText);
-                    if (r.csrf_token) this.app.refreshCsrf(r.csrf_token);
-                    if (xhr.status === 200 && r.status === 'success') {
-                        this.updateUI(job.ui, 'success');
-                        job.ui.querySelector('.remove-btn').dataset.serverFileId = r.file_id;
-                        const hidden = document.createElement('input');
-                        hidden.type = 'hidden';
-                        hidden.name = 'uploaded_media[]';
-                        hidden.value = r.file_id;
-                        hidden.id = `input-${job.id}`;
-                        document.getElementById('uploaded-files-container').appendChild(hidden);
-                    } else throw new Error(r.message);
-                } catch (e) {
-                    this.updateUI(job.ui, 'error');
-                }
-                this.isUploading = false;
-                this.processQueue();
-            };
-            xhr.send(fd);
-        }
-
-        updateUI(ui, status) {
-            ui.querySelector('.progress-ring').remove();
-            ui.querySelector('.remove-btn').classList.remove('disabled');
-            const i = document.createElement('i');
-            i.className = status === 'success' ? 'bi bi-check-circle-fill text-success me-2' : 'bi bi-exclamation-circle-fill text-danger me-2';
-            ui.prepend(i);
-            ui.style.borderColor = status === 'success' ? 'var(--bs-success)' : 'var(--bs-danger)';
-        }
-
-        async removeFile(btn) {
-            const ui = btn.closest('.file-chip');
-            const fid = btn.dataset.serverFileId;
-            if (fid) {
-                const fd = new FormData();
-                fd.append('file_id', fid);
-                try {
-                    await this.app.sendAjax(this.app.config.endpoints.deleteMedia, fd);
-                } catch (e) {}
-            }
-            ui.remove();
-            document.getElementById(`input-${btn.dataset.id}`)?.remove();
-        }
-
-        clearUploads() {
-            document.getElementById('upload-list-wrapper').innerHTML = '';
-            document.getElementById('uploaded-files-container').innerHTML = '';
-            this.queue = [];
-        }
-    }
-
-    class PromptManager {
-        constructor(app) {
-            this.app = app;
-        }
-
-        init() {
-            const sel = document.getElementById('savedPrompts');
-            const load = document.getElementById('usePromptBtn');
-            const del = document.getElementById('deletePromptBtn');
-
-            if (load && sel) load.onclick = () => {
-                if (!sel.value) return;
-                if (tinymce.get('prompt')) tinymce.get('prompt').setContent(sel.value);
-                else {
-                    const el = document.getElementById('prompt');
-                    el.value = sel.value;
-                    el.focus();
-                }
-            };
-
-            if (sel) sel.onchange = () => del.disabled = !sel.value;
-            if (del) del.onclick = () => this.deletePrompt();
-
-            const form = document.querySelector('#savePromptModal form');
-            if (form) {
-                document.getElementById('savePromptModal').addEventListener('show.bs.modal', () => {
-                    const val = tinymce.get('prompt') ? tinymce.get('prompt').getContent() : document.getElementById('prompt').value;
-                    document.getElementById('modalPromptText').value = val;
-                });
-                form.onsubmit = (e) => {
-                    e.preventDefault();
-                    this.savePrompt(new FormData(form), form.action);
-                };
-            }
-        }
-
-        async savePrompt(fd, action) {
-            const m = bootstrap.Modal.getInstance(document.getElementById('savePromptModal'));
-            try {
-                const d = await this.app.sendAjax(action, fd);
-                if (d.status === 'success') {
-                    this.app.ui.showToast('Saved!');
-                    m.hide();
-                    location.reload();
-                } else this.app.ui.showToast('Failed to save.');
-            } catch (e) {
-                this.app.ui.showToast('Error saving.');
-            }
-        }
-
-        async deletePrompt() {
-            const sel = document.getElementById('savedPrompts');
-            if (sel && sel.value && confirm('Delete?')) {
-                try {
-                    const id = sel.options[sel.selectedIndex].dataset.id;
-                    const d = await this.app.sendAjax(this.app.config.endpoints.deletePromptBase + id);
-                    if (d.status === 'success') {
-                        sel.options[sel.selectedIndex].remove();
-                        if (sel.options.length <= 1) {
-                            sel.value = '';
-                            document.getElementById('deletePromptBtn').disabled = true;
-                        }
-                    }
-                } catch (e) {}
-            }
-        }
-    }
-
+    // Initialize
     document.addEventListener('DOMContentLoaded', () => new OllamaApp().init());
 </script>
 <?= $this->endSection() ?>

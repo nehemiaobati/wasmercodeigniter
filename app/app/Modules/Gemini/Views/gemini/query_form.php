@@ -1368,15 +1368,43 @@
                     try {
                         const d = await this.app.sendAjax(form.action, new FormData(form));
                         if (d.status === 'success') {
-                            this.app.ui.showToast('Saved!');
                             m.hide();
-                            location.reload();
-                        } else throw new Error();
+                            this.app.ui.showToast('Prompt saved!');
+
+                            // Update UI dynamically
+                            if (d.prompt) {
+                                this.addPromptToUI(d.prompt);
+                            }
+
+                            // Clear form
+                            e.target.reset();
+                        } else {
+                            this.app.ui.showToast('Failed to save.');
+                        }
                     } catch (e) {
-                        this.app.ui.showToast('Failed to save.');
+                        this.app.ui.showToast('Error saving prompt');
                     }
                 };
             }
+        }
+
+        addPromptToUI(prompt) {
+            const select = document.getElementById('savedPrompts');
+            const container = document.getElementById('savedPromptsContainer');
+            const emptyAlert = document.getElementById('no-prompts-alert');
+
+            // Show container if it was hidden
+            if (container.classList.contains('d-none')) {
+                container.classList.remove('d-none');
+                emptyAlert.classList.add('d-none');
+            }
+
+            // Add new option to select
+            const option = document.createElement('option');
+            option.value = prompt.prompt_text;
+            option.dataset.id = prompt.id;
+            option.textContent = prompt.title;
+            select.appendChild(option);
         }
 
         async deletePrompt(sel) {
@@ -1385,14 +1413,32 @@
                 const id = sel.options[sel.selectedIndex].dataset.id;
                 const d = await this.app.sendAjax(APP_CONFIG.endpoints.deletePromptBase + id);
                 if (d.status === 'success') {
-                    sel.options[sel.selectedIndex].remove();
-                    if (sel.options.length <= 1) {
-                        sel.value = '';
-                        document.getElementById('deletePromptBtn').disabled = true;
-                    }
+                    this.app.ui.showToast('Prompt deleted');
+                    this.removePromptFromUI(id);
+                } else {
+                    this.app.ui.showToast('Delete failed');
                 }
             } catch (e) {
-                /* Quiet fail */
+                this.app.ui.showToast('Error deleting prompt');
+            }
+        }
+
+        removePromptFromUI(id) {
+            const select = document.getElementById('savedPrompts');
+            const option = select.querySelector(`option[data-id="${id}"]`);
+
+            if (option) {
+                option.remove();
+
+                // If no prompts left, show empty state
+                if (select.options.length <= 1) { // Only the "Select..." option remains
+                    document.getElementById('savedPromptsContainer').classList.add('d-none');
+                    document.getElementById('no-prompts-alert').classList.remove('d-none');
+                    document.getElementById('deletePromptBtn').disabled = true;
+                }
+
+                // Reset select
+                select.value = '';
             }
         }
     }
