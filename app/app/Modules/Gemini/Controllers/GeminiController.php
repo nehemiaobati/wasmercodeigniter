@@ -139,7 +139,7 @@ class GeminiController extends BaseController
             'audio_url'              => session()->getFlashdata('audio_url'),
             // Re-define constants locally or fetch from config if needed
             'maxFileSize'            => GeminiService::MAX_FILE_SIZE,
-            'maxFiles'               => 5,
+            'maxFiles'               => 10,
             'supportedMimeTypes'     => json_encode(GeminiService::SUPPORTED_MIME_TYPES),
             'mediaConfigs'           => $mediaConfigs, // Pass to view
         ];

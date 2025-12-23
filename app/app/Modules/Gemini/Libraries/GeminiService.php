@@ -32,7 +32,7 @@ class GeminiService
         "gemini-2.0-flash-lite",    // Legacy Fallback
     ];
 
-    public const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    public const MAX_FILE_SIZE = 50 * 1024 * 1024; // 10MB
     public const SUPPORTED_MIME_TYPES = [
         'image/png',
         'image/jpeg',
