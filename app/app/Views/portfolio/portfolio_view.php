@@ -3,6 +3,7 @@
 <?= $this->section('styles') ?>
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 <style>
+    /* --- Global & Layout --- */
     html {
         scroll-behavior: smooth;
     }
@@ -16,12 +17,11 @@
         color: var(--text-heading);
     }
 
-    /* Quick Navigation for page sections */
+    /* --- Quick Navigation --- */
     .quick-nav {
         position: sticky;
         top: 85px;
         z-index: 999;
-        /* MODIFICATION: Use a theme-aware RGBA variable for transparency */
         background-color: rgba(var(--bs-body-bg-rgb), 0.9);
         backdrop-filter: blur(10px);
         border-radius: 0.75rem;
@@ -49,7 +49,7 @@
         background-color: var(--primary-color);
     }
 
-    /* Hero Section */
+    /* --- Hero Section --- */
     .hero-grid {
         display: grid;
         grid-template-columns: 2fr 1fr;
@@ -88,10 +88,7 @@
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
     }
 
-    /* Card-based sections */
-    /* MODIFICATION: Removed all custom card classes like .skill-category, .portfolio-card, etc. 
-       They are all replaced by the global .blueprint-card class in the HTML. */
-
+    /* --- Grids & Cards --- */
     .skills-grid,
     .education-grid,
     .personal-details-grid,
@@ -122,7 +119,7 @@
         border-bottom: none;
     }
 
-    /* Work Timeline */
+    /* --- Work Timeline --- */
     .work-timeline {
         position: relative;
         max-width: 900px;
@@ -133,7 +130,6 @@
         content: '';
         position: absolute;
         width: 4px;
-        /* MODIFICATION: Use theme-aware variable */
         background-color: var(--border-color);
         top: 0;
         bottom: 0;
@@ -163,7 +159,6 @@
         height: 20px;
         right: -10px;
         background-color: var(--primary-color);
-        /* MODIFICATION: Use theme-aware variable */
         border: 4px solid var(--bs-body-bg);
         top: 25px;
         border-radius: 50%;
@@ -174,7 +169,7 @@
         left: -10px;
     }
 
-    /* Portfolio */
+    /* --- Portfolio Specifics --- */
     .portfolio-grid {
         grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
     }
@@ -197,7 +192,7 @@
         margin: 15px 0 25px 0;
     }
 
-    /* Contact Form */
+    /* --- Contact Form --- */
     .contact-grid {
         display: grid;
         grid-template-columns: 1fr 1.5fr;
@@ -205,6 +200,7 @@
         align-items: center;
     }
 
+    /* --- Responsive Queries --- */
     @media (max-width: 992px) {
         .hero-grid {
             grid-template-columns: 1fr;
@@ -213,6 +209,15 @@
 
         .hero-text {
             order: 2;
+        }
+
+        /* Responsive text sizing */
+        .hero-text h1 {
+            font-size: 2.5rem;
+        }
+
+        .hero-text .lead {
+            font-size: 1.1rem;
         }
 
         .hero-image-container {
@@ -284,13 +289,13 @@
                 <div class="hero-text">
                     <h1>I am <strong>Nehemia Obati</strong></h1>
                     <p class="subtitle">Software Developer</p>
-                    <p>I'm a full-stack developer with a passion for crafting dynamic and user-friendly web experiences. Fluent in technologies from front-end languages to back-end powerhouses like Python and PHP, and proficient in cloud platforms like GCP and AWS. My expertise in Bash and Linux empowers me to manage server environments with ease. I am constantly exploring new technologies to stay at the forefront of web development and am excited to leverage my comprehensive skillset to create innovative and impactful solutions.</p>
+                    <p class="lead mb-4">
+                        Full-Stack Developer specializing in robust web ecosystems. I build scalable applications using <strong>PHP</strong>, <strong>Python</strong>, and <strong>HTML</strong>, orchestrated on <strong>GCP</strong>, <strong>AWS</strong>, and <strong>Azure</strong>. With deep expertise in <strong>Linux</strong> and <strong>Windows</strong> server management, I deliver solutions that are as reliable as they are dynamic.
+                    </p>
                     <a href="#portfolio" class="btn btn-primary">View My Work</a>
-                    <!-- MODIFICATION: Corrected asset path -->
                     <a href="<?= base_url('public/assets/Nehemia Obati Resume.pdf') ?>" class="btn btn-outline-primary ms-2" target="_blank">Download Resume</a>
                 </div>
                 <div class="hero-image-container text-center">
-                    <!-- MODIFICATION: Corrected asset path -->
                     <img src="<?= base_url('public/assets/images/potraitwebp.webp') ?>" alt="Nehemia Obati" class="hero-image">
                 </div>
             </div>
@@ -346,25 +351,35 @@
                 <h2>Portfolio</h2>
             </div>
             <div class="portfolio-grid">
-                <div class="blueprint-card p-0 d-flex flex-column"> <img src="https://placehold.co/600x400/0d6efd/ffffff?text=PIMIS" alt="Screenshot of the PIMIS - Public Investment Management System for the National Treasury.">
+                <!-- Project: PIMIS -->
+                <div class="blueprint-card p-0 d-flex flex-column">
+                    <img src="https://placehold.co/600x400/0d6efd/ffffff?text=PIMIS" alt="Screenshot of the PIMIS - Public Investment Management System for the National Treasury.">
                     <div class="portfolio-content p-4">
                         <h3>PIMIS - Public Investment Management System</h3>
-                        <p>A system for the National Treasury. Project TENDER NO. TNT/025/2020-2021.</p> <a href="https://pimisdev.treasury.go.ke/" target="_blank" class="btn btn-primary mt-auto">View Project</a>
+                        <p>A system for the National Treasury. Project TENDER NO. TNT/025/2020-2021.</p>
+                        <a href="https://pimisdev.treasury.go.ke/" target="_blank" class="btn btn-primary mt-auto">View Project</a>
                     </div>
                 </div>
-                <div class="blueprint-card p-0 d-flex flex-column"> <img src="https://placehold.co/600x400/198754/ffffff?text=ECIPMS" alt="Dashboard of the ECIPMS - County Integrated Planning Management System for Kakamega County.">
+                <!-- Project: ECIPMS -->
+                <div class="blueprint-card p-0 d-flex flex-column">
+                    <img src="https://placehold.co/600x400/198754/ffffff?text=ECIPMS" alt="Dashboard of the ECIPMS - County Integrated Planning Management System for Kakamega County.">
                     <div class="portfolio-content p-4">
                         <h3>ECIPMS - County Integrated Planning Management System</h3>
-                        <p>Automated M&E system for Kakamega County Government. CONTRACT FOR THE SUPPLY, INSTALLATION AND COMMISSIONING OF STANDARDIZED AUTOMATED MONITORING AND EVALUATION SYSTEM. Project TENDER NO. CGKK/OG/2020/2021/01.</p> <a href="https://ecipms.kingsway.co.ke/" target="_blank" class="btn btn-primary mt-auto">View Project</a>
+                        <p>Automated M&E system for Kakamega County Government. CONTRACT FOR THE SUPPLY, INSTALLATION AND COMMISSIONING OF STANDARDIZED AUTOMATED MONITORING AND EVALUATION SYSTEM. Project TENDER NO. CGKK/OG/2020/2021/01.</p>
+                        <a href="https://ecipms.kingsway.co.ke/" target="_blank" class="btn btn-primary mt-auto">View Project</a>
                     </div>
                 </div>
-                <div class="blueprint-card p-0 d-flex flex-column"> <img src="https://placehold.co/600x400/6f42c1/ffffff?text=IFMIS" alt="The IFMIS e-procurement module for the National Treasury of Kenya.">
+                <!-- Project: IFMIS -->
+                <div class="blueprint-card p-0 d-flex flex-column">
+                    <img src="https://placehold.co/600x400/6f42c1/ffffff?text=IFMIS" alt="The IFMIS e-procurement module for the National Treasury of Kenya.">
                     <div class="portfolio-content p-4">
                         <h3>IFMIS - National Treasury</h3>
                         <p>Onsite support for IFMIS applications and E-Procurement enhancement. TENDER FOR PROVISION OF ONSITE SUPPORT FOR IFMIS APPLICATIONS AND ENHANCEMENT OF IFMIS E-PROCUREMENT. Project TENDER NO. TNT/029/2019-2020.</p>
                     </div>
                 </div>
-                <div class="blueprint-card p-0 d-flex flex-column"> <img src="https://placehold.co/600x400/fd7e14/ffffff?text=Oracle+Support" alt="Oracle Database logo representing the application support license project.">
+                <!-- Project: Oracle Support -->
+                <div class="blueprint-card p-0 d-flex flex-column">
+                    <img src="https://placehold.co/600x400/fd7e14/ffffff?text=Oracle+Support" alt="Oracle Database logo representing the application support license project.">
                     <div class="portfolio-content p-4">
                         <h3>Oracle E-Procurement - National Treasury</h3>
                         <p>Provision of Oracle application support licenses. TENDER FOR THE PROVISION OF ORACLE APPLICATION SUPPORT LICENSES. Project TENDER NO. TNT/026/2019-2020.</p>
@@ -495,37 +510,84 @@
 
 <?= $this->section('scripts') ?>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const quickNavLinks = document.querySelectorAll('.quick-nav .nav-link');
-        const sections = document.querySelectorAll('main section[id]');
+    /**
+     * PortfolioApp
+     * 
+     * Handles the interactive elements of the portfolio page including
+     * scroll tracking for navigation and contact form submission state.
+     */
+    class PortfolioApp {
+        constructor() {
+            this.quickNavLinks = document.querySelectorAll('.quick-nav .nav-link');
+            this.sections = document.querySelectorAll('main section[id]');
+            this.contactForm = document.getElementById('contactForm');
+            this.sendMessageButton = document.getElementById('sendMessageButton');
 
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const id = entry.target.getAttribute('id');
-                    quickNavLinks.forEach(link => {
-                        link.classList.toggle('active', link.getAttribute('href') === `#${id}`);
-                    });
-                }
-            });
-        }, {
-            rootMargin: '-170px 0px -50% 0px',
-            threshold: 0
-        });
+            this.init();
+        }
 
-        sections.forEach(section => {
-            observer.observe(section);
-        });
+        init() {
+            this.initScrollSpy();
+            this.initContactForm();
+        }
 
-        const contactForm = document.getElementById('contactForm');
-        const sendMessageButton = document.getElementById('sendMessageButton');
+        /**
+         * Initialize IntersectionObserver to track active section
+         * and update the Quick Nav links accordingly.
+         */
+        initScrollSpy() {
+            if (!this.quickNavLinks.length || !this.sections.length) return;
 
-        if (contactForm && sendMessageButton) {
-            contactForm.addEventListener('submit', function() {
-                sendMessageButton.setAttribute('disabled', 'disabled');
-                sendMessageButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sending...';
+            const observerOptions = {
+                rootMargin: '-170px 0px -50% 0px',
+                threshold: 0
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const id = entry.target.getAttribute('id');
+                        this.updateActiveNavLink(id);
+                    }
+                });
+            }, observerOptions);
+
+            this.sections.forEach(section => observer.observe(section));
+        }
+
+        /**
+         * Update the active class on navigation links.
+         * @param {string} sectionId 
+         */
+        updateActiveNavLink(sectionId) {
+            this.quickNavLinks.forEach(link => {
+                const isActive = link.getAttribute('href') === `#${sectionId}`;
+                link.classList.toggle('active', isActive);
             });
         }
-    });
+
+        /**
+         * Initialize the contact form submission handler
+         * to show a loading state on the submit button.
+         */
+        initContactForm() {
+            if (!this.contactForm || !this.sendMessageButton) return;
+
+            this.contactForm.addEventListener('submit', () => {
+                this.setButtonLoadingState();
+            });
+        }
+
+        /**
+         * Disable button and show spinner.
+         */
+        setButtonLoadingState() {
+            this.sendMessageButton.setAttribute('disabled', 'disabled');
+            this.sendMessageButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sending...';
+        }
+    }
+
+    // Initialize the application when the DOM is ready
+    document.addEventListener('DOMContentLoaded', () => new PortfolioApp());
 </script>
 <?= $this->endSection() ?>
