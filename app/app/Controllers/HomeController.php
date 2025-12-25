@@ -73,4 +73,22 @@ class HomeController extends BaseController
         ];
         return view('home/privacy', $data);
     }
+
+    public function acceptCookie()
+    {
+        // 1 year expiration
+        $expires = 365 * 24 * 60 * 60;
+
+        $response = service('response');
+        $response->setCookie(
+            'user_cookie_consent',
+            'accepted',
+            $expires
+        );
+
+        return $this->response->setJSON([
+            'status' => 'success',
+            'message' => 'Cookie consent accepted'
+        ]);
+    }
 }

@@ -37,8 +37,50 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const banner = document.getElementById('cookieConsentBanner');
+
         if (banner) {
+            // Show the banner
             banner.style.display = 'block';
+
+            const form = banner.querySelector('form');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    const originalText = submitBtn.innerHTML;
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Accepting...';
+
+                    fetch(form.action, {
+                            method: 'POST',
+                            body: new FormData(form),
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.status === 'success') {
+                                // Smooth fade out
+                                banner.style.transition = 'opacity 0.5s ease-out';
+                                banner.style.opacity = '0';
+                                setTimeout(() => {
+                                    banner.style.display = 'none';
+                                }, 500);
+                            } else {
+                                // Revert button state on failure logic (though unlikely for simple cookie set)
+                                submitBtn.disabled = false;
+                                submitBtn.innerHTML = originalText;
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error accepting cookies:', error);
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = originalText;
+                        });
+                });
+            }
         }
     });
 </script>
