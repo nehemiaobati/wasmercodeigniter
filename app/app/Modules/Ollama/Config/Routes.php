@@ -23,4 +23,6 @@ $routes->group('ollama', ['namespace' => 'App\Modules\Ollama\Controllers', 'filt
     $routes->post('prompts/add', 'OllamaController::addPrompt', ['as' => 'ollama.prompts.add']);
     $routes->post('prompts/delete/(:num)', 'OllamaController::deletePrompt/$1', ['as' => 'ollama.prompts.delete']);
     $routes->post('memory/clear', 'OllamaController::clearMemory', ['as' => 'ollama.memory.clear']);
+    $routes->post('history', 'OllamaController::fetchHistory', ['as' => 'ollama.history']);
+    $routes->post('history/delete', 'OllamaController::deleteHistory', ['as' => 'ollama.history.delete']);
 });

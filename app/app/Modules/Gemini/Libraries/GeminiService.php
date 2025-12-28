@@ -32,7 +32,7 @@ class GeminiService
         "gemini-2.0-flash-lite",    // Legacy Fallback
     ];
 
-    public const MAX_FILE_SIZE = 50 * 1024 * 1024; // 10MB
+    public const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     public const SUPPORTED_MIME_TYPES = [
         'image/png',
         'image/jpeg',
@@ -127,21 +127,27 @@ class GeminiService
         $this->userModel->deductBalance($userId, number_format($costData['costKSH'], 4, '.', ''));
 
         // Memory updates
+        $memoryResult = [];
         if (!empty($options['assistant_mode'] ?? true) && isset($contextData['memoryService'])) {
-            $contextData['memoryService']->updateMemory(
+            $newId = $contextData['memoryService']->updateMemory(
                 $prompt,
                 $apiResponse['result'],
                 $apiResponse['raw'] ?? '',
                 $contextData['usedInteractionIds'] ?? []
             );
+            $memoryResult = ['id' => $newId, 'timestamp' => date('Y-m-d H:i:s')];
         }
 
         $this->db->transComplete();
 
         return [
             'result' => $apiResponse['result'],
+            'thoughts' => $apiResponse['thoughts'] ?? '',
             'costKSH' => $costData['costKSH'],
             'audioData' => $audioResult['audioData'] ?? null,
+            'used_interaction_ids' => $contextData['usedInteractionIds'] ?? [],
+            'new_interaction_id' => $memoryResult['id'] ?? null,
+            'timestamp' => $memoryResult['timestamp'] ?? null,
             'success' => true
         ];
     }
@@ -215,12 +221,18 @@ class GeminiService
                 }
 
                 $text = '';
+                $thoughts = '';
                 foreach ($data['candidates'][0]['content']['parts'] ?? [] as $part) {
-                    $text .= $part['text'] ?? '';
+                    if (isset($part['thought']) && $part['thought'] === true) {
+                        $thoughts .= $part['text'] ?? '';
+                    } else {
+                        $text .= $part['text'] ?? '';
+                    }
                 }
 
                 return [
                     'result' => $text,
+                    'thoughts' => $thoughts,
                     'usage' => $data['usageMetadata'] ?? null,
                     'raw' => $data
                 ];
@@ -261,6 +273,10 @@ class GeminiService
                 CURLOPT_WRITEFUNCTION => function ($ch, $chunk) use (&$buffer, &$fullText, &$usage, &$rawChunks, $chunkCallback) {
                     $buffer .= $chunk;
                     $parsed = $this->_processStreamBuffer($buffer);
+                    foreach ($parsed['thought_chunks'] ?? [] as $thoughtConfig) {
+                        // Send thought chunks as a special array structure to distinguish from text
+                        $chunkCallback(['thought' => $thoughtConfig]);
+                    }
                     foreach ($parsed['chunks'] as $text) {
                         $fullText .= $text;
                         $chunkCallback($text);
@@ -286,7 +302,7 @@ class GeminiService
 
     private function _processStreamBuffer(string &$buffer): array
     {
-        $result = ['chunks' => [], 'usage' => null, 'raw_chunks' => []];
+        $result = ['chunks' => [], 'thought_chunks' => [], 'usage' => null, 'raw_chunks' => []];
 
         // 1. Clean framing characters
         $buffer = ltrim($buffer, ", \n\r\t[");
@@ -312,8 +328,14 @@ class GeminiService
                     $objectFound = true;
 
                     // Extract Data
-                    if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
-                        $result['chunks'][] = $data['candidates'][0]['content']['parts'][0]['text'];
+                    if (isset($data['candidates'][0]['content']['parts'][0])) {
+                        $part = $data['candidates'][0]['content']['parts'][0];
+
+                        if (isset($part['thought']) && $part['thought'] === true) {
+                            $result['thought_chunks'][] = $part['text'];
+                        } else {
+                            $result['chunks'][] = $part['text'];
+                        }
                     }
                     if (isset($data['usageMetadata'])) {
                         $result['usage'] = $data['usageMetadata'];
@@ -557,13 +579,15 @@ class GeminiService
         }
 
         // Update Memory
+        $memoryResult = [];
         if (isset($contextData['memoryService'])) {
-            $contextData['memoryService']->updateMemory(
+            $newId = $contextData['memoryService']->updateMemory(
                 $inputText,
                 $fullText,
                 $rawChunks,
                 $contextData['usedInteractionIds'] ?? []
             );
+            $memoryResult = ['id' => $newId, 'timestamp' => date('Y-m-d H:i:s')];
         }
 
         $this->db->transComplete();
@@ -575,7 +599,10 @@ class GeminiService
 
         return [
             'costKSH' => $costData['costKSH'],
-            'audioData' => $audioData
+            'audioData' => $audioData,
+            'used_interaction_ids' => $contextData['usedInteractionIds'] ?? [],
+            'new_interaction_id' => $memoryResult['id'] ?? null,
+            'timestamp' => $memoryResult['timestamp'] ?? null,
         ];
     }
     /**

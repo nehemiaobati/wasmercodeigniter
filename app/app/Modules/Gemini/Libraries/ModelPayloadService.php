@@ -45,10 +45,10 @@ class ModelPayloadService
                 'payload' => [
                     "contents" => [["role" => "user", "parts" => $parts]],
                     "generationConfig" => [
-                        "thinkingConfig" => ["thinkingLevel" => "HIGH"],
+                        "thinkingConfig" => ["thinkingLevel" => "HIGH", "includeThoughts" => true],
                         "temperature" => 1,
                         "topP" => 0.95,
-                        "maxOutputTokens" => 64000,
+                        "maxOutputTokens" => 8192,
                     ],
                     "tools" => [["googleSearch" => new stdClass()]],
                 ]
@@ -58,10 +58,10 @@ class ModelPayloadService
                 'payload' => [
                     "contents" => [["role" => "user", "parts" => $parts]],
                     "generationConfig" => [
-                        "thinkingConfig" => ["thinkingBudget" => 32768],
+                        "thinkingConfig" => ["thinkingBudget" => 32768, "includeThoughts" => true],
                         "temperature" => 1,
                         "topP" => 0.95,
-                        "maxOutputTokens" => 64000,
+                        "maxOutputTokens" => 8192,
                     ],
                     "tools" => [["googleSearch" => new stdClass()]],
                 ]
@@ -73,10 +73,10 @@ class ModelPayloadService
                 'payload' => [
                     "contents" => [["role" => "user", "parts" => $parts]],
                     "generationConfig" => [
-                        "thinkingConfig" => ["thinkingBudget" => -1],
+                        "thinkingConfig" => ["thinkingBudget" => 2048, "includeThoughts" => true],
                         "temperature" => 1,
                         "topP" => 0.95,
-                        "maxOutputTokens" => 64000,
+                        "maxOutputTokens" => 8192,
                     ],
                     "tools" => [["googleSearch" => new stdClass()]],
                 ]
@@ -86,10 +86,10 @@ class ModelPayloadService
                 'payload' => [
                     "contents" => [["role" => "user", "parts" => $parts]],
                     "generationConfig" => [
-                        "thinkingConfig" => ["thinkingBudget" => 0],
+                        "thinkingConfig" => ["thinkingBudget" => 2048, "includeThoughts" => true],
                         "temperature" => 1,
                         "topP" => 0.95,
-                        "maxOutputTokens" => 64000,
+                        "maxOutputTokens" => 8192,
                     ],
                     "tools" => [["googleSearch" => new stdClass()]],
                 ]
@@ -103,7 +103,7 @@ class ModelPayloadService
                     "generationConfig" => [
                         "temperature" => 1,
                         "topP" => 0.95,
-                        "maxOutputTokens" => 64000,
+                        "maxOutputTokens" => 8192,
                     ],
                     "tools" => [["googleSearch" => new stdClass()]],
                 ]
@@ -115,7 +115,7 @@ class ModelPayloadService
                     "generationConfig" => [
                         "temperature" => 1,
                         "topP" => 0.95,
-                        "maxOutputTokens" => 64000,
+                        "maxOutputTokens" => 8192,
                     ],
                 ]
             ],
@@ -130,7 +130,7 @@ class ModelPayloadService
                         "imageConfig" => ["image_size" => "1K"],
                         "temperature" => 1,
                         "topP" => 0.95,
-                        "maxOutputTokens" => 64000,
+                        "maxOutputTokens" => 8192,
                     ],
                     "tools" => [["googleSearch" => new stdClass()]],
                 ]
@@ -143,7 +143,7 @@ class ModelPayloadService
                         "responseModalities" => ["IMAGE", "TEXT"],
                         "temperature" => 1,
                         "topP" => 0.95,
-                        "maxOutputTokens" => 64000,
+                        "maxOutputTokens" => 8192,
                     ],
                 ]
             ],

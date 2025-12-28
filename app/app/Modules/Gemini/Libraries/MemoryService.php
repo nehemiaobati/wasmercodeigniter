@@ -484,4 +484,48 @@ XML;
     {
         return $this->tokenService->processText($text);
     }
+
+    /**
+     * Retrieves user interaction history.
+     *
+     * @param int $userId
+     * @param int $limit
+     * @param int $offset
+     * @return array
+     */
+    public function getUserHistory(int $userId, int $limit = 20, int $offset = 0): array
+    {
+        $interactions = $this->interactionModel
+            ->asArray()
+            ->select('unique_id, timestamp, user_input_raw, SUBSTRING(ai_output, 1, 100) as ai_output')
+            ->where('user_id', $userId)
+            ->orderBy('timestamp', 'DESC')
+            ->limit($limit, $offset)
+            ->findAll();
+
+        foreach ($interactions as &$interaction) {
+            // Ensure timestamp is standard for frontend consistency
+            if (!empty($interaction['timestamp'])) {
+                $interaction['timestamp'] = date('Y-m-d H:i:s', strtotime((string)$interaction['timestamp']));
+            }
+        }
+
+        return $interactions;
+    }
+
+    /**
+     * Deletes a specific interaction.
+     *
+     * @param int $userId
+     * @param string $uniqueId
+     * @return bool
+     */
+    public function deleteInteraction(int $userId, string $uniqueId): bool
+    {
+        // Verify ownership and delete
+        return $this->interactionModel
+            ->where('user_id', $userId)
+            ->where('unique_id', $uniqueId)
+            ->delete();
+    }
 }

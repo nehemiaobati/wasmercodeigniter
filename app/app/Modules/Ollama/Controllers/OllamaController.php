@@ -76,7 +76,9 @@ class OllamaController extends BaseController
 
     public function uploadMedia(): ResponseInterface
     {
-        $userId = (int) session()->get('userId');
+        $userId =
+
+            (int) session()->get('userId');
         if ($userId <= 0) {
             return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Auth required.']);
         }
@@ -191,15 +193,24 @@ class OllamaController extends BaseController
         $userSetting = $this->ollamaService->getUserSettings($userId);
         $isAssistantMode = $userSetting ? $userSetting->assistant_mode_enabled : true;
 
+        $memoryService = new \App\Modules\Ollama\Libraries\OllamaMemoryService($userId);
+
+        $messages = [];
+        $usedInteractionIds = [];
+
         if ($isAssistantMode) {
-            $messages = [['role' => 'system', 'content' => 'You are a helpful AI assistant.']];
+            $contextData = $memoryService->buildContextualMessages($inputText);
+            $messages = $contextData['messages'];
+            $usedInteractionIds = $contextData['used_interaction_ids'];
         } else {
-            $messages = [];
+            $messages = [['role' => 'user', 'content' => $inputText]];
         }
 
-        $userMsg = ['role' => 'user', 'content' => $inputText];
-        if (!empty($images)) $userMsg['images'] = $images;
-        $messages[] = $userMsg;
+        // Add images to the last message if present
+        if (!empty($images)) {
+            $lastIdx = count($messages) - 1;
+            $messages[$lastIdx]['images'] = $images;
+        }
 
         session_write_close();
         $this->response->sendHeaders();
@@ -210,22 +221,33 @@ class OllamaController extends BaseController
             $selectedModel,
             $messages,
             function ($chunk) {
-                if (is_array($chunk) && isset($chunk['error'])) {
-                    echo "data: " . json_encode(['error' => $chunk['error'], 'csrf_token' => csrf_hash()]) . "\n\n";
+                if (is_array($chunk)) {
+                    if (isset($chunk['error'])) {
+                        echo "data: " . json_encode(['error' => $chunk['error'], 'csrf_token' => csrf_hash()]) . "\n\n";
+                    } elseif (isset($chunk['thought'])) {
+                        echo "data: " . json_encode(['thought' => $chunk['thought']]) . "\n\n";
+                    } elseif (isset($chunk['text'])) {
+                        echo "data: " . json_encode(['text' => $chunk['text']]) . "\n\n";
+                    }
                 } else {
+                    // Fallback for string chunk
                     echo "data: " . json_encode(['text' => $chunk]) . "\n\n";
                 }
                 if (ob_get_level() > 0) ob_flush();
                 flush();
             },
-            function ($fullText, $usage) use ($userId, $inputText, $uploadedFileIds) {
-                // Finalize via Service (deduct cost)
-                $result = $this->ollamaService->finalizeStreamInteraction($userId, $inputText, $fullText);
+            function ($fullText, $usage) use ($userId, $inputText, $uploadedFileIds, $selectedModel, $usedInteractionIds) {
+                // Finalize via Service (deduct cost & update memory)
+                $result = $this->ollamaService->finalizeStreamInteraction($userId, $inputText, $fullText, $selectedModel, $usedInteractionIds);
                 $this->ollamaService->cleanupTempFiles($uploadedFileIds, $userId);
 
                 $finalPayload = [
-                    'csrf_token' => csrf_hash(),
-                    'cost'       => $result['cost']
+                    'csrf_token'           => csrf_hash(),
+                    'cost'                 => $result['cost'],
+                    'used_interaction_ids' => $result['used_interaction_ids'] ?? [],
+                    'new_interaction_id'   => $result['new_interaction_id'] ?? null,
+                    'timestamp'            => $result['timestamp'] ?? null,
+                    'user_input'           => $inputText
                 ];
                 echo "event: close\n";
                 echo "data: " . json_encode($finalPayload) . "\n\n";
@@ -297,6 +319,48 @@ class OllamaController extends BaseController
         return redirect()->back()->with('success', 'Memory cleared.');
     }
 
+    /**
+     * Fetches user interaction history.
+     *
+     * @return ResponseInterface
+     */
+    public function fetchHistory()
+    {
+        $userId = (int) session()->get('userId');
+        $limit = $this->request->getVar('limit') ?? 20;
+        $offset = $this->request->getVar('offset') ?? 0;
+
+        $memoryService = new \App\Modules\Ollama\Libraries\OllamaMemoryService($userId);
+        $history = $memoryService->getUserHistory($userId, (int)$limit, (int)$offset);
+
+        return $this->response->setJSON([
+            'status' => 'success',
+            'history' => $history,
+            'token' => csrf_hash()
+        ]);
+    }
+
+    /**
+     * Deletes a specific interaction.
+     *
+     * @return ResponseInterface
+     */
+    public function deleteHistory()
+    {
+        $userId = (int) session()->get('userId');
+        $uniqueId = $this->request->getPost('unique_id');
+
+        if (!$uniqueId) {
+            return $this->_respondError('Invalid ID.');
+        }
+
+        $memoryService = new \App\Modules\Ollama\Libraries\OllamaMemoryService($userId);
+        if ($memoryService->deleteInteraction($userId, $uniqueId)) {
+            return $this->response->setJSON(['status' => 'success', 'token' => csrf_hash()]);
+        }
+        return $this->_respondError('Failed to delete.');
+    }
+
     public function downloadDocument()
     {
         $userId = (int) session()->get('userId');
@@ -357,21 +421,53 @@ class OllamaController extends BaseController
         $parsedown = new Parsedown();
         $parsedown->setSafeMode(true);
         $parsedown->setBreaksEnabled(true);
-        $parsedHtml = $parsedown->text($result['result']);
+
+        $finalResult = $result['result'];
+        $parsedHtml = $parsedown->text($finalResult);
+
+        // Prepare raw result with thoughts (for Plain text view consistency)
+        $rawResult = $result['result'];
+        if (!empty($result['thoughts'])) {
+            $parsedHtml = $this->_buildThinkingBlockHtml($result['thoughts']) . "\n\n" . $parsedHtml;
+            $rawResult = "=== THINKING PROCESS ===\n\n" . $result['thoughts'] . "\n\n=== ANSWER ===\n\n" . $rawResult;
+        }
 
         if ($this->request->isAJAX()) {
-            return $this->response->setJSON([
+            $responsePayload = [
                 'status' => 'success',
                 'result' => $parsedHtml,
-                'raw_result' => $result['result'],
+                'raw_result' => $rawResult,
                 'flash_html' => view('App\Views\partials\flash_messages'),
+                'used_interaction_ids' => $result['used_interaction_ids'] ?? [],
+                'new_interaction_id' => $result['new_interaction_id'] ?? null,
+                'timestamp' => $result['timestamp'] ?? null,
+                'user_input' => ($this->request->getPost('prompt') ?? ''),
                 'token' => csrf_hash()
-            ]);
+            ];
+
+            return $this->response->setJSON($responsePayload);
         }
 
         return redirect()->back()->withInput()
             ->with('result', $parsedHtml)
-            ->with('raw_result', $result['result'])
+            ->with('raw_result', $rawResult)
             ->with('success', 'Generated successfully.');
+    }
+
+    /**
+     * Build HTML for thinking block display
+     *
+     * @param string $thoughts The thinking content to display
+     * @return string HTML string for thinking block
+     */
+    private function _buildThinkingBlockHtml(string $thoughts): string
+    {
+        return sprintf(
+            '<details class="thinking-block mb-3">' .
+                '<summary class="cursor-pointer text-muted fw-bold small">Thinking Process</summary>' .
+                '<div class="thinking-content fst-italic text-muted p-2 border-start mt-1 small">%s</div>' .
+                '</details>',
+            esc($thoughts)
+        );
     }
 }

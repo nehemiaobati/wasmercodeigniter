@@ -25,6 +25,8 @@ $routes->group('', ['namespace' => 'App\Modules\Gemini\Controllers'], static fun
 
         // Memory & Media
         $routes->post('memory/clear', 'GeminiController::clearMemory', ['as' => 'gemini.memory.clear']);
+        $routes->post('history', 'GeminiController::fetchHistory', ['as' => 'gemini.history.fetch']);
+        $routes->post('history/delete', 'GeminiController::deleteHistory', ['as' => 'gemini.history.delete']);
         $routes->post('upload-media', 'GeminiController::uploadMedia', ['as' => 'gemini.upload_media']);
         $routes->post('delete-media', 'GeminiController::deleteMedia', ['as' => 'gemini.delete_media']);
 

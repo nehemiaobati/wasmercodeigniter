@@ -9,8 +9,16 @@
     |--------------------------------------------------------------------------
     | AI Studio Implementation - Internal Styles
     |--------------------------------------------------------------------------
-    | Scoped styles for the AI Studio interface.
     */
+
+    :root {
+        --gemini-header-height: 60px;
+        --gemini-sidebar-width: 350px;
+        --gemini-code-bg: #282c34;
+        --gemini-z-header: 1020;
+        --gemini-z-sidebar: 1050;
+        --gemini-z-overlay: 1040;
+    }
 
     /* =========================================
        1. Global Layout Overrides
@@ -27,21 +35,12 @@
         background-color: var(--bs-body-bg);
     }
 
-    :root {
-        --code-bg: #282c34;
-        --sidebar-width: 350px;
-        --header-height: 60px;
-    }
-
     /* =========================================
-       2. Main Container
+       2. Main Layout Container
        ========================================= */
     .gemini-view-container {
         position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
+        inset: 0;
         height: 100dvh;
         width: 100vw;
         display: flex;
@@ -61,23 +60,26 @@
     }
 
     /* =========================================
-       3. Header & Sidebar
+       3. Header
        ========================================= */
     .gemini-header {
         position: sticky;
         top: 0;
-        z-index: 1020;
+        z-index: var(--gemini-z-header);
         background: var(--bs-body-bg);
         border-bottom: 1px solid var(--bs-border-color);
         padding: 0.5rem 1.5rem;
-        height: var(--header-height);
+        height: var(--gemini-header-height);
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
 
+    /* =========================================
+       4. Sidebar
+       ========================================= */
     .gemini-sidebar {
-        width: var(--sidebar-width);
+        width: var(--gemini-sidebar-width);
         border-left: 1px solid var(--bs-border-color);
         background: var(--bs-tertiary-bg);
         overflow-y: auto;
@@ -96,13 +98,13 @@
             right: 0;
             top: 0;
             bottom: 0;
-            z-index: 1050;
+            z-index: var(--gemini-z-sidebar);
             box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
         }
     }
 
     /* =========================================
-       4. Content Areas
+       5. Content Areas
        ========================================= */
     .gemini-response-area {
         flex: 1;
@@ -122,8 +124,9 @@
     }
 
     /* =========================================
-       5. Components: Inputs
+       6. Components
        ========================================= */
+    /* Textarea */
     .prompt-textarea {
         resize: none;
         overflow-y: hidden;
@@ -140,9 +143,7 @@
         border-color: var(--bs-primary);
     }
 
-    /* =========================================
-       6. Components: Cards & Files
-       ========================================= */
+    /* Model Cards */
     .model-card {
         cursor: pointer;
         transition: 0.2s;
@@ -160,6 +161,7 @@
         background-color: var(--bs-primary-bg-subtle);
     }
 
+    /* File Chips */
     #upload-list-wrapper {
         display: flex;
         flex-wrap: wrap;
@@ -209,27 +211,9 @@
         }
     }
 
-    /* =========================================
-       7. Components: Results & Code
-       ========================================= */
-    #results-card {
-        overflow: visible;
-        /* Allow dropdowns */
-        border-radius: var(--bs-border-radius);
-    }
-
-    #results-card .card-header {
-        border-top-left-radius: calc(var(--bs-border-radius) - 1px);
-        border-top-right-radius: calc(var(--bs-border-radius) - 1px);
-    }
-
-    #results-card .card-footer {
-        border-bottom-left-radius: calc(var(--bs-border-radius) - 1px);
-        border-bottom-right-radius: calc(var(--bs-border-radius) - 1px);
-    }
-
+    /* Code Blocks */
     pre {
-        background: var(--code-bg);
+        background: var(--gemini-code-bg);
         color: #fff;
         padding: 1rem;
         border-radius: 5px;
@@ -237,7 +221,6 @@
         margin-top: 1rem;
     }
 
-    /* Copy Button */
     .copy-code-btn {
         position: absolute;
         top: 8px;
@@ -304,19 +287,116 @@
 
     @keyframes pulse-border {
         0% {
-            box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.4);
             border-color: var(--bs-primary);
+            box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.4);
         }
 
         70% {
-            box-shadow: 0 0 0 10px rgba(13, 110, 253, 0);
             border-color: var(--bs-primary);
+            box-shadow: 0 0 0 10px rgba(13, 110, 253, 0);
         }
 
         100% {
-            box-shadow: 0 0 0 0 rgba(13, 110, 253, 0);
             border-color: var(--bs-primary);
+            box-shadow: 0 0 0 0 rgba(13, 110, 253, 0);
         }
+    }
+
+    /* Memory Stream */
+    .memory-item {
+        font-size: 0.9rem;
+        border-left: 3px solid transparent;
+        transition: all 0.2s;
+        cursor: default;
+        background-color: var(--bs-body-bg);
+    }
+
+    .memory-item:hover {
+        background-color: var(--bs-tertiary-bg);
+    }
+
+    .memory-item.active-context {
+        border-left-color: var(--bs-warning);
+        background-color: rgba(255, 193, 7, 0.1) !important;
+        border-radius: 4px;
+    }
+
+    .memory-date-header {
+        font-size: 0.75rem;
+        font-weight: bold;
+        text-transform: uppercase;
+        color: var(--bs-secondary);
+        margin-top: 1rem;
+        margin-bottom: 0.5rem;
+        position: sticky;
+        top: 0;
+        background: var(--bs-body-bg);
+        z-index: 5;
+        padding-top: 4px;
+        padding-bottom: 4px;
+    }
+
+    .delete-memory-btn {
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    .memory-item:hover .delete-memory-btn {
+        opacity: 1;
+    }
+
+    /* Thinking Blocks */
+    .thinking-block {
+        background-color: rgba(255, 255, 255, 0.05);
+        /* Adaptive in dark mode via BS vars usually, but hardcoded here for contrast on code-bg if mixed */
+        border-radius: 4px;
+        transition: all 0.2s;
+        border: 1px solid var(--bs-border-color);
+    }
+
+    [data-bs-theme="light"] .thinking-block {
+        background-color: var(--bs-tertiary-bg);
+    }
+
+    .thinking-block[open] {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    [data-bs-theme="light"] .thinking-block[open] {
+        background-color: var(--bs-secondary-bg);
+    }
+
+    /* Results Card */
+    #results-card {
+        overflow: visible;
+        border-radius: var(--bs-border-radius);
+    }
+
+    #results-card .card-header {
+        border-top-left-radius: calc(var(--bs-border-radius) - 1px);
+        border-top-right-radius: calc(var(--bs-border-radius) - 1px);
+    }
+
+    #results-card .card-footer {
+        border-bottom-left-radius: calc(var(--bs-border-radius) - 1px);
+        border-bottom-right-radius: calc(var(--bs-border-radius) - 1px);
+    }
+
+    /* Code Blocks */
+    pre {
+        background: var(--gemini-code-bg);
+        color: #fff;
+        padding: 1rem;
+        border-radius: 5px;
+        position: relative;
+        margin-top: 1rem;
+    }
+
+    .thinking-content {
+        white-space: pre-wrap;
+        font-family: var(--bs-font-monospace);
+        font-size: 0.85rem;
+        color: var(--bs-secondary-color);
     }
 </style>
 <?= $this->endSection() ?>
@@ -325,9 +405,9 @@
 <div class="gemini-view-container">
 
     <!-- Main Content Area -->
-    <div class="gemini-main">
+    <main class="gemini-main">
         <!-- Header -->
-        <div class="gemini-header">
+        <header class="gemini-header">
             <a href="<?= url_to('home') ?>" class="d-flex align-items-center gap-2 text-decoration-none text-reset">
                 <i class="bi bi-stars text-primary fs-4"></i>
                 <span class="fw-bold fs-5">AI Studio</span>
@@ -340,7 +420,7 @@
                     <i class="bi bi-layout-sidebar-reverse"></i> Settings
                 </button>
             </div>
-        </div>
+        </header>
 
         <!-- Chat / Response Area -->
         <div class="gemini-response-area" id="response-area-wrapper">
@@ -496,64 +576,93 @@
                 </div>
             </form>
         </div>
-    </div>
+    </main>
 
     <!-- Right Sidebar (Settings & History) -->
-    <div class="gemini-sidebar collapse collapse-horizontal show" id="geminiSidebar">
-        <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h5 class="fw-bold m-0"><i class="bi bi-sliders"></i> Configuration</h5>
-            <button class="btn-close d-lg-none" data-bs-toggle="collapse" data-bs-target="#geminiSidebar"></button>
+    <aside class="gemini-sidebar collapse collapse-horizontal show" id="geminiSidebar">
+        <!-- Header with Tabs -->
+        <div class="d-flex align-items-center mb-3">
+            <ul class="nav nav-pills nav-fill flex-grow-1 p-1 bg-body rounded" id="sidebarTabs" role="tablist" style="font-size: 0.9rem;">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active py-1" id="config-tab" data-bs-toggle="tab" data-bs-target="#config-pane" type="button" role="tab"><i class="bi bi-sliders me-1"></i> Config</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link py-1" id="memory-tab" data-bs-toggle="tab" data-bs-target="#memory-pane" type="button" role="tab"><i class="bi bi-activity me-1"></i> History</button>
+                </li>
+            </ul>
+            <button class="btn-close ms-2 d-lg-none" data-bs-toggle="collapse" data-bs-target="#geminiSidebar"></button>
         </div>
 
-        <!-- Toggles -->
-        <div class="form-check form-switch mb-3">
-            <input class="form-check-input setting-toggle" type="checkbox" id="assistantMode" data-key="assistant_mode_enabled" <?= $assistant_mode_enabled ? 'checked' : '' ?>>
-            <label class="form-check-label fw-medium" for="assistantMode">Conversational Memory</label>
-        </div>
-        <div class="form-check form-switch mb-3">
-            <input class="form-check-input setting-toggle" type="checkbox" id="voiceOutput" data-key="voice_output_enabled" <?= $voice_output_enabled ? 'checked' : '' ?>>
-            <label class="form-check-label fw-medium" for="voiceOutput">Voice Output (TTS)</label>
-        </div>
-        <div class="form-check form-switch mb-4">
-            <input class="form-check-input setting-toggle" type="checkbox" id="streamOutput" data-key="stream_output_enabled" <?= $stream_output_enabled ? 'checked' : '' ?>>
-            <label class="form-check-label fw-medium" for="streamOutput">Stream Responses</label>
-        </div>
+        <div class="tab-content h-100 overflow-hidden d-flex flex-column">
 
-        <hr>
+            <!-- Configuration Pane -->
+            <div class="tab-pane fade show active h-100 overflow-auto custom-scrollbar" id="config-pane" role="tabpanel">
 
-        <!-- Saved Prompts -->
-        <label class="form-label small fw-bold text-uppercase text-muted">Saved Prompts</label>
-        <div id="saved-prompts-wrapper">
-            <div class="input-group mb-3 <?= empty($prompts) ? 'd-none' : '' ?>" id="savedPromptsContainer">
-                <select class="form-select form-select-sm" id="savedPrompts">
-                    <option value="" disabled selected>Select...</option>
-                    <?php if (!empty($prompts)): ?>
-                        <?php foreach ($prompts as $p): ?>
-                            <option value="<?= esc($p->prompt_text, 'attr') ?>" data-id="<?= $p->id ?>"><?= esc($p->title) ?></option>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </select>
-                <button class="btn btn-outline-secondary btn-sm" type="button" id="usePromptBtn">Load</button>
-                <button class="btn btn-outline-danger btn-sm" type="button" id="deletePromptBtn" disabled><i class="bi bi-trash"></i></button>
+                <!-- Toggles -->
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input setting-toggle" type="checkbox" id="assistantMode" data-key="assistant_mode_enabled" <?= $assistant_mode_enabled ? 'checked' : '' ?>>
+                    <label class="form-check-label fw-medium" for="assistantMode">Conversational Memory</label>
+                </div>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input setting-toggle" type="checkbox" id="voiceOutput" data-key="voice_output_enabled" <?= $voice_output_enabled ? 'checked' : '' ?>>
+                    <label class="form-check-label fw-medium" for="voiceOutput">Voice Output (TTS)</label>
+                </div>
+                <div class="form-check form-switch mb-4">
+                    <input class="form-check-input setting-toggle" type="checkbox" id="streamOutput" data-key="stream_output_enabled" <?= $stream_output_enabled ? 'checked' : '' ?>>
+                    <label class="form-check-label fw-medium" for="streamOutput">Stream Responses</label>
+                </div>
+
+                <hr>
+
+                <!-- Saved Prompts -->
+                <label class="form-label small fw-bold text-uppercase text-muted">Saved Prompts</label>
+                <div id="saved-prompts-wrapper">
+                    <div class="input-group mb-3 <?= empty($prompts) ? 'd-none' : '' ?>" id="savedPromptsContainer">
+                        <select class="form-select form-select-sm" id="savedPrompts">
+                            <option value="" disabled selected>Select...</option>
+                            <?php if (!empty($prompts)): ?>
+                                <?php foreach ($prompts as $p): ?>
+                                    <option value="<?= esc($p->prompt_text, 'attr') ?>" data-id="<?= $p->id ?>"><?= esc($p->title) ?></option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </select>
+                        <button class="btn btn-outline-secondary btn-sm" type="button" id="usePromptBtn">Load</button>
+                        <button class="btn btn-outline-danger btn-sm" type="button" id="deletePromptBtn" disabled><i class="bi bi-trash"></i></button>
+                    </div>
+                    <div id="no-prompts-alert" class="alert alert-light border mb-3 small text-muted <?= !empty($prompts) ? 'd-none' : '' ?>">
+                        No saved prompts yet.
+                    </div>
+                </div>
+
+                <hr>
+
+                <!-- Danger Zone -->
+                <form action="<?= url_to('gemini.memory.clear') ?>" method="post" onsubmit="return confirm('Clear all history?');">
+                    <?= csrf_field() ?>
+                    <button type="submit" class="btn btn-outline-danger w-100 btn-sm"><i class="bi bi-trash me-2"></i> Clear History</button>
+                </form>
+
+                <div class="mt-4 pt-4 text-center">
+                    <small class="text-muted">AFRIKENKID AI Studio v2</small>
+                </div>
             </div>
-            <div id="no-prompts-alert" class="alert alert-light border mb-3 small text-muted <?= !empty($prompts) ? 'd-none' : '' ?>">
-                No saved prompts yet.
+
+            <!-- Memory Stream Pane -->
+            <div class="tab-pane fade h-100 overflow-auto custom-scrollbar" id="memory-pane" role="tabpanel">
+                <div id="memory-loading" class="text-center py-4 d-none">
+                    <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
+                </div>
+                <div id="history-list" class="d-flex flex-column pb-5">
+                    <!-- History items will be injected here -->
+                    <div class="text-center text-muted small mt-5">
+                        <i class="bi bi-clock-history fs-4 mb-2 d-block"></i>
+                        Select the History tab to load interactions.
+                    </div>
+                </div>
             </div>
+
         </div>
-
-        <hr>
-
-        <!-- Danger Zone -->
-        <form action="<?= url_to('gemini.memory.clear') ?>" method="post" onsubmit="return confirm('Clear all history?');">
-            <?= csrf_field() ?>
-            <button type="submit" class="btn btn-outline-danger w-100 btn-sm"><i class="bi bi-trash me-2"></i> Clear History</button>
-        </form>
-
-        <div class="mt-auto pt-4 text-center">
-            <small class="text-muted">AFRIKENKID AI Studio v2</small>
-        </div>
-    </div>
+    </aside>
 </div>
 
 <!-- Hidden Support Forms -->
@@ -610,6 +719,7 @@
      */
 
     // Configuration Constants
+    // Configuration Constants
     const APP_CONFIG = {
         csrfName: '<?= csrf_token() ?>',
         csrfHash: '<?= csrf_hash() ?>', // Initial hash
@@ -626,12 +736,152 @@
             stream: '<?= url_to('gemini.stream') ?>',
             generate: '<?= url_to('gemini.generate') ?>',
             generateMedia: '<?= url_to('gemini.media.generate') ?>',
-            pollMedia: '<?= url_to('gemini.media.poll') ?>'
+            pollMedia: '<?= url_to('gemini.media.poll') ?>',
+            history: '<?= url_to('gemini.history.fetch') ?>',
+            deleteHistory: '<?= url_to('gemini.history.delete') ?>'
         }
     };
 
     /**
-     * 1. Core Application Controller
+     * ViewRenderer
+     * 
+     * Pure static class responsible for generating HTML strings.
+     * Decouples UI templating from business logic (Interaction/Stream handlers).
+     * 
+     * Principles:
+     * - Returns HTML strings only (no DOM side effects).
+     * - Stateless: Does not store app state.
+     * - Secure: Helper methods like escapeHtml prevent XSS in history items.
+     */
+    class ViewRenderer {
+        static escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        static renderResultCard(isMedia = false, title = 'Studio Output', processing = false) {
+            const processingClass = processing ? 'polling-pulse' : '';
+            const bodyContent = isMedia ?
+                `<div class="media-output-container"></div>` :
+                `<div class="card-body response-content" id="ai-response-body"></div>
+                 <textarea id="raw-response" class="d-none"></textarea>
+                 <div class="card-footer bg-body border-top text-center py-2">
+                    <small class="text-muted fw-medium d-block">Generated by Google Gemini / Imagen / Veo</small>
+                 </div>`;
+
+            const toolbar = isMedia ? '' : `
+                <div class="d-flex gap-2">
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-sm btn-light copy-btn" id="copyFullResponseBtn" data-format="text"><i class="bi bi-clipboard me-1"></i> Copy</button>
+                        <button type="button" class="btn btn-sm btn-light dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"><span class="visually-hidden">Toggle</span></button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><h6 class="dropdown-header"><i class="bi bi-clipboard me-1"></i> Copy As</h6></li>
+                            <li><a class="dropdown-item copy-format-action" href="#" data-format="text">Plain Text</a></li>
+                            <li><a class="dropdown-item copy-format-action" href="#" data-format="markdown">Markdown</a></li>
+                            <li><a class="dropdown-item copy-format-action" href="#" data-format="html">HTML</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header"><i class="bi bi-download me-1"></i> Export As</h6></li>
+                            <li><a class="dropdown-item download-action" href="#" data-format="pdf">PDF Document</a></li>
+                            <li><a class="dropdown-item download-action" href="#" data-format="docx">Word Document</a></li>
+                        </ul>
+                    </div>
+                </div>`;
+
+            return `
+                <div class="card blueprint-card shadow-sm border-primary ${processingClass}" id="results-card">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <span class="fw-bold"><i class="bi bi-stars me-2"></i>${title}</span>
+                        ${toolbar}
+                    </div>
+                    ${bodyContent}
+                </div>`;
+        }
+
+        static renderAudioPlayer(url) {
+            return `
+                <div class="alert alert-info d-flex align-items-center mb-4">
+                    <i class="bi bi-volume-up-fill fs-4 me-3"></i>
+                    <audio controls autoplay class="w-100">
+                        <source src="${url}" type="audio/mpeg">
+                        <source src="${url}" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                </div>`;
+        }
+
+        static renderFileChip(file, id) {
+            return `<div class="file-chip fade show" id="file-item-${id}"><div class="progress-ring"></div><span class="file-name">${file.name}</span><button type="button" class="btn-close p-1 remove-btn disabled" data-id="${id}"></button></div>`;
+        }
+
+        static renderHistoryHeader(date) {
+            const div = document.createElement('div');
+            div.className = 'memory-date-header mt-3 mb-2 px-2 py-1 rounded shadow-sm';
+            div.textContent = date;
+            return div;
+        }
+
+        static renderHistoryItem(item) {
+            const el = document.createElement('div');
+            el.className = 'memory-item p-3 mb-2 rounded border shadow-sm position-relative';
+            el.dataset.id = item.unique_id || item.id;
+            el.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="text-truncate fw-medium" style="max-width: 85%; font-size: 0.85rem;" title="${this.escapeHtml(item.user_input || item.user_input_raw)}">
+                        ${this.escapeHtml(item.user_input || item.user_input_raw)}
+                    </div>
+                    <button class="btn btn-link text-danger p-0 delete-memory-btn" style="font-size: 0.8rem;" data-id="${item.unique_id || item.id}" title="Forget">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+                <div class="text-muted text-truncate small" style="opacity: 0.7;">
+                    ${this.escapeHtml(item.ai_output || item.ai_output_raw)}
+                </div>`;
+            return el;
+        }
+
+        static renderLoadMoreButton() {
+            const div = document.createElement('div');
+            div.className = 'text-center py-3';
+            div.innerHTML = `
+                <button class="btn btn-sm btn-outline-primary load-more-btn">
+                    Load More <i class="bi bi-arrow-down-circle ms-1"></i>
+                </button>`;
+            return div;
+        }
+
+        static renderFlashMessage(msg, type = 'danger') {
+            return `<div class="alert alert-${type} alert-dismissible fade show">${msg}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
+        }
+
+        static renderVideoProcessing() {
+            return '<div class="text-center p-4"><div class="spinner-border text-primary mb-3"></div><h5>Synthesizing Video</h5><p class="text-muted">Processing...</p></div>';
+        }
+
+        static renderVideoPlayer(url) {
+            return `<div class="video-wrapper"><video controls autoplay loop playsinline><source src="${url}" type="video/mp4"></video></div>`;
+        }
+
+        static renderImage(url) {
+            return `<img src="${url}" class="generated-media-item img-fluid" onclick="window.open('${url}','_blank')">`;
+        }
+    }
+
+    /**
+     * GeminiApp
+     * 
+     * Main application controller/orchestrator.
+     * 
+     * Responsibilities:
+     * 1. Dependency Injection: Initializes and holds references to all sub-modules (ui, uploader, etc.).
+     * 2. State Management: centralized source of truth for CSRF tokens.
+     * 3. Communication: Provides the `sendAjax` wrapper for consistent error handling and CSRF rotation.
+     * 
+     * Pattern: Singleton-like (instantiated once on DOMContentLoaded).
      */
     class GeminiApp {
         constructor() {
@@ -641,6 +891,7 @@
             this.ui = new UIManager(this);
             this.uploader = new MediaUploader(this);
             this.prompts = new PromptManager(this);
+            this.history = new HistoryManager(this);
             this.streamer = new StreamHandler(this);
             this.interaction = new InteractionHandler(this);
         }
@@ -656,6 +907,7 @@
             this.ui.init();
             this.uploader.init();
             this.prompts.init();
+            this.history.init();
             this.interaction.init();
 
             // Expose for debugging
@@ -663,7 +915,10 @@
         }
 
         /**
-         * Update CSRF token state
+         * Updates the CSRF hash across the application state and all hidden input fields.
+         * Critical for preventing 403 Forbidden errors on subsequent requests in SPA-like flows.
+         * 
+         * @param {string} hash - The new CSRF hash from the server header or JSON response.
          */
         refreshCsrf(hash) {
             if (!hash) return;
@@ -674,6 +929,16 @@
 
         /**
          * Unified AJAX Helper
+         * 
+         * Wraps `fetch` to provide:
+         * 1. Auto-appending of CSRF tokens to FormData.
+         * 2. X-Requested-With header for CodeIgniter AJAX detection.
+         * 3. Automatic CSRF token rotation from response headers/body.
+         * 4. Centralized error logging and UI toast notification on failure.
+         * 
+         * @param {string} url - Endpoint URL
+         * @param {FormData|null} data - Payload
+         * @returns {Promise<Object>} - Parsed JSON response
          */
         async sendAjax(url, data = null) {
             const formData = data instanceof FormData ? data : new FormData();
@@ -708,8 +973,15 @@
     }
 
     /**
-     * 2. UI Manager
-     * Handles DOM visual updates, toggles, and library integrations.
+     * UIManager
+     * 
+     * Mediator for all DOM manipulations and visual state updates.
+     * 
+     * specific duties:
+     * - Managing Loading States: Toggling buttons/spinners during async operations.
+     * - Sidebar/Layout: Handling responsive behavior and tab switching logic.
+     * - 3rd Party Libs: Initializing and configuring TinyMCE (editor) and Highlight.js (syntax).
+     * - Feedback: Displaying Toasts and Flash messages via ViewRenderer.
      */
     class UIManager {
         constructor(app) {
@@ -718,7 +990,8 @@
                 generateBtn: document.getElementById('generateBtn'),
                 sidebar: document.getElementById('geminiSidebar'),
                 responseArea: document.getElementById('response-area-wrapper'),
-                toast: document.getElementById('liveToast')
+                toast: document.getElementById('liveToast'),
+                flashContainer: document.getElementById('flash-messages-container')
             };
         }
 
@@ -727,8 +1000,6 @@
             this.setupTabs();
             this.setupSettingsToggles();
             this.initTinyMCE();
-
-            // Initial setup for existing content (e.g. after validation error)
             this.enableCodeFeatures();
             this.setupDownloads();
         }
@@ -751,7 +1022,7 @@
                 autoresize_bottom_margin: 0,
                 min_height: 40,
                 max_height: 120,
-                highlight_on_focus: false, // Prevents TinyMCE's specific focus highlighting
+                highlight_on_focus: false,
                 content_style: 'body { outline: none !important; }',
                 setup: (editor) => {
                     editor.on('keydown', (e) => {
@@ -775,14 +1046,12 @@
         }
 
         setError(msg) {
-            const container = document.getElementById('flash-messages-container');
-            if (container) {
-                container.innerHTML = `<div class="alert alert-danger alert-dismissible fade show">${msg}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
-            }
+            if (this.els.flashContainer) this.els.flashContainer.innerHTML = ViewRenderer.renderFlashMessage(msg);
         }
 
         setLoading(isLoading) {
             const btn = this.els.generateBtn;
+            if (!btn) return;
             if (isLoading) {
                 btn.disabled = true;
                 btn.innerHTML = '<span class="spinner-border spinner-border-sm text-white"></span>';
@@ -792,9 +1061,6 @@
             }
         }
 
-        /**
-         * Tab & Model Selection Logic
-         */
         setupTabs() {
             document.querySelectorAll('#generationTabs button').forEach(btn => {
                 btn.addEventListener('shown.bs.tab', (e) => {
@@ -803,7 +1069,6 @@
                     this.updateModelSelectionUI(type);
                 });
             });
-
             document.querySelectorAll('.model-card').forEach(card => {
                 card.addEventListener('click', () => {
                     document.querySelectorAll('.model-card').forEach(c => c.classList.remove('active'));
@@ -824,7 +1089,6 @@
             vidGrid.classList.add('d-none');
 
             let placeholder = 'Message Gemini...';
-
             if (type === 'text') {
                 mInput.value = 'gemini-2.0-flash';
             } else {
@@ -839,21 +1103,14 @@
                     vidGrid.querySelector('.model-card')?.click();
                 }
             }
-
-            // Update TinyMCE placeholder
             if (tinymce.activeEditor) tinymce.activeEditor.getBody().setAttribute('data-mce-placeholder', placeholder);
             else document.getElementById('prompt')?.setAttribute('placeholder', placeholder);
         }
 
-        /**
-         * Setup Code highlighting and Copy buttons
-         */
         enableCodeFeatures() {
             if (typeof hljs !== 'undefined') hljs.highlightAll();
-
             document.querySelectorAll('pre code').forEach((block) => {
                 if (block.parentElement.querySelector('.copy-code-btn')) return;
-
                 const btn = document.createElement('button');
                 btn.className = 'btn btn-sm btn-dark copy-code-btn';
                 btn.innerHTML = '<i class="bi bi-clipboard"></i>';
@@ -873,7 +1130,6 @@
         }
 
         setupDownloads() {
-            // Download handlers
             document.querySelectorAll('.download-action').forEach(btn => {
                 btn.onclick = (e) => {
                     e.preventDefault();
@@ -882,19 +1138,16 @@
                     document.getElementById('downloadForm').submit();
                 };
             });
-
-            // Copy handlers
             const mainCopyBtn = document.getElementById('copyFullResponseBtn');
-            if (!mainCopyBtn) return;
-
-            mainCopyBtn.onclick = () => this.copyContent('text', mainCopyBtn);
-
-            document.querySelectorAll('.copy-format-action').forEach(btn => {
-                btn.onclick = (e) => {
-                    e.preventDefault();
-                    this.copyContent(e.target.dataset.format, mainCopyBtn);
-                };
-            });
+            if (mainCopyBtn) {
+                mainCopyBtn.onclick = () => this.copyContent('text', mainCopyBtn);
+                document.querySelectorAll('.copy-format-action').forEach(btn => {
+                    btn.onclick = (e) => {
+                        e.preventDefault();
+                        this.copyContent(e.target.dataset.format, mainCopyBtn);
+                    };
+                });
+            }
         }
 
         copyContent(format, btn) {
@@ -902,10 +1155,18 @@
             const body = document.getElementById('ai-response-body');
             if (!raw || !body) return;
 
-            let content = (format === 'markdown') ? raw.value : (format === 'html' ? body.innerHTML : body.innerText);
+            let content;
+            if (format === 'markdown') content = raw.value;
+            else if (format === 'html') content = body.innerHTML;
+            else {
+                const thinkingBlock = body.querySelector('.thinking-block');
+                const wasOpen = thinkingBlock ? thinkingBlock.hasAttribute('open') : true;
+                if (thinkingBlock && !wasOpen) thinkingBlock.setAttribute('open', '');
+                content = body.innerText;
+                if (thinkingBlock && !wasOpen) thinkingBlock.removeAttribute('open');
+            }
 
             if (!content.trim()) return this.showToast('Nothing to copy.');
-
             navigator.clipboard.writeText(content).then(() => {
                 this.showToast('Copied!');
                 if (btn) {
@@ -936,37 +1197,22 @@
             const existing = document.getElementById('results-card');
             if (existing) return;
             document.getElementById('empty-state')?.remove();
-
-            const html = `
-                <div class="card blueprint-card shadow-sm border-primary" id="results-card">
-                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                        <span class="fw-bold"><i class="bi bi-stars me-2"></i>Studio Output</span>
-                         <div class="d-flex gap-2">
-                             <!-- (Copy buttons ... reused from PHP template logic ideally, but rebuilt here for JS) -->
-                            <div class="btn-group" role="group">
-                                <button class="btn btn-sm btn-light copy-btn" id="copyFullResponseBtn" data-format="text"><i class="bi bi-clipboard me-1"></i> Copy</button>
-                                <button type="button" class="btn btn-sm btn-light dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"><span class="visually-hidden">Toggle</span></button>
-                                <ul class="dropdown-menu dropdown-menu-end">
-                                    <li><h6 class="dropdown-header"><i class="bi bi-clipboard me-1"></i> Copy As</h6></li>
-                                    <li><a class="dropdown-item copy-format-action" href="#" data-format="text">Plain Text</a></li>
-                                    <li><a class="dropdown-item copy-format-action" href="#" data-format="markdown">Markdown</a></li>
-                                    <li><a class="dropdown-item copy-format-action" href="#" data-format="html">HTML</a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><h6 class="dropdown-header"><i class="bi bi-download me-1"></i> Export As</h6></li>
-                                    <li><a class="dropdown-item download-action" href="#" data-format="pdf">PDF Document</a></li>
-                                    <li><a class="dropdown-item download-action" href="#" data-format="docx">Word Document</a></li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-body response-content" id="ai-response-body"></div>
-                    <textarea id="raw-response" class="d-none"></textarea>
-                    <div class="card-footer bg-body border-top text-center py-2">
-                        <small class="text-muted fw-medium d-block">Generated by Google Gemini / Imagen / Veo</small>
-                    </div>
-                </div>`;
-            this.els.responseArea.insertAdjacentHTML('beforeend', html);
+            this.els.responseArea.insertAdjacentHTML('beforeend', ViewRenderer.renderResultCard());
             this.setupDownloads();
+        }
+
+        renderMediaCard(contentHtml, isProcessing = false) {
+            const existing = document.getElementById('results-card');
+            if (existing) existing.remove();
+            document.getElementById('empty-state')?.remove();
+
+            const title = isProcessing ? 'Generating Content...' : 'Studio Output';
+            const wrapper = ViewRenderer.renderResultCard(true, title, isProcessing);
+            this.els.responseArea.insertAdjacentHTML('beforeend', wrapper);
+            const container = this.els.responseArea.querySelector('.media-output-container');
+            if (container) container.innerHTML = contentHtml;
+
+            this.scrollToBottom();
         }
 
         scrollToBottom() {
@@ -976,49 +1222,29 @@
             }), 100);
         }
 
-        renderMediaCard(html, isProcessing = false) {
-            const existing = document.getElementById('results-card');
-            if (existing) existing.remove();
-            document.getElementById('empty-state')?.remove();
-
-            const processingClass = isProcessing ? 'polling-pulse' : '';
-            const title = isProcessing ? 'Generating Content...' : 'Studio Output';
-
-            const card = `
-                <div class="card blueprint-card mt-4 shadow-sm border-primary ${processingClass}" id="results-card">
-                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                        <span class="fw-bold"><i class="bi bi-stars me-2"></i>${title}</span>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="media-output-container">${html}</div>
-                    </div>
-                </div>`;
-            this.els.responseArea.insertAdjacentHTML('beforeend', card);
-            this.scrollToBottom();
-        }
-
         renderAudio(url) {
             if (!url) return;
-            document.getElementById('audio-player-container').innerHTML = `
-                <div class="alert alert-info d-flex align-items-center mb-4">
-                    <i class="bi bi-volume-up-fill fs-4 me-3"></i>
-                    <audio controls autoplay class="w-100">
-                        <source src="${url}" type="audio/mpeg">
-                        <source src="${url}" type="audio/wav">
-                    </audio>
-                </div>`;
+            document.getElementById('audio-player-container').innerHTML = ViewRenderer.renderAudioPlayer(url);
         }
     }
 
     /**
-     * 3. Interaction Handler
-     * Orchestrates form submissions and delegation to specific handlers.
+     * InteractionHandler
+     * 
+     * Orchestrates the user intent flow (Submit -> Validate -> Route -> Execute).
+     * 
+     * Logic Flow:
+     * 1. Intercepts form submission.
+     * 2. Syncs TinyMCE content to textarea.
+     * 3. Determines generation type (Text vs Media).
+     * 4. Routes Text requests to either `generateText` (Standard) or `StreamHandler` (SSE).
+     * 5. Routes Media requests to `generateMedia`.
+     * 6. Handles async polling for Video generation.
      */
     class InteractionHandler {
         constructor(app) {
             this.app = app;
         }
-
         init() {
             document.getElementById('geminiForm')?.addEventListener('submit', e => this.handleSubmit(e));
         }
@@ -1027,7 +1253,6 @@
             e.preventDefault();
             const type = document.getElementById('generationType').value;
             if (typeof tinymce !== 'undefined') tinymce.triggerSave();
-
             const prompt = document.getElementById('prompt').value.trim();
             if (!prompt && type === 'text') return this.app.ui.showToast('Please enter a prompt.');
 
@@ -1042,9 +1267,9 @@
                     await this.generateMedia(fd);
                 }
             } catch (e) {
-                /* Error UI handled in methods */
+                // UI error handled in calls
             } finally {
-                if (type !== 'video') this.app.ui.setLoading(false); // Video polling handles its own loading state
+                if (type !== 'video') this.app.ui.setLoading(false);
             }
         }
 
@@ -1057,8 +1282,16 @@
                     document.getElementById('raw-response').value = d.raw_result;
                     this.app.ui.enableCodeFeatures();
                     this.app.ui.scrollToBottom();
-                    if (d.flash_html) document.getElementById('flash-messages-container').innerHTML = d.flash_html;
+                    if (d.flash_html) this.app.ui.els.flashContainer.innerHTML = d.flash_html;
                     this.app.ui.renderAudio(d.audio_url);
+
+                    if (d.new_interaction_id) this.app.history.addItem({
+                        id: d.new_interaction_id,
+                        timestamp: d.timestamp,
+                        user_input: d.user_input
+                    }, d.raw_result);
+
+                    if (d.used_interaction_ids) this.app.history.highlightContext(d.used_interaction_ids);
                 } else {
                     this.app.ui.setError(d.message || 'Generation failed.');
                 }
@@ -1074,12 +1307,11 @@
                 if (d.status === 'error') throw new Error(d.message);
 
                 if (d.type === 'image') {
-                    const html = `<img src="${d.url}" class="generated-media-item img-fluid" onclick="window.open('${d.url}','_blank')">`;
-                    this.app.ui.renderMediaCard(html);
+                    this.app.ui.renderMediaCard(ViewRenderer.renderImage(d.url));
                 } else if (d.type === 'video') {
-                    this.app.ui.renderMediaCard('<div class="text-center p-4"><div class="spinner-border text-primary mb-3"></div><h5>Synthesizing Video</h5><p class="text-muted">Processing...</p></div>', true);
+                    this.app.ui.renderMediaCard(ViewRenderer.renderVideoProcessing(), true);
                     this.pollVideo(d.op_id);
-                    return; // Keep loading true
+                    return;
                 }
             } catch (e) {
                 this.app.ui.setError(e.message || 'Media Generation Failed');
@@ -1095,8 +1327,7 @@
                     const d = await this.app.sendAjax(APP_CONFIG.endpoints.pollMedia, fd);
                     if (d.status === 'completed') {
                         clearInterval(t);
-                        const html = `<div class="video-wrapper"><video controls autoplay loop playsinline><source src="${d.url}" type="video/mp4"></video></div>`;
-                        this.app.ui.renderMediaCard(html);
+                        this.app.ui.renderMediaCard(ViewRenderer.renderVideoPlayer(d.url));
                         this.app.ui.setLoading(false);
                     } else if (d.status === 'failed') {
                         throw new Error(d.message);
@@ -1111,8 +1342,16 @@
     }
 
     /**
-     * 4. Stream Handler
-     * Manages server-sent events for streaming responses.
+     * StreamHandler
+     * 
+     * Manages Server-Sent Events (SSE) for real-time AI responses.
+     * 
+     * Core Complexity:
+     * - Chunk Parsing: Decodes binary stream chunks into text.
+     * - Event Splitting: Separates `data: {...}` lines from the stream buffer.
+     * - JSON Validation: Safely parses partial/full JSON objects.
+     * - Dual-Mode Rendering: Distinguishes between 'thought' (reasoning models) and 'text' (final answer) 
+     *   to render them in separate UI blocks (folding details vs markdown body).
      */
     class StreamHandler {
         constructor(app) {
@@ -1127,22 +1366,20 @@
                 audio: document.getElementById('audio-player-container')
             };
 
-            // Reset
             els.body.innerHTML = '';
             els.raw.value = '';
             els.audio.innerHTML = '';
 
             try {
                 if (!formData.has(APP_CONFIG.csrfName)) formData.append(APP_CONFIG.csrfName, this.app.csrfHash);
-
                 const response = await fetch(APP_CONFIG.endpoints.stream, {
                     method: 'POST',
                     body: formData
                 });
-
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
                 let accum = '';
+                this.currentFullText = '';
 
                 while (true) {
                     const {
@@ -1150,18 +1387,16 @@
                         done
                     } = await reader.read();
                     if (done) break;
-
                     const chunk = decoder.decode(value, {
                         stream: true
                     });
                     accum = this.processChunk(chunk, accum, els);
                 }
-
+                this.currentFullText = accum; // For history
                 this.app.ui.enableCodeFeatures();
             } catch (e) {
                 this.app.ui.setError('Stream Connection Lost.');
             }
-
             this.app.uploader.clear();
         }
 
@@ -1171,27 +1406,69 @@
                 if (line.startsWith('data: ')) {
                     try {
                         const d = JSON.parse(line.substring(6));
-                        if (d.text) {
+                        if (d.thought) {
+                            this._ensureThinkingBlock(els.body);
+                            this._appendToThinkingBlock(els.body, d.thought);
+                            if (!els.raw.value.includes('=== THINKING PROCESS ===')) els.raw.value = '=== THINKING PROCESS ===\n\n' + els.raw.value;
+                            els.raw.value += d.thought;
+                        } else if (d.text) {
                             accum += d.text;
-                            els.body.innerHTML = marked.parse(accum);
-                            els.raw.value += d.text;
+                            if (els.raw.value.includes('=== THINKING PROCESS ===') && !els.raw.value.includes('=== ANSWER ===')) els.raw.value += '\n\n=== ANSWER ===\n\n';
+                            this._preserveThinkingBlockWhileUpdating(els.body, () => {
+                                els.body.innerHTML = marked.parse(accum);
+                                els.raw.value += d.text;
+                            });
                         }
                         if (d.error) this.app.ui.setError(d.error);
-                        if (d.cost) document.getElementById('flash-messages-container').innerHTML = `<div class="alert alert-success alert-dismissible fade show">KSH ${parseFloat(d.cost).toFixed(2)} deducted.<button class="btn-close" data-bs-dismiss="alert"></button></div>`;
+                        if (d.cost) this.app.ui.els.flashContainer.innerHTML = ViewRenderer.renderFlashMessage(`KSH ${parseFloat(d.cost).toFixed(2)} deducted.`, 'success');
                         if (d.audio_url) this.app.ui.renderAudio(d.audio_url);
                         if (d.csrf_token) this.app.refreshCsrf(d.csrf_token);
+
+                        // History sync handled here if needed, or at end
+                        if (d.new_interaction_id) {
+                            this.app.history.addItem({
+                                id: d.new_interaction_id,
+                                timestamp: d.timestamp,
+                                user_input: d.user_input
+                            }, accum); // Use current accumulated text
+                        }
+                        if (d.used_interaction_ids) this.app.history.highlightContext(d.used_interaction_ids);
                     } catch (e) {
-                        /* Ignore partial JSON */
+                        console.error("Parse error", e);
                     }
                 }
             });
             return accum;
         }
-    }
 
+        _ensureThinkingBlock(bodyEl) {
+            if (bodyEl.querySelector('.thinking-block')) return;
+            const details = document.createElement('details');
+            details.className = 'thinking-block mb-3';
+            details.innerHTML = '<summary class="cursor-pointer text-muted fw-bold small">Thinking Process</summary><div class="thinking-content fst-italic text-muted p-2 border-start mt-1 small"></div>';
+            bodyEl.insertBefore(details, bodyEl.firstChild);
+        }
+
+        _appendToThinkingBlock(bodyEl, text) {
+            const content = bodyEl.querySelector('.thinking-block .thinking-content');
+            if (content) content.textContent += text;
+        }
+
+        _preserveThinkingBlockWhileUpdating(bodyEl, updateFn) {
+            const block = bodyEl.querySelector('.thinking-block');
+            updateFn();
+            if (block) bodyEl.insertBefore(block, bodyEl.firstChild);
+        }
+    }
     /**
-     * 5. Media Uploader
-     * Handles drag & drop and file APIs.
+     * MediaUploader
+     * 
+     * Manages the file upload workflow with a focus on UX availability options (Drag & Drop + Click).
+     * 
+     * Features:
+     * - Queue System: Uploads files sequentially (one-by-one) to prevent server overload.
+     * - UI Sync: Creates visual chips immediately, updates status (spinning -> success/error) asynchronously.
+     * - Form Linking: Appends hidden inputs for `file_id`s so the main form knows what to attach to the prompt.
      */
     class MediaUploader {
         constructor(app) {
@@ -1199,19 +1476,15 @@
             this.queue = [];
             this.isUploading = false;
         }
-
         init() {
             const area = document.getElementById('mediaUploadArea');
             const inp = document.getElementById('media-input-trigger');
             if (!area) return;
 
-            // Drag & Drop Events
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => {
-                area.addEventListener(e, ev => {
-                    ev.preventDefault();
-                    ev.stopPropagation();
-                });
-            });
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => area.addEventListener(e, ev => {
+                ev.preventDefault();
+                ev.stopPropagation();
+            }));
             ['dragenter', 'dragover'].forEach(e => area.addEventListener(e, () => area.classList.add('dragover')));
             ['dragleave', 'drop'].forEach(e => area.addEventListener(e, () => area.classList.remove('dragover')));
 
@@ -1220,7 +1493,6 @@
                 this.handleFiles(e.target.files);
                 inp.value = '';
             });
-
             document.getElementById('upload-list-wrapper')?.addEventListener('click', e => {
                 const btn = e.target.closest('.remove-btn');
                 if (btn) this.removeFile(btn);
@@ -1228,32 +1500,22 @@
         }
 
         handleFiles(files) {
-            const currentCount = document.querySelectorAll('.file-chip').length;
-            if ((files.length + currentCount) > APP_CONFIG.limits.maxFiles) {
-                return this.app.ui.showToast(`Limit reached: Max ${APP_CONFIG.limits.maxFiles} files.`);
-            }
-
+            if ((files.length + document.querySelectorAll('.file-chip').length) > APP_CONFIG.limits.maxFiles) return this.app.ui.showToast(`Limit reached.`);
             Array.from(files).forEach(f => {
                 if (APP_CONFIG.limits.supportedTypes.includes(f.type) && f.size <= APP_CONFIG.limits.maxFileSize) {
                     const id = Math.random().toString(36).substr(2, 9);
+                    const el = document.createElement('div');
+                    el.innerHTML = ViewRenderer.renderFileChip(f, id);
+                    const chip = el.firstChild;
+                    document.getElementById('upload-list-wrapper').appendChild(chip);
                     this.queue.push({
                         file: f,
                         id: id,
-                        ui: this.createFileChip(f, id)
+                        ui: chip
                     });
-                } else {
-                    this.app.ui.showToast(`Invalid: ${f.name}`);
-                }
+                } else this.app.ui.showToast(`Invalid file: ${f.name}`);
             });
-
             if (this.queue.length) this.processQueue();
-        }
-
-        createFileChip(f, id) {
-            const d = document.createElement('div');
-            d.innerHTML = `<div class="file-chip fade show" id="file-item-${id}"><div class="progress-ring"></div><span class="file-name">${f.name}</span><button type="button" class="btn-close p-1 remove-btn disabled" data-id="${id}"></button></div>`;
-            document.getElementById('upload-list-wrapper').appendChild(d.firstChild);
-            return document.getElementById(`file-item-${id}`);
         }
 
         processQueue() {
@@ -1266,16 +1528,13 @@
             const fd = new FormData();
             fd.append(APP_CONFIG.csrfName, this.app.csrfHash);
             fd.append('file', job.file);
-
             const xhr = new XMLHttpRequest();
             xhr.open('POST', APP_CONFIG.endpoints.upload, true);
             xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-
             xhr.onload = () => {
                 try {
                     const r = JSON.parse(xhr.responseText);
                     if (r.csrf_token) this.app.refreshCsrf(r.csrf_token);
-
                     if (xhr.status === 200 && r.status === 'success') {
                         this.updateChipStatus(job.ui, 'success');
                         job.ui.querySelector('.remove-btn').dataset.serverFileId = r.file_id;
@@ -1312,7 +1571,6 @@
             const fid = btn.dataset.serverFileId;
             btn.closest('.file-chip').remove();
             document.getElementById(`input-${btn.dataset.id}`)?.remove();
-
             if (fid) {
                 const fd = new FormData();
                 fd.append('file_id', fid);
@@ -1331,37 +1589,37 @@
      * 6. Prompt Manager
      * Handles loading and saving prompts.
      */
+    /**
+     * PromptManager
+     * 
+     * functionality for the "Saved Prompts" CRUD system.
+     * 
+     * - Operations: Load (into TinyMCE), Save (via Modal), Delete.
+     * - UI Sync: Dynamic DOM updates (adding/removing <option> tags) without page reload.
+     */
     class PromptManager {
         constructor(app) {
             this.app = app;
         }
-
         init() {
-            // Load Prompt
             document.getElementById('usePromptBtn')?.addEventListener('click', () => {
                 const sel = document.getElementById('savedPrompts');
-                if (!sel || !sel.value) return;
-
+                if (!sel?.value) return;
                 if (tinymce.get('prompt')) tinymce.get('prompt').setContent(sel.value);
                 else document.getElementById('prompt').value = sel.value;
             });
-
-            // Delete Prompt
             const sel = document.getElementById('savedPrompts');
             const delBtn = document.getElementById('deletePromptBtn');
             if (sel && delBtn) {
                 sel.onchange = () => delBtn.disabled = !sel.value;
                 delBtn.onclick = () => this.deletePrompt(sel);
             }
-
-            // Save Prompt Form
             const form = document.querySelector('#savePromptModal form');
             if (form) {
                 document.getElementById('savePromptModal').addEventListener('show.bs.modal', () => {
                     const val = tinymce.get('prompt') ? tinymce.get('prompt').getContent() : document.getElementById('prompt').value;
                     document.getElementById('modalPromptText').value = val;
                 });
-
                 form.onsubmit = async (e) => {
                     e.preventDefault();
                     const m = bootstrap.Modal.getInstance(document.getElementById('savePromptModal'));
@@ -1370,43 +1628,25 @@
                         if (d.status === 'success') {
                             m.hide();
                             this.app.ui.showToast('Prompt saved!');
-
-                            // Update UI dynamically
-                            if (d.prompt) {
-                                this.addPromptToUI(d.prompt);
-                            }
-
-                            // Clear form
+                            if (d.prompt) this.addPromptToUI(d.prompt);
                             e.target.reset();
-                        } else {
-                            this.app.ui.showToast('Failed to save.');
-                        }
+                        } else this.app.ui.showToast('Failed to save.');
                     } catch (e) {
                         this.app.ui.showToast('Error saving prompt');
                     }
                 };
             }
         }
-
         addPromptToUI(prompt) {
             const select = document.getElementById('savedPrompts');
-            const container = document.getElementById('savedPromptsContainer');
-            const emptyAlert = document.getElementById('no-prompts-alert');
-
-            // Show container if it was hidden
-            if (container.classList.contains('d-none')) {
-                container.classList.remove('d-none');
-                emptyAlert.classList.add('d-none');
-            }
-
-            // Add new option to select
+            document.getElementById('savedPromptsContainer').classList.remove('d-none');
+            document.getElementById('no-prompts-alert').classList.add('d-none');
             const option = document.createElement('option');
             option.value = prompt.prompt_text;
             option.dataset.id = prompt.id;
             option.textContent = prompt.title;
             select.appendChild(option);
         }
-
         async deletePrompt(sel) {
             if (!sel.value || !confirm('Delete this prompt?')) return;
             try {
@@ -1414,32 +1654,187 @@
                 const d = await this.app.sendAjax(APP_CONFIG.endpoints.deletePromptBase + id);
                 if (d.status === 'success') {
                     this.app.ui.showToast('Prompt deleted');
-                    this.removePromptFromUI(id);
-                } else {
-                    this.app.ui.showToast('Delete failed');
-                }
+                    sel.querySelector(`option[data-id="${id}"]`)?.remove();
+                } else this.app.ui.showToast('Delete failed');
             } catch (e) {
                 this.app.ui.showToast('Error deleting prompt');
             }
         }
+    }
 
-        removePromptFromUI(id) {
-            const select = document.getElementById('savedPrompts');
-            const option = select.querySelector(`option[data-id="${id}"]`);
+    /**
+     * 7. History Manager (Memory Stream)
+     */
+    /**
+     * HistoryManager
+     * 
+     * Manages the "Memory Stream" sidebar functionality.
+     * 
+     * Logic:
+     * - Pagination: Tracks `offset`/`limit` to implementing "Load More" without duplicate fetching.
+     * - Date Grouping: Checks timestamps to insert "Today", "Yesterday", etc., headers dynamically.
+     * - Context: Highlights specific history items if the AI refers to them in a response (`used_interaction_ids`).
+     */
+    class HistoryManager {
+        static HISTORY_PAGE_SIZE = 5;
+        constructor(app) {
+            this.app = app;
+            this.listEl = document.getElementById('history-list');
+            this.loadingEl = document.getElementById('memory-loading');
+            this.isLoaded = false;
+            this.offset = 0;
+            this.limit = HistoryManager.HISTORY_PAGE_SIZE;
+            this.hasMore = true;
+            this.currentLastDate = '';
+        }
 
-            if (option) {
-                option.remove();
-
-                // If no prompts left, show empty state
-                if (select.options.length <= 1) { // Only the "Select..." option remains
-                    document.getElementById('savedPromptsContainer').classList.add('d-none');
-                    document.getElementById('no-prompts-alert').classList.remove('d-none');
-                    document.getElementById('deletePromptBtn').disabled = true;
+        init() {
+            document.getElementById('memory-tab')?.addEventListener('shown.bs.tab', () => {
+                if (!this.isLoaded) this.fetchHistory();
+            });
+            this.listEl.addEventListener('click', (e) => {
+                const delBtn = e.target.closest('.delete-memory-btn');
+                if (delBtn) {
+                    e.stopPropagation();
+                    this.deleteItem(delBtn.dataset.id);
+                    return;
                 }
+                const loadBtn = e.target.closest('.load-more-btn');
+                if (loadBtn) {
+                    e.preventDefault();
+                    this.loadMore();
+                }
+            });
+        }
 
-                // Reset select
-                select.value = '';
+        async fetchHistory(append = false) {
+            if (!append) {
+                this.loadingEl.classList.remove('d-none');
+                this.listEl.classList.add('d-none');
             }
+            const loadMoreBtn = this.listEl.querySelector('.load-more-btn');
+            if (append && loadMoreBtn) {
+                loadMoreBtn.disabled = true;
+                loadMoreBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Loading...';
+            }
+            try {
+                const fd = new FormData();
+                fd.append('limit', this.limit);
+                fd.append('offset', this.offset);
+                const d = await this.app.sendAjax(APP_CONFIG.endpoints.history, fd);
+                if (d.status === 'success') {
+                    this.renderList(d.history, append);
+                    this.isLoaded = true;
+                    this.offset += d.history.length;
+                    this.hasMore = d.history.length === this.limit;
+                    this.updateLoadMoreButton();
+                }
+            } catch (e) {
+                if (!append) this.listEl.innerHTML = '<div class="text-center text-danger mt-4"><small>Failed to load history.</small></div>';
+            } finally {
+                if (!append) {
+                    this.loadingEl.classList.add('d-none');
+                    this.listEl.classList.remove('d-none');
+                }
+            }
+        }
+
+        renderList(items, append = false) {
+            if (!items || items.length === 0) {
+                if (!append) this.listEl.innerHTML = '<div class="text-center text-muted mt-5 small">No interaction history yet.</div>';
+                return;
+            }
+            if (!append) {
+                this.listEl.innerHTML = '';
+                this.currentLastDate = '';
+            } else document.querySelector('.load-more-btn')?.remove();
+
+            items.forEach(item => {
+                const date = this.formatDate(item.timestamp);
+                if (date !== this.currentLastDate) {
+                    this.listEl.appendChild(ViewRenderer.renderHistoryHeader(date));
+                    this.currentLastDate = date;
+                }
+                this.listEl.appendChild(ViewRenderer.renderHistoryItem(item));
+            });
+        }
+
+        updateLoadMoreButton() {
+            document.querySelector('.load-more-btn')?.closest('div')?.remove();
+            if (this.hasMore) this.listEl.appendChild(ViewRenderer.renderLoadMoreButton());
+        }
+
+        formatDate(ts) {
+            const date = (typeof ts === 'string' && ts.includes(' ')) ? new Date(ts.replace(' ', 'T')) : new Date(ts);
+            if (isNaN(date.getTime())) return 'Today';
+            return date.toLocaleDateString(undefined, {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        async deleteItem(id) {
+            if (!confirm('Forget this interaction?')) return;
+            const el = this.listEl.querySelector(`.memory-item[data-id="${id}"]`);
+            if (el) el.style.opacity = '0.5';
+            const fd = new FormData();
+            fd.append('unique_id', id);
+            try {
+                const d = await this.app.sendAjax(APP_CONFIG.endpoints.deleteHistory, fd);
+                if (d.status === 'success') el?.remove();
+                else {
+                    if (el) el.style.opacity = '1';
+                    this.app.ui.showToast('Failed to delete.');
+                }
+            } catch (e) {
+                if (el) el.style.opacity = '1';
+                this.app.ui.showToast('Error deleting item.');
+            }
+        }
+
+        highlightContext(ids) {
+            this.listEl.querySelectorAll('.active-context').forEach(el => el.classList.remove('active-context'));
+            if (!ids || !ids.length) return;
+            let firstMatch = null;
+            ids.forEach(id => {
+                const el = this.listEl.querySelector(`.memory-item[data-id="${id}"]`);
+                if (el) {
+                    el.classList.add('active-context');
+                    if (!firstMatch) firstMatch = el;
+                }
+            });
+            if (firstMatch && document.getElementById('assistantMode').checked) {
+                const tabEl = document.getElementById('memory-tab');
+                (bootstrap.Tab.getInstance(tabEl) || new bootstrap.Tab(tabEl)).show();
+                setTimeout(() => firstMatch.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                }), 300);
+            }
+        }
+
+        addItem(item, aiRaw) {
+            if (this.listEl.querySelector('.text-center.text-muted')) this.listEl.innerHTML = '';
+            const dateStr = this.formatDate(item.timestamp);
+            let header = this.listEl.querySelector('.memory-date-header');
+            if (!header || header.textContent !== dateStr) {
+                header = ViewRenderer.renderHistoryHeader(dateStr);
+                this.listEl.insertBefore(header, this.listEl.firstChild);
+            }
+            // Construct partial item to fit interface expected by renderer
+            const newItem = {
+                unique_id: item.id,
+                user_input: item.user_input,
+                ai_output: aiRaw
+            };
+            const el = ViewRenderer.renderHistoryItem(newItem);
+            if (header.nextSibling) this.listEl.insertBefore(el, header.nextSibling);
+            else this.listEl.appendChild(el);
+        }
+
+        async loadMore() {
+            await this.fetchHistory(true);
         }
     }
 

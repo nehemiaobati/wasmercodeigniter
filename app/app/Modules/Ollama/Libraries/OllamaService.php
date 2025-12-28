@@ -117,13 +117,18 @@ class OllamaService
         // 6. Return Result
         // Normalize response
         $resultText = $response['data']['result'] ?? $response['response'] ?? $response['data']['response'] ?? '';
-        $usage = $response['data']['usage'] ?? $response['usage'] ?? [];
+        $thoughts   = $response['thoughts'] ?? $response['data']['thoughts'] ?? '';
+        $usage      = $response['data']['usage'] ?? $response['usage'] ?? [];
 
         return [
-            'status' => 'success',
-            'result' => $resultText,
-            'cost' => $cost,
-            'usage' => $usage
+            'status'               => 'success',
+            'result'               => $resultText,
+            'thoughts'             => $thoughts,
+            'cost'                 => $cost,
+            'usage'                => $usage,
+            'new_interaction_id'   => $response['new_interaction_id'] ?? null,
+            'timestamp'            => $response['timestamp'] ?? null,
+            'used_interaction_ids' => $response['used_interaction_ids'] ?? []
         ];
     }
 
@@ -230,11 +235,15 @@ class OllamaService
             $data = json_decode($body, true);
 
             if (isset($data['message']['content'])) {
+                $content = $data['message']['content'];
+                $extracted = $this->_extractThinking($content);
+
                 return [
                     'status' => 'success',
                     'message' => 'Chat generated successfully',
                     'data' => [
-                        'result' => $data['message']['content'],
+                        'result' => $extracted['result'],
+                        'thoughts' => $extracted['thoughts'],
                         'usage' => [
                             'total_duration' => $data['total_duration'] ?? 0,
                             'eval_count' => $data['eval_count'] ?? 0,
@@ -247,6 +256,26 @@ class OllamaService
         } catch (\Exception $e) {
             return ['status' => 'error', 'message' => 'Failed to connect to Ollama. Is it running?'];
         }
+    }
+
+    /**
+     * Extract Thinking Process from content (e.g., <think>...</think>)
+     * @private
+     */
+    private function _extractThinking(string $content): array
+    {
+        $thoughts = '';
+        $result = $content;
+
+        if (preg_match('/<think>(.*?)<\/think>/s', $content, $matches)) {
+            $thoughts = trim($matches[1]);
+            $result = trim(str_replace($matches[0], '', $content));
+        }
+
+        return [
+            'thoughts' => $thoughts,
+            'result' => $result
+        ];
     }
 
     /**
@@ -267,6 +296,10 @@ class OllamaService
         $fullText = '';
         $usage = null;
 
+        // State for thinking block detection
+        $inThinkingBlock = false;
+        $tagBuffer = '';
+
         try {
             $ch = curl_init();
             curl_setopt_array($ch, [
@@ -274,7 +307,7 @@ class OllamaService
                 CURLOPT_POST => true,
                 CURLOPT_POSTFIELDS => $config['body'],
                 CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-                CURLOPT_WRITEFUNCTION => function ($ch, $chunk) use (&$buffer, &$fullText, &$usage, $chunkCallback) {
+                CURLOPT_WRITEFUNCTION => function ($ch, $chunk) use (&$buffer, &$fullText, &$usage, &$inThinkingBlock, &$tagBuffer, $chunkCallback) {
                     $buffer .= $chunk;
                     while (($pos = strpos($buffer, "\n")) !== false) {
                         $line = substr($buffer, 0, $pos);
@@ -288,7 +321,41 @@ class OllamaService
                             if (isset($data['message']['content'])) {
                                 $text = $data['message']['content'];
                                 $fullText .= $text;
-                                $chunkCallback($text);
+
+                                // Process text for thinking blocks
+                                $remainingText = $text;
+                                while ($remainingText !== '') {
+                                    if (!$inThinkingBlock) {
+                                        $startPos = strpos($remainingText, '<think>');
+                                        if ($startPos !== false) {
+                                            // Text before <think>
+                                            $before = substr($remainingText, 0, $startPos);
+                                            if ($before !== '') $chunkCallback(['text' => $before]);
+
+                                            $inThinkingBlock = true;
+                                            $remainingText = substr($remainingText, $startPos + 7);
+                                        } else {
+                                            // No <think> tag, but check for partial tag at end
+                                            // Handle edge case where <think> is split: <th... ink>
+                                            // For simplicity, we just send as text if no <think> is found in current chunk
+                                            // But a better way is to buffer potential tags
+                                            $chunkCallback(['text' => $remainingText]);
+                                            $remainingText = '';
+                                        }
+                                    } else {
+                                        $endPos = strpos($remainingText, '</think>');
+                                        if ($endPos !== false) {
+                                            $thought = substr($remainingText, 0, $endPos);
+                                            if ($thought !== '') $chunkCallback(['thought' => $thought]);
+
+                                            $inThinkingBlock = false;
+                                            $remainingText = substr($remainingText, $endPos + 8);
+                                        } else {
+                                            $chunkCallback(['thought' => $remainingText]);
+                                            $remainingText = '';
+                                        }
+                                    }
+                                }
                             }
                             if (isset($data['done']) && $data['done'] === true) {
                                 $usage = [
@@ -343,6 +410,7 @@ class OllamaService
             'message' => 'Chat completed successfully',
             'data' => [
                 'response' => $response['data']['result'],
+                'thoughts' => $response['data']['thoughts'] ?? '',
                 'model'    => $model,
                 'usage'    => $response['data']['usage'] ?? []
             ]
@@ -389,16 +457,31 @@ class OllamaService
     }
 
     /**
-     * Finalizes the streaming interaction by handling billing.
+     * Finalizes the streaming interaction by handling billing and memory updates.
      */
-    public function finalizeStreamInteraction(int $userId, string $inputText, string $fullText): array
+    public function finalizeStreamInteraction(int $userId, string $inputText, string $fullText, string $model, array $usedIds): array
     {
         $cost = 1.00; // Fixed cost for now
         $this->db->transStart();
         $this->userModel->deductBalance($userId, (string)$cost);
+
+        // Update Memory
+        $memoryResult = [];
+        $memoryService = new OllamaMemoryService($userId);
+        $savedData = $memoryService->saveStreamInteraction($inputText, $fullText, $model, $usedIds);
+        $memoryResult = [
+            'id' => $savedData['id'],
+            'timestamp' => $savedData['timestamp']
+        ];
+
         $this->db->transComplete();
 
-        return ['cost' => $cost];
+        return [
+            'cost'                 => $cost,
+            'new_interaction_id'   => $memoryResult['id'],
+            'timestamp'            => $memoryResult['timestamp'],
+            'used_interaction_ids' => $usedIds
+        ];
     }
 
     /**

@@ -139,7 +139,7 @@ class GeminiController extends BaseController
             'audio_url'              => session()->getFlashdata('audio_url'),
             // Re-define constants locally or fetch from config if needed
             'maxFileSize'            => GeminiService::MAX_FILE_SIZE,
-            'maxFiles'               => 10,
+            'maxFiles'               => 5,
             'supportedMimeTypes'     => json_encode(GeminiService::SUPPORTED_MIME_TYPES),
             'mediaConfigs'           => $mediaConfigs, // Pass to view
         ];
@@ -347,6 +347,8 @@ class GeminiController extends BaseController
                         'error' => $chunk['error'],
                         'csrf_token' => csrf_hash() // Inject fresh token for recovery
                     ]) . "\n\n";
+                } elseif (is_array($chunk) && isset($chunk['thought'])) {
+                    echo "data: " . json_encode(['thought' => $chunk['thought']]) . "\n\n";
                 } else {
                     echo "data: " . json_encode(['text' => $chunk]) . "\n\n";
                 }
@@ -377,7 +379,11 @@ class GeminiController extends BaseController
                 // Send Final Status Event
                 $finalPayload = [
                     'csrf_token' => csrf_hash(),
-                    'cost'       => $result['costKSH']
+                    'cost'       => $result['costKSH'],
+                    'used_interaction_ids' => $result['used_interaction_ids'] ?? [],
+                    'new_interaction_id' => $result['new_interaction_id'] ?? null,
+                    'timestamp' => $result['timestamp'] ?? null,
+                    'user_input' => $inputText
                 ];
 
                 if ($audioUrl) {
@@ -486,6 +492,46 @@ class GeminiController extends BaseController
     }
 
     /**
+     * Fetches user interaction history.
+     *
+     * @return ResponseInterface
+     */
+    public function fetchHistory()
+    {
+        $userId = (int) session()->get('userId');
+        $limit = $this->request->getVar('limit') ?? 20;
+        $offset = $this->request->getVar('offset') ?? 0;
+
+        $history = service('memory', $userId)->getUserHistory($userId, (int)$limit, (int)$offset);
+
+        return $this->response->setJSON([
+            'status' => 'success',
+            'history' => $history,
+            'token' => csrf_hash()
+        ]);
+    }
+
+    /**
+     * Deletes a specific interaction.
+     *
+     * @return ResponseInterface
+     */
+    public function deleteHistory()
+    {
+        $userId = (int) session()->get('userId');
+        $uniqueId = $this->request->getPost('unique_id');
+
+        if (!$uniqueId) {
+            return $this->_respondError('Invalid ID.');
+        }
+
+        if (service('memory', $userId)->deleteInteraction($userId, $uniqueId)) {
+            return $this->response->setJSON(['status' => 'success', 'token' => csrf_hash()]);
+        }
+        return $this->_respondError('Failed to delete.');
+    }
+
+    /**
      * Ensures strict unlink pattern for serverless environments.
      *
      * This method serves audio files and immediately deletes them for serverless compliance.
@@ -590,7 +636,16 @@ class GeminiController extends BaseController
         $parsedown = new Parsedown();
         $parsedown->setSafeMode(true);
         $parsedown->setBreaksEnabled(true);
-        $parsedHtml = $parsedown->text($result['result']);
+
+        $finalResult = $result['result'];
+        $parsedHtml = $parsedown->text($finalResult);
+
+        // Prepare raw result with thoughts (for Plain text view consistency)
+        $rawResult = $result['result'];
+        if (!empty($result['thoughts'])) {
+            $parsedHtml = $this->_buildThinkingBlockHtml($result['thoughts']) . "\n\n" . $parsedHtml;
+            $rawResult = "=== THINKING PROCESS ===\n\n" . $result['thoughts'] . "\n\n=== ANSWER ===\n\n" . $rawResult;
+        }
 
         // Handle AJAX
         if ($this->request->isAJAX()) {
@@ -600,8 +655,12 @@ class GeminiController extends BaseController
             $responsePayload = [
                 'status' => 'success',
                 'result' => $parsedHtml,
-                'raw_result' => $result['result'],
+                'raw_result' => $rawResult,
                 'flash_html' => $flashHtml,
+                'used_interaction_ids' => $result['used_interaction_ids'] ?? [],
+                'new_interaction_id' => $result['new_interaction_id'] ?? null,
+                'timestamp' => $result['timestamp'] ?? null,
+                'user_input' => ($this->request->getPost('prompt') ?? ''),
                 'token' => csrf_hash()
             ];
 
@@ -616,7 +675,7 @@ class GeminiController extends BaseController
         // Handle Fallback Standard Post
         $redirect = redirect()->back()->withInput()
             ->with('result', $parsedHtml)
-            ->with('raw_result', $result['result']);
+            ->with('raw_result', $rawResult);
 
         if ($audioUrl) {
             // Pass the Serve URL to flashdata (Session Hygiene: Only string path, not base64)
@@ -624,5 +683,22 @@ class GeminiController extends BaseController
         }
 
         return $redirect;
+    }
+
+    /**
+     * Build HTML for thinking block display
+     *
+     * @param string $thoughts The thinking content to display
+     * @return string HTML string for thinking block
+     */
+    private function _buildThinkingBlockHtml(string $thoughts): string
+    {
+        return sprintf(
+            '<details class="thinking-block mb-3">' .
+                '<summary class="cursor-pointer text-muted fw-bold small">Thinking Process</summary>' .
+                '<div class="thinking-content fst-italic text-muted p-2 border-start mt-1 small">%s</div>' .
+                '</details>',
+            esc($thoughts)
+        );
     }
 }
