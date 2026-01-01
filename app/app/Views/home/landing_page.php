@@ -7,106 +7,52 @@
     /* MODIFICATION: Removed local variables and hardcoded colors. 
        All theming is now handled by global CSS variables and Bootstrap utilities. */
 
-    /* Hero Section Styling (Remains Unchanged - Uses its own theme) */
+    /* Hero Section - Uses Global Variables */
     .hero-section {
         background: var(--hero-gradient);
         color: var(--bs-white);
-        /* Using Bootstrap white for text */
-        padding: 100px 0;
+        padding: 5rem 0;
+        /* 100px -> 5rem */
         text-align: center;
         overflow: hidden;
         position: relative;
     }
 
-    .hero-content {
-        position: relative;
-        z-index: 1;
-    }
-
-    .hero-section .display-3 {
-        font-weight: 700;
-        animation: fadeInDown 1s ease-out;
-    }
-
-    .hero-section .lead {
-        font-size: 1.25rem;
-        max-width: 700px;
-        margin: 0 auto 30px;
-        animation: fadeInUp 1s ease-out 0.5s;
-        animation-fill-mode: both;
-    }
-
-    .hero-buttons .btn {
-        animation: fadeInUp 1s ease-out 1s;
-        animation-fill-mode: both;
-    }
-
-    /* Features Section Styling */
-    .feature-icon {
+    /* Feature Icons */
+    .feature-icon-wrapper {
+        width: 4rem;
+        height: 4rem;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 4rem;
-        height: 4rem;
         font-size: 2rem;
         border-radius: 50%;
-        color: var(--feature-icon-color);
-        background-color: var(--primary-color);
-        margin-bottom: 1.5rem;
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
-    }
-
-    .custom-dev-section .list-unstyled i {
-        color: var(--primary-color);
-        margin-right: 10px;
-    }
-
-    .process-step {
-        display: flex;
-        align-items: flex-start;
-        margin-bottom: 1.5rem;
-    }
-
-    /* MODIFICATION: Uses Bootstrap theme-aware classes instead of hardcoded colors */
-    .process-number,
-    .step-number {
-        font-size: 1.5rem;
-        font-weight: 700;
-        border-radius: 50%;
-        width: 45px;
-        height: 45px;
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 15px;
-    }
-
-    .step-number {
-        width: 60px;
-        height: 60px;
-        margin: 0 auto 1rem;
-    }
-
-    /* Call-to-Action Section Styling (Remains Unchanged - Intentionally Dark) */
-    .cta-section {
-        background-color: var(--cta-bg);
+        background-color: var(--bs-primary);
         color: var(--bs-white);
-        /* Using Bootstrap white for text */
-        border-radius: 0.75rem;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+        transition: transform 0.3s ease;
     }
 
-    /* Animations */
-    @keyframes fadeInDown {
-        from {
-            opacity: 0;
-            transform: translateY(-20px);
-        }
+    .blueprint-card:hover .feature-icon-wrapper {
+        transform: scale(1.1) rotate(5deg);
+    }
 
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+    /* Animation Utilities */
+    .fade-in-up {
+        animation: fadeInUp 0.8s ease-out both;
+    }
+
+    .delay-100 {
+        animation-delay: 0.1s;
+    }
+
+    .delay-200 {
+        animation-delay: 0.2s;
+    }
+
+    .delay-300 {
+        animation-delay: 0.3s;
     }
 
     @keyframes fadeInUp {
@@ -136,14 +82,15 @@
 
 <?= $this->section('content') ?>
 
+
 <!-- Hero Section -->
 <section class="hero-section">
-    <div class="container hero-content">
-        <h1 class="display-3 mb-3">The Ultimate Productivity Suite for Creators & Businesses.</h1>
-        <p class="lead">Chat with a powerful AI assistant and Unlock on-chain insights for any BTC or LTC address. Top up your account easily with <span style="color: green;">M-Pesa</span>, <span style="color: red;"> Airtel Money</span>, and or Card. Simple, pay-as-you-go pricing.</p>
-        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center hero-buttons">
-            <a href="<?= url_to('register') ?>" class="btn btn-primary btn-lg px-4 gap-3 fw-bold">Create Your Free Account</a>
-            <a href="#features" class="btn btn-outline-light btn-lg px-4">Explore Features</a>
+    <div class="container position-relative z-1">
+        <h1 class="display-3 fw-bold mb-4 fade-in-up">The Ultimate Productivity Suite<br>for <span class="text-white-50">Creators</span> & <span class="text-white-50">Businesses</span>.</h1>
+        <p class="lead mb-4 mx-auto fade-in-up delay-100" style="max-width: 700px;">Chat with a powerful AI assistant and Unlock on-chain insights for any BTC or LTC address. Top up your account easily with <span class="text-success fw-bold">M-Pesa</span>, <span class="text-danger fw-bold">Airtel Money</span>, or Card.</p>
+        <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center fade-in-up delay-200">
+            <a href="<?= url_to('register') ?>" class="btn btn-light btn-lg px-5 fw-bold rounded-pill shadow-lg">Create Free Account</a>
+            <a href="#features" class="btn btn-outline-light btn-lg px-5 rounded-pill">Explore Features</a>
         </div>
     </div>
 </section>
@@ -152,33 +99,36 @@
     <!-- Features Section -->
     <section id="features" class="py-5 my-5 text-center">
         <div class="fade-in-section">
-            <h2 class="display-5 fw-bold mb-5">Our Core Services</h2>
+            <div class="mb-5">
+                <span class="badge bg-primary-subtle text-primary mb-2 rounded-pill px-3 py-2">Our Services</span>
+                <h2 class="display-5 fw-bold">What We Offer</h2>
+            </div>
+
             <div class="row g-4 justify-content-center">
                 <div class="col-lg-4 col-md-6">
-                    <!-- MODIFICATION: Replaced custom 'feature-card' with standard 'blueprint-card' -->
-                    <div class="card h-100 blueprint-card">
+                    <div class="card h-100 blueprint-card border-0">
                         <div class="card-body p-4">
-                            <div class="feature-icon"><i class="bi bi-robot"></i></div>
-                            <h3 class="fs-4 fw-bold">Your Creative AI Co-Pilot <br><small class="text-muted fs-6">Powered by Gemini</small></h3>
-                            <p class="text-muted">From writing marketing copy and <strong>generating images</strong> to analyzing documents, our AI assistant, powered by Google's Gemini, helps you work smarter.</p>
+                            <div class="feature-icon-wrapper"><i class="bi bi-stars"></i></div>
+                            <h3 class="fs-4 fw-bold mb-3">Creative AI Co-Pilot</h3>
+                            <p class="text-muted mb-0">From writing marketing copy and <strong>generating images</strong> to analyzing documents, our AI assistant (Gemini 1.5) helps you work smarter.</p>
                         </div>
                     </div>
                 </div>
                 <div class="col-lg-4 col-md-6">
-                    <div class="card h-100 blueprint-card">
+                    <div class="card h-100 blueprint-card border-0">
                         <div class="card-body p-4">
-                            <div class="feature-icon"><i class="bi bi-search"></i></div>
-                            <h3 class="fs-4 fw-bold">Instant Blockchain Insights</h3>
-                            <p class="text-muted">Ditch the block explorers. Get real-time balance and transaction history for any Bitcoin or Litecoin address with a single click.</p>
+                            <div class="feature-icon-wrapper"><i class="bi bi-graph-up-arrow"></i></div>
+                            <h3 class="fs-4 fw-bold mb-3">Blockchain Insights</h3>
+                            <p class="text-muted mb-0">Real-time balance and transaction history for any Bitcoin or Litecoin address at your fingertips. No more complex block explorers.</p>
                         </div>
                     </div>
                 </div>
                 <div class="col-lg-4 col-md-6">
-                    <div class="card h-100 blueprint-card">
+                    <div class="card h-100 blueprint-card border-0">
                         <div class="card-body p-4">
-                            <div class="feature-icon"><i class="bi bi-shield-check"></i></div>
-                            <h3 class="fs-4 fw-bold">Pay Your Way. Pay-As-You-Go.</h3>
-                            <p class="text-muted">Top up securely with <span style="color: green;">M-Pesa</span>, <span style="color: red;">Airtel Money</span>, or Card. You only pay for what you use—no subscriptions, no hidden fees.</p>
+                            <div class="feature-icon-wrapper"><i class="bi bi-wallet2"></i></div>
+                            <h3 class="fs-4 fw-bold mb-3">Pay-As-You-Go</h3>
+                            <p class="text-muted mb-0">Secure top-ups with <span class="text-success fw-bold">M-Pesa</span>, <span class="text-danger fw-bold">Airtel</span>, or Card. No subscriptions, no hidden fees. Just pay for what you use.</p>
                         </div>
                     </div>
                 </div>
@@ -186,51 +136,58 @@
         </div>
     </section>
 
-    <!-- MODIFICATION: Replaced custom 'custom-dev-section' with standard 'blueprint-card' -->
-    <section id="custom-development" class="py-5 my-5 blueprint-card">
+    <!-- Bespoke Development Section -->
+    <section id="custom-development" class="py-5 my-5">
         <div class="container fade-in-section">
-            <div class="text-center mb-5">
-                <h2 class="display-5 fw-bold">Need a Tailored Solution?</h2>
-                <p class="lead text-body-secondary">Beyond our ready-to-use tools, we build bespoke web applications to solve your unique business challenges.</p>
-            </div>
-            <div class="row g-5 align-items-center">
-                <div class="col-lg-6">
-                    <h3 class="fw-bold mb-4">What We Offer</h3>
-                    <ul class="list-unstyled fs-5">
-                        <li class="mb-3"><i class="bi bi-check2-circle"></i> Custom Web Applications</li>
-                        <li class="mb-3"><i class="bi bi-check2-circle"></i> CodeIgniter & PHP Development</li>
-                        <li class="mb-3"><i class="bi bi-check2-circle"></i> Third-Party Expert Service Integrations</li>
-                        <li class="mb-3"><i class="bi bi-check2-circle"></i> Website Performance Optimization</li>
-                    </ul>
+            <div class="card w-100 blueprint-card overflow-hidden">
+                <div class="row g-0 align-items-center">
+                    <div class="col-lg-6 p-5">
+                        <span class="badge bg-info-subtle text-info-emphasis mb-2 rounded-pill px-3">Enterprise</span>
+                        <h2 class="display-6 fw-bold mb-4">Need a Tailored Solution?</h2>
+                        <p class="lead text-body-secondary mb-4">We build bespoke web applications to solve your unique business challenges using CodeIgniter and modern web standards.</p>
+
+                        <ul class="list-unstyled fs-5 mb-4">
+                            <li class="mb-2 d-flex align-items-center"><i class="bi bi-check-circle-fill text-primary me-3"></i> Custom Web Apps</li>
+                            <li class="mb-2 d-flex align-items-center"><i class="bi bi-check-circle-fill text-primary me-3"></i> API Integrations</li>
+                            <li class="mb-2 d-flex align-items-center"><i class="bi bi-check-circle-fill text-primary me-3"></i> Performance Tuning</li>
+                        </ul>
+
+                        <a href="<?= url_to('contact.form') ?>" class="btn btn-primary btn-lg rounded-pill fw-bold">Book Consultation</a>
+                    </div>
+                    <div class="col-lg-6 bg-body-tertiary p-5 h-100">
+                        <h4 class="fw-bold mb-4">Our Process</h4>
+                        <!-- Process Step 1 -->
+                        <div class="d-flex mb-4">
+                            <div class="flex-shrink-0">
+                                <span class="d-inline-flex align-items-center justify-content-center bg-primary text-white fs-5 fw-bold rounded-circle" style="width: 48px; height: 48px;">1</span>
+                            </div>
+                            <div class="ms-3">
+                                <h5 class="fw-bold">Consultation</h5>
+                                <p class="text-body-secondary mb-0">We listen to your vision and requirements in a free discovery meeting.</p>
+                            </div>
+                        </div>
+                        <!-- Process Step 2 -->
+                        <div class="d-flex mb-4">
+                            <div class="flex-shrink-0">
+                                <span class="d-inline-flex align-items-center justify-content-center bg-primary text-white fs-5 fw-bold rounded-circle" style="width: 48px; height: 48px;">2</span>
+                            </div>
+                            <div class="ms-3">
+                                <h5 class="fw-bold">Planning</h5>
+                                <p class="text-body-secondary mb-0">You get a detailed roadmap, timeline, and transparent pricing.</p>
+                            </div>
+                        </div>
+                        <!-- Process Step 3 -->
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <span class="d-inline-flex align-items-center justify-content-center bg-primary text-white fs-5 fw-bold rounded-circle" style="width: 48px; height: 48px;">3</span>
+                            </div>
+                            <div class="ms-3">
+                                <h5 class="fw-bold">Build & Launch</h5>
+                                <p class="text-body-secondary mb-0">We develop with clean code and deploy to your secure server.</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-lg-6">
-                    <h3 class="fw-bold mb-4">Our Proven Process</h3>
-                    <div class="process-step">
-                        <!-- MODIFICATION: Added theme-aware Bootstrap classes -->
-                        <div class="process-number bg-primary-subtle text-primary-emphasis">1</div>
-                        <div>
-                            <h5 class="fw-bold">Consultation</h5>
-                            <p class="text-body-secondary">We start by understanding your vision, goals, and technical requirements in a free, no-obligation meeting.</p>
-                        </div>
-                    </div>
-                    <div class="process-step">
-                        <div class="process-number bg-primary-subtle text-primary-emphasis">2</div>
-                        <div>
-                            <h5 class="fw-bold">Proposal & Planning</h5>
-                            <p class="text-body-secondary">You receive a detailed project proposal, including timeline, deliverables, and a transparent quote.</p>
-                        </div>
-                    </div>
-                    <div class="process-step">
-                        <div class="process-number bg-primary-subtle text-primary-emphasis">3</div>
-                        <div>
-                            <h5 class="fw-bold">Development & Launch</h5>
-                            <p class="text-body-secondary">We build your application with clean, efficient code and deploy it to a secure, scalable server environment.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="text-center mt-5">
-                <a href="<?= url_to('contact.form') ?>" class="btn btn-primary btn-lg fw-bold" aria-label="Book a free consultation">Book a Free Consultation</a>
             </div>
         </div>
     </section>
@@ -239,66 +196,35 @@
     <section id="case-studies" class="py-5 my-5">
         <div class="container fade-in-section">
             <div class="text-center mb-5">
-                <h2 class="display-5 fw-bold">What You Can Build</h2>
-                <p class="lead text-body-secondary">See how our platform leverages AI to solve real-world problems.</p>
+                <h2 class="display-5 fw-bold">Use Cases</h2>
+                <p class="lead text-body-secondary">Real-world applications of our technology.</p>
             </div>
             <div class="row g-4">
-                <div class="col-md-6 col-lg-4">
-                    <div class="card h-100 border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="mb-3 text-primary"><i class="bi bi-file-earmark-text fs-1"></i></div>
-                            <h4 class="card-title fw-bold">Legal Drafting</h4>
-                            <p class="card-text text-muted">Generate professional legal letters and contracts in seconds using our advanced AI assistant. Perfect for small businesses.</p>
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm blueprint-card">
+                        <div class="card-body p-4">
+                            <div class="mb-3 text-primary"><i class="bi bi-code-square fs-1"></i></div>
+                            <h4 class="card-title fw-bold">Code Generation</h4>
+                            <p class="card-text text-body-secondary">Generate boilerplate, debug functions, and write scripts in seconds.</p>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-4">
-                    <div class="card h-100 border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="mb-3 text-primary"><i class="bi bi-journal-richtext fs-1"></i></div>
-                            <h4 class="card-title fw-bold">Document Summarization</h4>
-                            <p class="card-text text-muted">Upload lengthy PDF reports and get concise, actionable summaries. Save hours of reading time.</p>
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm blueprint-card">
+                        <div class="card-body p-4">
+                            <div class="mb-3 text-primary"><i class="bi bi-file-earmark-pdf fs-1"></i></div>
+                            <h4 class="card-title fw-bold">Summarization</h4>
+                            <p class="card-text text-body-secondary">Turn long PDFs into concise summaries.</p>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-4">
-                    <div class="card h-100 border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="mb-3 text-primary"><i class="bi bi-translate fs-1"></i></div>
-                            <h4 class="card-title fw-bold">Content Localization</h4>
-                            <p class="card-text text-muted">Translate and adapt marketing copy for different African regions, maintaining cultural relevance and tone.</p>
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm blueprint-card">
+                        <div class="card-body p-4">
+                            <div class="mb-3 text-primary"><i class="bi bi-graph-up fs-1"></i></div>
+                            <h4 class="card-title fw-bold">Market Insights</h4>
+                            <p class="card-text text-body-secondary">Analyze wallet trends and transaction patterns instantly.</p>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- How It Works Section -->
-    <section class="how-it-works py-5 my-5">
-        <div class="fade-in-section">
-            <h2 class="display-5 fw-bold mb-5 text-center">Get Started in 3 Easy Steps</h2>
-            <div class="row g-4 text-center">
-                <div class="col-md-4">
-                    <div class="step-item">
-                        <!-- MODIFICATION: Added theme-aware Bootstrap classes and border -->
-                        <div class="step-number bg-primary-subtle text-primary-emphasis border border-primary">1</div>
-                        <h4 class="fw-bold">Create Account</h4>
-                        <p class="text-body-secondary">Sign up in seconds. We'll gift you <strong>Ksh. 30</strong> in starter credits to begin exploring immediately.</p>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="step-item">
-                        <div class="step-number bg-primary-subtle text-primary-emphasis border border-primary">2</div>
-                        <h4 class="fw-bold">Add Funds</h4>
-                        <p class="text-body-secondary">Make a secure payment to add balance to your account. Our service is affordable and flexible.</p>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="step-item">
-                        <div class="step-number bg-primary-subtle text-primary-emphasis border border-primary">3</div>
-                        <h4 class="fw-bold">Start Exploring</h4>
-                        <p class="text-body-secondary">Use your balance to access our Crypto and AI services instantly. No subscriptions needed.</p>
                     </div>
                 </div>
             </div>
@@ -306,13 +232,15 @@
     </section>
 
     <!-- Final CTA Section -->
-    <section id="cta" class="py-5 mb-5 text-center cta-section">
+    <section id="cta" class="py-5 mb-5 text-center">
         <div class="fade-in-section">
-            <div class="row justify-content-center">
-                <div class="col-lg-8">
-                    <h2 class="display-5 fw-bold mb-3">Ready to Build, Create, and Discover?</h2>
-                    <p class="lead mb-4">Your account is free. Your first few queries are on us. Let's get started.</p>
-                    <a href="<?= url_to('register') ?>" class="btn btn-primary btn-lg px-4 fw-bold">Create Your Account</a>
+            <div class="card bg-dark text-white rounded-4 overflow-hidden shadow-lg p-5 border-0" style="background: var(--hero-gradient) !important;">
+                <div class="row justify-content-center position-relative z-1">
+                    <div class="col-lg-8">
+                        <h2 class="display-5 fw-bold mb-3">Ready to Start?</h2>
+                        <p class="lead mb-4 text-white-50">Join thousands of users building efficiently with AFRIKENKID.</p>
+                        <a href="<?= url_to('register') ?>" class="btn btn-light btn-lg px-5 fw-bold rounded-pill">Get Started</a>
+                    </div>
                 </div>
             </div>
         </div>

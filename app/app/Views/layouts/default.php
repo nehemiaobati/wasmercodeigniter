@@ -57,22 +57,32 @@
     <style>
         /* CSS variables now directly reference Bootstrap's variables for better theme integration. */
         :root {
+            /* Base Colors */
             --primary-color: var(--bs-primary);
             --secondary-color: var(--bs-secondary);
 
+            /* Theme Colors */
             --light-bg: var(--bs-body-bg);
-            --card-bg: var(--bs-card-bg);
+            --card-bg: var(--bs-body-bg);
+            /* Use body bg for cards in default mode for better blend */
             --text-body: var(--bs-body-color);
             --text-heading: var(--bs-heading-color);
             --border-color: var(--bs-border-color);
-            --header-bg: var(--bs-body-bg);
+            --header-bg: rgba(var(--bs-body-bg-rgb), 0.85);
+            /* Glassmorphism base */
 
             /* Landing Page specific */
-            --hero-gradient: linear-gradient(135deg, var(--bs-primary), var(--bs-dark));
+            --hero-gradient: linear-gradient(145deg, var(--bs-primary), 80%, #000);
+            /* Richer gradient */
             --cta-bg: var(--bs-dark);
-            /* Using Bootstrap dark for CTA background */
             --feature-icon-color: var(--bs-white);
-            /* White for feature icons */
+        }
+
+        [data-bs-theme="dark"] {
+            --card-bg: var(--bs-body-bg);
+            /* Ensure dark mode uses body bg */
+            --header-bg: rgba(33, 37, 41, 0.85);
+            /* Dark mode glass base */
         }
 
         body {
@@ -82,30 +92,35 @@
             visibility: hidden;
             /* Prevents FOUC */
             transition: background-color 0.3s ease, color 0.3s ease;
+            -webkit-font-smoothing: antialiased;
+            /* Crisp text */
+        }
+
+        /* Glassmorphic Navbar */
+        .navbar {
+            background-color: var(--header-bg) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(var(--bs-border-color-rgb), 0.1);
+            transition: all 0.3s ease;
         }
 
         .blueprint-card {
             background-color: var(--card-bg);
-            border-radius: 0.75rem;
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
-            border: 1px solid var(--border-color);
-            transition: all 0.2s ease-in-out;
-        }
-
-        html[data-bs-theme="dark"] .blueprint-card {
-            box-shadow: none;
+            border: 1px solid rgba(var(--bs-border-color-rgb), 0.5);
+            border-radius: 1rem;
+            /* Softer corners */
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
         }
 
         .blueprint-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 0.8rem 1.5rem rgba(0, 0, 0, 0.07) !important;
+            box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.1);
+            /* Deep, soft shadow */
+            border-color: var(--bs-primary);
         }
 
-        .navbar {
-            background-color: var(--header-bg) !important;
-            border-bottom: 1px solid var(--border-color);
-            transition: box-shadow 0.3s ease-in-out, background-color 0.3s ease;
-        }
+
 
         .navbar.scrolled {
             box-shadow: 0 .125rem .25rem rgba(0, 0, 0, .075);
