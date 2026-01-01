@@ -180,14 +180,14 @@ class BlogController extends BaseController
         }
 
         $payload = [
-            'title'              => $this->request->getPost('title'),
-            'excerpt'            => $this->request->getPost('excerpt'),
-            'status'             => $this->request->getPost('status'),
-            'published_at'       => $this->request->getPost('published_at'),
-            'featured_image_url' => $this->request->getPost('featured_image_url'),
-            'category_name'      => $this->request->getPost('category_name'),
-            'author_name'        => $this->request->getPost('author_name'),
-            'meta_description'   => $this->request->getPost('meta_description'),
+            'title'              => $this->request->getPost('title') ?: null,
+            'excerpt'            => $this->request->getPost('excerpt') ?: null,
+            'status'             => $this->request->getPost('status') ?: 'draft',
+            'published_at'       => $this->request->getPost('published_at') ? str_replace('T', ' ', $this->request->getPost('published_at')) . ':00' : null,
+            'featured_image_url' => $this->request->getPost('featured_image_url') ?: null,
+            'category_name'      => $this->request->getPost('category_name') ?: null,
+            'author_name'        => $this->request->getPost('author_name') ?: 'Nehemia Obati',
+            'meta_description'   => $this->request->getPost('meta_description') ?: null,
             'body_content'       => json_encode($contentBlocks)
         ];
 

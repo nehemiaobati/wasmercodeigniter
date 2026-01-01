@@ -152,6 +152,29 @@
         .footer a:hover {
             color: var(--primary-color);
         }
+
+        /* Theme Toggle & Mobile UI */
+        .theme-toggle {
+            width: 44px;
+            height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            font-size: 1.2rem;
+        }
+
+        .theme-toggle:hover {
+            background-color: rgba(var(--bs-primary-rgb), 0.1);
+            color: var(--primary-color);
+        }
+
+        /* Mobile Menu Items */
+        .offcanvas-body .nav-link {
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+        }
     </style>
     <?= $this->renderSection('styles') ?>
 
@@ -193,7 +216,7 @@
             <!-- EDIT: Added .fw-bold utility class -->
             <a class="navbar-brand fs-4 fw-bold" href="<?= url_to('landing') ?>"><i class="bi bi-box"></i> AFRIKENKID</a>
 
-            <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileNav" aria-controls="mobileNav">
+            <button class="navbar-toggler border-0 p-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileNav" aria-controls="mobileNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
 
@@ -228,7 +251,7 @@
                     <?php endif; ?>
                     <li class="nav-item ms-lg-3">
                         <!-- EDIT: Added .cursor-pointer utility class -->
-                        <span class="nav-link theme-toggle cursor-pointer" id="theme-toggle-desktop" role="button" aria-label="Toggle theme" tabindex="0"></span>
+                        <span class="theme-toggle" id="theme-toggle-desktop" role="button" aria-label="Toggle theme" tabindex="0"></span>
                     </li>
                 </ul>
             </div>
@@ -237,39 +260,41 @@
 
     <div class="offcanvas offcanvas-end" tabindex="-1" id="mobileNav" aria-labelledby="mobileNavLabel">
         <div class="offcanvas-header border-bottom">
-            <h5 class="offcanvas-title" id="mobileNavLabel">Menu</h5>
+            <h5 class="offcanvas-title fw-bold" id="mobileNavLabel">Menu</h5>
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
-        <div class="offcanvas-body">
-            <ul class="navbar-nav">
+        <div class="offcanvas-body d-flex flex-column">
+            <ul class="navbar-nav flex-grow-1">
 
-                <?php $linksToRender($pageIdentifier ?? '', 'fw-medium'); // EDIT: Passed .fw-medium to the links 
+                <?php $linksToRender($pageIdentifier ?? '', 'fw-bold fs-5'); // Larger text for mobile 
                 ?>
 
                 <li class="nav-item">
-                    <hr class="dropdown-divider">
+                    <hr class="dropdown-divider my-3">
                 </li>
 
                 <?php if (session()->get('isLoggedIn')): ?>
-                    <li class="nav-item"><a class="nav-link fw-medium" href="<?= url_to('account.index') ?>">My Account</a></li>
+                    <li class="nav-item"><a class="nav-link fw-bold fs-5" href="<?= url_to('account.index') ?>">My Account</a></li>
                     <?php if (session()->get('is_admin')): ?>
-                        <li class="nav-item"><a class="nav-link fw-medium" href="<?= url_to('admin.index') ?>">Admin Panel</a></li>
+                        <li class="nav-item"><a class="nav-link fw-bold fs-5" href="<?= url_to('admin.index') ?>">Admin Panel</a></li>
                     <?php endif; ?>
-                    <li class="nav-item"><a class="nav-link fw-medium" href="<?= url_to('logout') ?>">Logout</a></li>
+                    <li class="nav-item"><a class="nav-link fw-bold fs-5 text-danger" href="<?= url_to('logout') ?>">Logout</a></li>
                 <?php else: ?>
-                    <li class="nav-item auth-buttons-mobile pt-3 mt-3 border-top">
-                        <div class="d-grid gap-2">
-                            <a class="btn btn-outline-primary" href="<?= url_to('login') ?>">Login</a>
-                            <a class="btn btn-primary" href="<?= url_to('register') ?>">Register</a>
+                    <li class="nav-item mt-2">
+                        <div class="d-grid gap-3">
+                            <a class="btn btn-primary btn-lg fw-bold" href="<?= url_to('register') ?>">Get Started</a>
+                            <a class="btn btn-outline-primary btn-lg fw-bold" href="<?= url_to('login') ?>">Login</a>
                         </div>
                     </li>
                 <?php endif; ?>
-                <li class="nav-item mt-3 d-flex justify-content-between align-items-center">
-                    <span class="fw-medium">Theme</span>
-                    <!-- EDIT: Added .cursor-pointer utility class -->
-                    <span class="theme-toggle cursor-pointer" id="theme-toggle-mobile" role="button" aria-label="Toggle theme" tabindex="0"></span>
-                </li>
             </ul>
+
+            <div class="mt-auto border-top pt-3">
+                <div class="d-flex justify-content-between align-items-center p-2 rounded-3 bg-body-tertiary">
+                    <span class="fw-medium px-2">Theme Mode</span>
+                    <span class="theme-toggle" id="theme-toggle-mobile" role="button" aria-label="Toggle theme" tabindex="0"></span>
+                </div>
+            </div>
         </div>
     </div>
 
