@@ -603,6 +603,7 @@
                     <input class="form-check-input setting-toggle" type="checkbox" id="assistantMode" data-key="assistant_mode_enabled" <?= $assistant_mode_enabled ? 'checked' : '' ?>>
                     <label class="form-check-label fw-medium" for="assistantMode">Conversational Memory</label>
                 </div>
+
                 <div class="form-check form-switch mb-3">
                     <input class="form-check-input setting-toggle" type="checkbox" id="voiceOutput" data-key="voice_output_enabled" <?= $voice_output_enabled ? 'checked' : '' ?>>
                     <label class="form-check-label fw-medium" for="voiceOutput">Voice Output (TTS)</label>
@@ -719,7 +720,6 @@
      */
 
     // Configuration Constants
-    // Configuration Constants
     const APP_CONFIG = {
         csrfName: '<?= csrf_token() ?>',
         csrfHash: '<?= csrf_hash() ?>', // Initial hash
@@ -728,6 +728,7 @@
             maxFiles: <?= $maxFiles ?? 5 ?>,
             supportedTypes: <?= $supportedMimeTypes ?? '[]' ?>,
         },
+        serverlessMode: <?= json_encode($serverlessMode ?? false) ?>,
         endpoints: {
             upload: '<?= url_to('gemini.upload_media') ?>',
             deleteMedia: '<?= url_to('gemini.delete_media') ?>',
@@ -738,8 +739,9 @@
             generateMedia: '<?= url_to('gemini.media.generate') ?>',
             pollMedia: '<?= url_to('gemini.media.poll') ?>',
             history: '<?= url_to('gemini.history.fetch') ?>',
-            deleteHistory: '<?= url_to('gemini.history.delete') ?>'
-        }
+            deleteHistory: '<?= url_to('gemini.history.delete') ?>',
+            savePrompt: '<?= url_to('gemini.prompts.add') ?>', // Added save_prompt endpoint
+        },
     };
 
     /**
@@ -1358,6 +1360,8 @@
 
         async generateText(fd) {
             this.app.ui.ensureResultCard();
+            await this._appendInlineMedia(fd);
+
             try {
                 const d = await this.app.sendAjax(APP_CONFIG.endpoints.generate, fd);
                 if (d.status === 'success') {
@@ -1421,6 +1425,19 @@
                     this.app.ui.setLoading(false);
                 }
             }, 5000);
+        }
+
+        /**
+         * Helper: Appends deferred files as base64 bundle if in Serverless Mode.
+         * @param {FormData} fd 
+         */
+        async _appendInlineMedia(fd) {
+            if (APP_CONFIG.serverlessMode) {
+                const pendingFiles = await this.app.uploader.getBundledFiles();
+                if (pendingFiles.length) {
+                    fd.append('inline_media', JSON.stringify(pendingFiles));
+                }
+            }
         }
     }
 
@@ -1556,51 +1573,142 @@
     class MediaUploader {
         constructor(app) {
             this.app = app;
+            this.fileInput = document.getElementById('media-input-trigger');
+            this.uploadContainer = document.getElementById('uploaded-files-container');
             this.queue = [];
             this.isUploading = false;
+            // In Serverless Mode, we store File objects here instead of uploading
+            this.deferredFiles = [];
         }
+
         init() {
+            if (!this.fileInput) return;
+            this.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
+
+            // Drag and drop functionality (re-added based on original code, if still desired)
             const area = document.getElementById('mediaUploadArea');
-            const inp = document.getElementById('media-input-trigger');
-            if (!area) return;
+            if (area) {
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => area.addEventListener(e, ev => {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                }));
+                ['dragenter', 'dragover'].forEach(e => area.addEventListener(e, () => area.classList.add('dragover')));
+                ['dragleave', 'drop'].forEach(e => area.addEventListener(e, () => area.classList.remove('dragover')));
+                area.addEventListener('drop', e => this.handleFileSelect({
+                    target: {
+                        files: e.dataTransfer.files
+                    }
+                }));
+            }
+        }
 
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => area.addEventListener(e, ev => {
-                ev.preventDefault();
-                ev.stopPropagation();
-            }));
-            ['dragenter', 'dragover'].forEach(e => area.addEventListener(e, () => area.classList.add('dragover')));
-            ['dragleave', 'drop'].forEach(e => area.addEventListener(e, () => area.classList.remove('dragover')));
+        handleFileSelect(e) {
+            const files = Array.from(e.target.files);
+            if (!files.length) return;
 
-            area.addEventListener('drop', e => this.handleFiles(e.dataTransfer.files));
-            inp.addEventListener('change', e => {
-                this.handleFiles(e.target.files);
-                inp.value = '';
+            // Check total file limit
+            const currentFileCount = document.querySelectorAll('.file-chip').length;
+            if ((files.length + currentFileCount) > APP_CONFIG.limits.maxFiles) {
+                this.app.ui.showToast(`Limit reached. Maximum ${APP_CONFIG.limits.maxFiles} files.`);
+                return;
+            }
+
+            files.forEach(file => {
+                if (this.validateFile(file)) {
+                    APP_CONFIG.serverlessMode ?
+                        this.addDeferredFile(file) :
+                        this.addStandardFile(file);
+                }
             });
-            document.getElementById('upload-list-wrapper')?.addEventListener('click', e => {
-                const btn = e.target.closest('.remove-btn');
+
+            this.fileInput.value = '';
+            if (!APP_CONFIG.serverlessMode) this.processQueue();
+        }
+
+        addStandardFile(file) {
+            const id = Math.random().toString(36).substr(2, 9);
+            const uiHtml = ViewRenderer.renderFileChip(file, id);
+            this.uploadContainer.insertAdjacentHTML('beforeend', uiHtml);
+            const chip = this.uploadContainer.lastElementChild;
+
+            this.queue.push({
+                file,
+                id,
+                ui: chip
+            });
+
+            chip.querySelector('.remove-btn')?.addEventListener('click', (event) => {
+                const btn = event.target.closest('.remove-btn');
                 if (btn) this.removeFile(btn);
             });
         }
 
-        handleFiles(files) {
-            if ((files.length + document.querySelectorAll('.file-chip').length) > APP_CONFIG.limits.maxFiles) return this.app.ui.showToast(`Limit reached.`);
-            Array.from(files).forEach(f => {
-                if (APP_CONFIG.limits.supportedTypes.includes(f.type) && f.size <= APP_CONFIG.limits.maxFileSize) {
-                    const id = Math.random().toString(36).substr(2, 9);
-                    const el = document.createElement('div');
-                    el.innerHTML = ViewRenderer.renderFileChip(f, id);
-                    const chip = el.firstChild;
-                    document.getElementById('upload-list-wrapper').appendChild(chip);
-                    this.queue.push({
-                        file: f,
-                        id: id,
-                        ui: chip
-                    });
-                } else this.app.ui.showToast(`Invalid file: ${f.name}`);
-            });
-            if (this.queue.length) this.processQueue();
+        validateFile(file) {
+            if (!APP_CONFIG.limits.supportedTypes.includes(file.type)) {
+                this.app.ui.showToast(`Invalid file type: ${file.name}`);
+                return false;
+            }
+            if (file.size > APP_CONFIG.limits.maxFileSize) {
+                this.app.ui.showToast(`File too large: ${file.name}`);
+                return false;
+            }
+            return true;
         }
 
+        // --- Serverless Mode Logic ---
+
+        addDeferredFile(file) {
+            const id = 'deferred_' + Date.now() + Math.random().toString(36).substr(2, 9);
+            const uiHtml = ViewRenderer.renderFileChip(file, id, false); // Render without progress bar for deferred
+            this.uploadContainer.insertAdjacentHTML('beforeend', uiHtml);
+            const chip = this.uploadContainer.lastElementChild;
+
+            // Add 'ready' state immediately
+            this.updateChipStatus(chip, 'ready', id); // Use fake ID for UI removal
+
+            // Store file in memory
+            this.deferredFiles.push({
+                file,
+                id,
+                ui: chip
+            });
+
+            // Setup remove handler
+            chip.querySelector('.remove-btn')?.addEventListener('click', (event) => {
+                const btn = event.target.closest('.remove-btn');
+                if (btn) this.removeDeferredFile(btn.dataset.id);
+            });
+        }
+
+        removeDeferredFile(id) {
+            const index = this.deferredFiles.findIndex(f => f.id === id);
+            if (index !== -1) {
+                this.deferredFiles[index].ui.remove();
+                this.deferredFiles.splice(index, 1);
+            }
+        }
+
+        /**
+         * Returns queued files as Base64/DataURI for single-request bundling.
+         * Used by InteractionHandler in Serverless Mode.
+         */
+        async getBundledFiles() {
+            const promises = this.deferredFiles.map(item => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve({
+                        name: item.file.name,
+                        type: item.file.type,
+                        data: reader.result // Base64 Data URI
+                    });
+                    reader.onerror = reject;
+                    reader.readAsDataURL(item.file);
+                });
+            });
+            return Promise.all(promises);
+        }
+
+        // --- Standard Mode Logic ---
         processQueue() {
             if (this.isUploading || !this.queue.length) return;
             this.isUploading = true;
@@ -1629,13 +1737,25 @@
             }
         }
 
-        updateChipStatus(ui, status) {
-            ui.querySelector('.progress-ring').remove();
-            ui.querySelector('.remove-btn').classList.remove('disabled');
+        updateChipStatus(ui, status, id = null) {
+            const progressRing = ui.querySelector('.progress-ring');
+            if (progressRing) progressRing.remove();
+
+            const removeBtn = ui.querySelector('.remove-btn');
+            if (removeBtn) {
+                removeBtn.classList.remove('disabled');
+                if (id) removeBtn.dataset.id = id; // Set ID for deferred removal
+            }
+
             const i = document.createElement('i');
-            i.className = status === 'success' ? 'bi bi-check-circle-fill text-success me-2' : 'bi bi-exclamation-circle-fill text-danger me-2';
+            if (status === 'success' || status === 'ready') {
+                i.className = 'bi bi-check-circle-fill text-success me-2';
+                ui.style.borderColor = 'var(--bs-success)';
+            } else { // error
+                i.className = 'bi bi-exclamation-circle-fill text-danger me-2';
+                ui.style.borderColor = 'var(--bs-danger)';
+            }
             ui.prepend(i);
-            ui.style.borderColor = status === 'success' ? 'var(--bs-success)' : 'var(--bs-danger)';
         }
 
         appendHiddenInput(fileId, jobId) {
@@ -1644,7 +1764,7 @@
             hidden.name = 'uploaded_media[]';
             hidden.value = fileId;
             hidden.id = `input-${jobId}`;
-            document.getElementById('uploaded-files-container').appendChild(hidden);
+            this.uploadContainer.appendChild(hidden);
         }
 
         async removeFile(btn) {
@@ -1659,9 +1779,10 @@
         }
 
         clear() {
-            document.getElementById('upload-list-wrapper').innerHTML = '';
-            document.getElementById('uploaded-files-container').innerHTML = '';
+            this.uploadContainer.innerHTML = '';
             this.queue = [];
+            this.deferredFiles = [];
+            this.isUploading = false;
         }
     }
 

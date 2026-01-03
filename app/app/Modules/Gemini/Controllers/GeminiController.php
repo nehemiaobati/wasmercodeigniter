@@ -84,12 +84,28 @@ class GeminiController extends BaseController
      *
      * @return void
      */
+    /**
+     * Configures response headers for Server-Sent Events (SSE).
+     *
+     * @return void
+     */
     private function _setupSSEHeaders(): void
     {
         $this->response->setContentType('text/event-stream');
         $this->response->setHeader('Cache-Control', 'no-cache');
         $this->response->setHeader('Connection', 'keep-alive');
         $this->response->setHeader('X-Accel-Buffering', 'no'); // Disable buffering for Nginx
+    }
+
+    /**
+     * Sends an SSE error message and closes the stream.
+     *
+     * @param string $msg
+     * @return void
+     */
+    private function _sendSSEError(string $msg)
+    {
+        $this->response->setBody("data: " . json_encode(['error' => $msg, 'csrf_token' => csrf_hash()]) . "\n\n");
     }
 
     /**
@@ -139,8 +155,9 @@ class GeminiController extends BaseController
             'audio_url'              => session()->getFlashdata('audio_url'),
             // Re-define constants locally or fetch from config if needed
             'maxFileSize'            => GeminiService::MAX_FILE_SIZE,
-            'maxFiles'               => 5,
+            'maxFiles'               => GeminiService::MAX_FILES,
             'supportedMimeTypes'     => json_encode(GeminiService::SUPPORTED_MIME_TYPES),
+            'serverlessMode'         => (bool) getenv('SERVERLESS_MODE') ?: GeminiService::SERVERLESS_MODE,
             'mediaConfigs'           => $mediaConfigs, // Pass to view
         ];
         $data['robotsTag'] = 'noindex, follow';
@@ -164,12 +181,18 @@ class GeminiController extends BaseController
             return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Auth required.', 'csrf_token' => csrf_hash()]);
         }
 
-        if (!$this->validate([
+        $validationRules = [
             'file' => [
                 'label' => 'File',
-                'rules' => 'uploaded[file]|max_size[file,' . (GeminiService::MAX_FILE_SIZE / 1024) . ']|mime_in[file,' . implode(',', GeminiService::SUPPORTED_MIME_TYPES) . ']',
+                'rules' => sprintf(
+                    'uploaded[file]|max_size[file,%d]|mime_in[file,%s]',
+                    (int)(GeminiService::MAX_FILE_SIZE / 1024),
+                    implode(',', GeminiService::SUPPORTED_MIME_TYPES)
+                ),
             ],
-        ])) {
+        ];
+
+        if (!$this->validate($validationRules)) {
             // Include CSRF token in validation errors to prevent token desynchronization
             return $this->response->setStatusCode(400)->setJSON(['status' => 'error', 'message' => $this->validator->getErrors()['file'], 'csrf_token' => csrf_hash()]);
         }
@@ -246,7 +269,9 @@ class GeminiController extends BaseController
         $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
 
         // Handle File Parts via Service
-        $filesResult = $this->geminiService->prepareUploadedFiles($uploadedFileIds, $userId);
+        $inlineMediaJson = $this->request->getPost('inline_media');
+        $filesResult = $this->geminiService->prepareUploadedFiles($uploadedFileIds, $userId, $inlineMediaJson);
+
         if (isset($filesResult['error'])) {
             $this->geminiService->cleanupTempFiles($uploadedFileIds, $userId);
             return $this->_respondError($filesResult['error']);
@@ -286,8 +311,9 @@ class GeminiController extends BaseController
         // Input Validation
         $inputText = (string) $this->request->getPost('prompt');
         $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
+        $inlineMediaJson = $this->request->getPost('inline_media');
 
-        if (empty(trim($inputText)) && empty($uploadedFileIds)) {
+        if (empty(trim($inputText)) && empty($uploadedFileIds) && empty($inlineMediaJson)) {
             $this->response->setBody("data: " . json_encode([
                 'error' => 'Please provide a prompt.',
                 'csrf_token' => csrf_hash()
@@ -306,15 +332,11 @@ class GeminiController extends BaseController
             ? $memoryService->buildContextualPrompt($inputText)
             : ['finalPrompt' => $inputText, 'memoryService' => null, 'usedInteractionIds' => []];
 
-        $filesResult = $this->geminiService->prepareUploadedFiles($uploadedFileIds, $userId);
+        $filesResult = $this->geminiService->prepareUploadedFiles($uploadedFileIds, $userId, $inlineMediaJson);
         if (isset($filesResult['error'])) {
-            $this->response->setBody("data: " . json_encode([
-                'error' => $filesResult['error'],
-                'csrf_token' => csrf_hash()
-            ]) . "\n\n");
+            $this->_sendSSEError($filesResult['error']);
             return $this->response;
         }
-
         $parts = $filesResult['parts'];
         if ($contextData['finalPrompt']) {
             array_unshift($parts, ['text' => $contextData['finalPrompt']]);

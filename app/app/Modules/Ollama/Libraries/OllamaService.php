@@ -28,6 +28,13 @@ use App\Models\UserModel;
  */
 class OllamaService
 {
+    /**
+     * Serverless Mode Configuration
+     * True: One-Request Flow (Inline Base64) - For Wasmer/WASI
+     * False: Standard Flow (Disk-based) - For VPS/Dedicated
+     */
+    public const SERVERLESS_MODE = false; // Set to env('SERVERLESS_MODE', false) in production
+    public const MAX_FILES = 3; // Maximum number of files to upload
     public const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     public const SUPPORTED_MIME_TYPES = [
         'image/png',
@@ -66,7 +73,7 @@ class OllamaService
      * Centralized method to process a full User-AI interaction.
      * Handles balace checks, context building, file preparation, API call, and transaction persistence.
      */
-    public function processInteraction(int $userId, string $prompt, array $uploadedFileIds, string $model, array $options = []): array
+    public function processInteraction(int $userId, string $prompt, array $uploadedFileIds, string $model, array $options = [], ?string $inlineMediaJson = null): array
     {
         // 1. Balance Check
         $cost = 1.00; // Fixed cost for now
@@ -76,7 +83,7 @@ class OllamaService
         }
 
         // 2. Prepare Files
-        $images = $this->prepareUploadedFiles($uploadedFileIds, $userId);
+        $images = $this->prepareUploadedFiles($uploadedFileIds, $userId, $inlineMediaJson);
 
         // 3. Execution (Assistant vs Standard)
         $isAssistantMode = $options['assistant_mode'] ?? true;
@@ -508,7 +515,22 @@ class OllamaService
     /**
      * Process Uploaded Files - Reads and encodes, then deletes.
      */
-    public function prepareUploadedFiles(array $fileIds, int $userId): array
+    /**
+     * Process Uploaded Files - Reads and encodes, then deletes.
+     * Supports both disk-based uploads and inline base64 blobs (Serverless).
+     */
+    public function prepareUploadedFiles(array $fileIds, int $userId, ?string $inlineMediaJson = null): array
+    {
+        $diskImages = $this->_collectDiskFiles($fileIds, $userId);
+        $inlineImages = $this->_collectInlineFiles($inlineMediaJson);
+
+        return array_merge($diskImages, $inlineImages);
+    }
+
+    /**
+     * Helper: Process files stored on disk.
+     */
+    private function _collectDiskFiles(array $fileIds, int $userId): array
     {
         $images = [];
         $userTempPath = WRITEPATH . 'uploads/ollama_temp/' . $userId . '/';
@@ -519,6 +541,33 @@ class OllamaService
                 $images[] = base64_encode(file_get_contents($filePath));
                 @unlink($filePath);
             }
+        }
+        return $images;
+    }
+
+    /**
+     * Helper: Process inline base64 files.
+     */
+    private function _collectInlineFiles(?string $json): array
+    {
+        if (!$json) return [];
+
+        $images = [];
+        $inlineFiles = json_decode($json, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE || !is_array($inlineFiles)) {
+            return [];
+        }
+
+        foreach ($inlineFiles as $file) {
+            if (empty($file['data'])) continue;
+
+            $base64 = $file['data'];
+            // Strip header if present
+            if (strpos($base64, ';base64,') !== false) {
+                $base64 = explode(';base64,', $base64)[1];
+            }
+            $images[] = $base64;
         }
         return $images;
     }
