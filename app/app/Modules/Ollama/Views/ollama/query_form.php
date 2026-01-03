@@ -779,16 +779,29 @@
                     }
                 });
 
-                if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
-                const json = await res.json();
+                let json = null;
+                try {
+                    json = await res.json();
+                } catch (e) {
+                    /* Not JSON */
+                }
 
-                const token = json.token || json.csrf_token || res.headers.get('X-CSRF-TOKEN');
-                if (token) this.refreshCsrf(token);
+                if (json) {
+                    const token = json.token || json.csrf_token || res.headers.get('X-CSRF-TOKEN');
+                    if (token) this.refreshCsrf(token);
+                }
+
+                if (!res.ok) {
+                    const errorMsg = json?.message || `HTTP Error: ${res.status}`;
+                    throw new Error(errorMsg);
+                }
 
                 return json;
             } catch (e) {
                 console.error("AJAX Failure", e);
-                this.ui.showToast('Communication error.');
+                if (e.message.indexOf('HTTP Error') === 0 || e.message === 'Failed to fetch') {
+                    this.ui.showToast('Communication error.');
+                }
                 throw e;
             }
         }

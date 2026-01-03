@@ -80,7 +80,7 @@ class OllamaController extends BaseController
 
             (int) session()->get('userId');
         if ($userId <= 0) {
-            return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Auth required.']);
+            return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Auth required.', 'csrf_token' => csrf_hash()]);
         }
 
         if (!$this->validate([
@@ -89,14 +89,14 @@ class OllamaController extends BaseController
                 'rules' => 'uploaded[file]|max_size[file,' . (OllamaService::MAX_FILE_SIZE / 1024) . ']|mime_in[file,' . implode(',', OllamaService::SUPPORTED_MIME_TYPES) . ']',
             ],
         ])) {
-            return $this->response->setStatusCode(400)->setJSON(['status' => 'error', 'message' => $this->validator->getErrors()['file']]);
+            return $this->response->setStatusCode(400)->setJSON(['status' => 'error', 'message' => $this->validator->getErrors()['file'], 'csrf_token' => csrf_hash()]);
         }
 
         $file = $this->request->getFile('file');
         $result = $this->ollamaService->storeTempMedia($file, $userId);
 
         if (!$result['status']) {
-            return $this->response->setStatusCode(500)->setJSON(['status' => 'error', 'message' => $result['error']]);
+            return $this->response->setStatusCode(500)->setJSON(['status' => 'error', 'message' => 'Save failed.', 'csrf_token' => csrf_hash()]);
         }
 
         return $this->response->setJSON([
@@ -110,10 +110,10 @@ class OllamaController extends BaseController
     public function deleteMedia(): ResponseInterface
     {
         $userId = (int) session()->get('userId');
-        if ($userId <= 0) return $this->response->setStatusCode(403);
+        if ($userId <= 0) return $this->response->setStatusCode(403)->setJSON(['error' => 'Auth required', 'csrf_token' => csrf_hash()]);
 
         $fileId = $this->request->getPost('file_id');
-        if (!$fileId) return $this->response->setStatusCode(400);
+        if (!$fileId) return $this->response->setStatusCode(400)->setJSON(['error' => 'Invalid ID', 'csrf_token' => csrf_hash()]);
 
         $this->ollamaService->cleanupTempFiles([$fileId], $userId);
 
@@ -282,7 +282,7 @@ class OllamaController extends BaseController
         if ($userId <= 0) return $this->response->setStatusCode(403);
 
         if (!$this->validate(['title' => 'required', 'prompt_text' => 'required'])) {
-            return $this->response->setJSON(['status' => 'error', 'message' => 'Invalid input']);
+            return $this->_respondError('Invalid input');
         }
 
         $id = $this->ollamaService->addPrompt($userId, [
@@ -297,7 +297,7 @@ class OllamaController extends BaseController
                 'csrf_token' => csrf_hash()
             ]);
         }
-        return $this->response->setJSON(['status' => 'error', 'message' => 'Failed to save']);
+        return $this->_respondError('Failed to save');
     }
 
     public function deletePrompt($id): ResponseInterface
@@ -306,7 +306,7 @@ class OllamaController extends BaseController
         if ($this->ollamaService->deletePrompt($userId, (int)$id)) {
             return $this->response->setJSON(['status' => 'success', 'csrf_token' => csrf_hash()]);
         }
-        return $this->response->setJSON(['status' => 'error', 'message' => 'Failed to delete']);
+        return $this->_respondError('Failed to delete');
     }
 
     public function clearMemory(): RedirectResponse

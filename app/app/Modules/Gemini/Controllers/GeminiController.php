@@ -139,7 +139,7 @@ class GeminiController extends BaseController
             'audio_url'              => session()->getFlashdata('audio_url'),
             // Re-define constants locally or fetch from config if needed
             'maxFileSize'            => GeminiService::MAX_FILE_SIZE,
-            'maxFiles'               => 10,
+            'maxFiles'               => 5,
             'supportedMimeTypes'     => json_encode(GeminiService::SUPPORTED_MIME_TYPES),
             'mediaConfigs'           => $mediaConfigs, // Pass to view
         ];
@@ -160,7 +160,7 @@ class GeminiController extends BaseController
     {
         $userId = (int) session()->get('userId');
         if ($userId <= 0) {
-            return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Auth required.']);
+            return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Auth required.', 'csrf_token' => csrf_hash()]);
         }
 
         if (!$this->validate([
@@ -169,7 +169,7 @@ class GeminiController extends BaseController
                 'rules' => 'uploaded[file]|max_size[file,' . (GeminiService::MAX_FILE_SIZE / 1024) . ']|mime_in[file,' . implode(',', GeminiService::SUPPORTED_MIME_TYPES) . ']',
             ],
         ])) {
-            return $this->response->setStatusCode(400)->setJSON(['status' => 'error', 'message' => $this->validator->getErrors()['file']]);
+            return $this->response->setStatusCode(400)->setJSON(['status' => 'error', 'message' => $this->validator->getErrors()['file'], 'csrf_token' => csrf_hash()]);
         }
 
         $file = $this->request->getFile('file');
@@ -179,7 +179,7 @@ class GeminiController extends BaseController
 
         if (!$result['status']) {
             log_message('error', "Upload failed User {$userId}: " . ($result['error'] ?? 'Unknown error'));
-            return $this->response->setStatusCode(500)->setJSON(['status' => 'error', 'message' => 'Save failed.']);
+            return $this->response->setStatusCode(500)->setJSON(['status' => 'error', 'message' => 'Save failed.', 'csrf_token' => csrf_hash()]);
         }
 
         return $this->response->setJSON([
@@ -207,7 +207,7 @@ class GeminiController extends BaseController
             return $this->response->setJSON(['status' => 'success', 'csrf_token' => csrf_hash()]);
         }
 
-        return $this->response->setStatusCode(404)->setJSON(['status' => 'error', 'message' => 'File not found']);
+        return $this->response->setStatusCode(404)->setJSON(['status' => 'error', 'message' => 'File not found', 'csrf_token' => csrf_hash()]);
     }
 
     /**
@@ -416,7 +416,7 @@ class GeminiController extends BaseController
         if (!$this->validate([
             'setting_key' => 'required|in_list[assistant_mode_enabled,voice_output_enabled,stream_output_enabled]',
         ])) {
-            return $this->response->setStatusCode(400)->setJSON(['status' => 'error', 'message' => 'Invalid setting']);
+            return $this->response->setStatusCode(400)->setJSON(['status' => 'error', 'message' => 'Invalid setting', 'csrf_token' => csrf_hash()]);
         }
 
         $settingKey = $this->request->getPost('setting_key'); // 'assistant_mode_enabled' or 'voice_output_enabled'

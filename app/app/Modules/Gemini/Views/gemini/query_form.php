@@ -955,18 +955,31 @@
                     }
                 });
 
-                if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+                let json = null;
+                try {
+                    json = await res.json();
+                } catch (e) {
+                    /* Not JSON */
+                }
 
-                const json = await res.json();
+                // Always attempt CSRF rotation if token is present
+                if (json) {
+                    const token = json.token || json.csrf_token || res.headers.get('X-CSRF-TOKEN');
+                    if (token) this.refreshCsrf(token);
+                }
 
-                // Rotation
-                const token = json.token || json.csrf_token || res.headers.get('X-CSRF-TOKEN');
-                if (token) this.refreshCsrf(token);
+                if (!res.ok) {
+                    const errorMsg = json?.message || `HTTP Error: ${res.status}`;
+                    throw new Error(errorMsg);
+                }
 
                 return json;
             } catch (e) {
                 console.error("AJAX Failure", e);
-                this.ui.showToast('Communication error.');
+                // Only show toast if it's not a handled validation/logic error from server
+                if (e.message.indexOf('HTTP Error') === 0 || e.message === 'Failed to fetch') {
+                    this.ui.showToast('Communication error.');
+                }
                 throw e;
             }
         }
@@ -1524,29 +1537,26 @@
             this.uploadFile(this.queue.shift());
         }
 
-        uploadFile(job) {
+        async uploadFile(job) {
             const fd = new FormData();
-            fd.append(APP_CONFIG.csrfName, this.app.csrfHash);
             fd.append('file', job.file);
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', APP_CONFIG.endpoints.upload, true);
-            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-            xhr.onload = () => {
-                try {
-                    const r = JSON.parse(xhr.responseText);
-                    if (r.csrf_token) this.app.refreshCsrf(r.csrf_token);
-                    if (xhr.status === 200 && r.status === 'success') {
-                        this.updateChipStatus(job.ui, 'success');
-                        job.ui.querySelector('.remove-btn').dataset.serverFileId = r.file_id;
-                        this.appendHiddenInput(r.file_id, job.id);
-                    } else throw new Error(r.message);
-                } catch (e) {
-                    this.updateChipStatus(job.ui, 'error');
+
+            try {
+                const r = await this.app.sendAjax(APP_CONFIG.endpoints.upload, fd);
+                if (r.status === 'success') {
+                    this.updateChipStatus(job.ui, 'success');
+                    job.ui.querySelector('.remove-btn').dataset.serverFileId = r.file_id;
+                    this.appendHiddenInput(r.file_id, job.id);
+                } else {
+                    throw new Error(r.message || 'Upload failed');
                 }
+            } catch (e) {
+                this.updateChipStatus(job.ui, 'error');
+                this.app.ui.showToast(e.message || 'Upload failed');
+            } finally {
                 this.isUploading = false;
                 this.processQueue();
-            };
-            xhr.send(fd);
+            }
         }
 
         updateChipStatus(ui, status) {
