@@ -872,6 +872,73 @@
     }
 
     /**
+     * RequestQueue
+     * 
+     * Serializes AJAX requests to prevent CSRF race conditions when regeneration is enabled.
+     * Ensures only one request processes at a time, using the freshest token.
+     */
+    class RequestQueue {
+        constructor() {
+            this.queue = [];
+            this.processing = false;
+        }
+
+        /**
+         * Enqueue a request function to be executed sequentially.
+         * @param {Function} fn - Async function to execute
+         * @returns {Promise} - Resolves with fn's result
+         */
+        async enqueue(fn) {
+            return new Promise((resolve, reject) => {
+                this.queue.push({
+                    fn,
+                    resolve,
+                    reject
+                });
+                // If not currently processing, start processing the queue
+                if (!this.processing) this.process();
+            });
+        }
+
+        /**
+         * Process the next request in the queue.
+         * 
+         * This method runs recursively, processing one request at a time.
+         * Once a request completes (success or failure), it immediately processes the next.
+         * This ensures that each request uses the freshest CSRF token from the previous response.
+         */
+        async process() {
+            // Base case: If the queue is empty, stop processing and reset the flag.
+            if (this.queue.length === 0) {
+                this.processing = false;
+                return;
+            }
+
+            // Set processing flag to true to prevent multiple concurrent processing loops.
+            this.processing = true;
+            // Dequeue the next request item (function and its associated promises).
+            const {
+                fn,
+                resolve,
+                reject
+            } = this.queue.shift();
+
+            try {
+                // Execute the enqueued async function.
+                const result = await fn();
+                // Resolve the promise for the current request.
+                resolve(result);
+            } catch (e) {
+                // Reject the promise for the current request if an error occurs.
+                reject(e);
+            }
+
+            // Recursively call process to handle the next item in the queue (tail call).
+            this.process();
+        }
+    }
+
+    /**
      * GeminiApp
      * 
      * Main application controller/orchestrator.
@@ -886,6 +953,7 @@
     class GeminiApp {
         constructor() {
             this.csrfHash = APP_CONFIG.csrfHash; // Track current hash
+            this.requestQueue = new RequestQueue(); // Serialize AJAX to prevent CSRF race
 
             // Initialize Sub-Modules
             this.ui = new UIManager(this);
@@ -941,47 +1009,49 @@
          * @returns {Promise<Object>} - Parsed JSON response
          */
         async sendAjax(url, data = null) {
-            const formData = data instanceof FormData ? data : new FormData();
-            if (!formData.has(APP_CONFIG.csrfName)) {
-                formData.append(APP_CONFIG.csrfName, this.csrfHash);
-            }
+            return this.requestQueue.enqueue(async () => {
+                const formData = data instanceof FormData ? data : new FormData();
+                if (!formData.has(APP_CONFIG.csrfName)) {
+                    formData.append(APP_CONFIG.csrfName, this.csrfHash);
+                }
 
-            try {
-                const res = await fetch(url, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
-
-                let json = null;
                 try {
-                    json = await res.json();
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    let json = null;
+                    try {
+                        json = await res.json();
+                    } catch (e) {
+                        /* Not JSON */
+                    }
+
+                    // Always attempt CSRF rotation if token is present
+                    if (json) {
+                        const token = json.token || json.csrf_token || res.headers.get('X-CSRF-TOKEN');
+                        if (token) this.refreshCsrf(token);
+                    }
+
+                    if (!res.ok) {
+                        const errorMsg = json?.message || json?.error || `HTTP Error: ${res.status}`;
+                        throw new Error(errorMsg);
+                    }
+
+                    return json;
                 } catch (e) {
-                    /* Not JSON */
+                    console.error("AJAX Failure", e);
+                    // Only show toast if it's not a handled validation/logic error from server
+                    if (e.message.indexOf('HTTP Error') === 0 || e.message === 'Failed to fetch') {
+                        this.ui.showToast('Communication error.');
+                    }
+                    throw e;
                 }
-
-                // Always attempt CSRF rotation if token is present
-                if (json) {
-                    const token = json.token || json.csrf_token || res.headers.get('X-CSRF-TOKEN');
-                    if (token) this.refreshCsrf(token);
-                }
-
-                if (!res.ok) {
-                    const errorMsg = json?.message || `HTTP Error: ${res.status}`;
-                    throw new Error(errorMsg);
-                }
-
-                return json;
-            } catch (e) {
-                console.error("AJAX Failure", e);
-                // Only show toast if it's not a handled validation/logic error from server
-                if (e.message.indexOf('HTTP Error') === 0 || e.message === 'Failed to fetch') {
-                    this.ui.showToast('Communication error.');
-                }
-                throw e;
-            }
+            });
         }
     }
 
@@ -1309,7 +1379,7 @@
                     this.app.ui.setError(d.message || 'Generation failed.');
                 }
             } catch (e) {
-                this.app.ui.setError('An error occurred during generation.');
+                this.app.ui.setError(e.message || 'An error occurred during generation.');
             }
             this.app.uploader.clear();
         }

@@ -160,6 +160,7 @@ class GeminiController extends BaseController
     {
         $userId = (int) session()->get('userId');
         if ($userId <= 0) {
+            // Include CSRF token even on auth errors to allow frontend recovery
             return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Auth required.', 'csrf_token' => csrf_hash()]);
         }
 
@@ -169,6 +170,7 @@ class GeminiController extends BaseController
                 'rules' => 'uploaded[file]|max_size[file,' . (GeminiService::MAX_FILE_SIZE / 1024) . ']|mime_in[file,' . implode(',', GeminiService::SUPPORTED_MIME_TYPES) . ']',
             ],
         ])) {
+            // Include CSRF token in validation errors to prevent token desynchronization
             return $this->response->setStatusCode(400)->setJSON(['status' => 'error', 'message' => $this->validator->getErrors()['file'], 'csrf_token' => csrf_hash()]);
         }
 
@@ -179,6 +181,7 @@ class GeminiController extends BaseController
 
         if (!$result['status']) {
             log_message('error', "Upload failed User {$userId}: " . ($result['error'] ?? 'Unknown error'));
+            // Include CSRF token even on save failures to maintain session continuity
             return $this->response->setStatusCode(500)->setJSON(['status' => 'error', 'message' => 'Save failed.', 'csrf_token' => csrf_hash()]);
         }
 
