@@ -63,9 +63,8 @@ class OllamaController extends BaseController
             'assistant_mode_enabled' => $userSetting ? $userSetting->assistant_mode_enabled : true,
             'stream_output_enabled'  => $userSetting ? $userSetting->stream_output_enabled : true,
             'maxFileSize'            => OllamaService::MAX_FILE_SIZE,
-            'maxFiles'               => OllamaService::MAX_FILES,
+            'maxFiles'               => 3,
             'supportedMimeTypes'     => json_encode(OllamaService::SUPPORTED_MIME_TYPES),
-            'serverlessMode'         => (bool) getenv('SERVERLESS_MODE') ?: OllamaService::SERVERLESS_MODE,
             'availableModels'        => $availableModels,
             'robotsTag'              => 'noindex, follow'
         ];
@@ -146,15 +145,14 @@ class OllamaController extends BaseController
         $inputText = strip_tags((string) $this->request->getPost('prompt'));
         $selectedModel = (string) $this->request->getPost('model');
         $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
-        $inlineMediaJson = $this->request->getPost('inline_media');
 
         $userSetting = $this->ollamaService->getUserSettings($userId);
         $options = [
             'assistant_mode' => $userSetting ? $userSetting->assistant_mode_enabled : true,
         ];
 
-        // Process via Service (Pass inline media)
-        $result = $this->ollamaService->processInteraction($userId, $inputText, $uploadedFileIds, $selectedModel, $options, $inlineMediaJson);
+        // Process via Service
+        $result = $this->ollamaService->processInteraction($userId, $inputText, $uploadedFileIds, $selectedModel, $options);
 
         // Cleanup always
         $this->ollamaService->cleanupTempFiles($uploadedFileIds, $userId);
@@ -193,10 +191,7 @@ class OllamaController extends BaseController
         }
 
         // Context Preparation
-        $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
-        $inlineMediaJson = $this->request->getPost('inline_media');
-
-        $images = $this->ollamaService->prepareUploadedFiles($uploadedFileIds, $userId, $inlineMediaJson);
+        $images = $this->ollamaService->prepareUploadedFiles($uploadedFileIds, $userId);
 
         $userSetting = $this->ollamaService->getUserSettings($userId);
         $isAssistantMode = $userSetting ? $userSetting->assistant_mode_enabled : true;

@@ -32,13 +32,6 @@ class GeminiService
         "gemini-2.0-flash-lite",    // Legacy Fallback
     ];
 
-    /**
-     * Serverless Mode Configuration
-     * True: One-Request Flow (Inline Base64) - For Wasmer/WASI
-     * False: Standard Flow (Disk-based) - For VPS/Dedicated
-     */
-    public const SERVERLESS_MODE = true; // Set to env('SERVERLESS_MODE', false) in production
-    public const MAX_FILES = 5; // Maximum number of files to upload
     public const MAX_FILE_SIZE = 50 * 1024 * 1024; // 10MB
     public const SUPPORTED_MIME_TYPES = [
         'image/png',
@@ -643,24 +636,11 @@ class GeminiService
      * @param int $userId
      * @return array
      */
-    public function prepareUploadedFiles(array $fileIds, int $userId, ?string $inlineMediaJson = null): array
-    {
-        $diskParts = $this->_collectDiskFiles($fileIds, $userId);
-        if (isset($diskParts['error'])) return $diskParts;
-
-        $inlineParts = $this->_collectInlineFiles($inlineMediaJson);
-        if (isset($inlineParts['error'])) return $inlineParts;
-
-        return ['parts' => array_merge($diskParts['parts'], $inlineParts['parts'])];
-    }
-
-    /**
-     * Helper: Process files stored on disk.
-     */
-    private function _collectDiskFiles(array $fileIds, int $userId): array
+    public function prepareUploadedFiles(array $fileIds, int $userId): array
     {
         $parts = [];
         $userTempPath = WRITEPATH . 'uploads/gemini_temp/' . $userId . '/';
+        // Check for supported mime types - using centralized constant
         $supportedMimeTypes = self::SUPPORTED_MIME_TYPES;
 
         foreach ($fileIds as $fileId) {
@@ -684,41 +664,6 @@ class GeminiService
     }
 
     /**
-     * Helper: Process inline base64 files.
-     */
-    private function _collectInlineFiles(?string $json): array
-    {
-        if (!$json) return ['parts' => []];
-
-        $parts = [];
-        $supportedMimeTypes = self::SUPPORTED_MIME_TYPES;
-        $inlineFiles = json_decode($json, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE || !is_array($inlineFiles)) {
-            return ['parts' => []]; // Logic: Invalid JSON just means no inline files
-        }
-
-        foreach ($inlineFiles as $file) {
-            if (empty($file['data']) || empty($file['type'])) continue;
-
-            if (!in_array($file['type'], $supportedMimeTypes, true)) {
-                return ['error' => "Unsupported inline file type: " . $file['type']];
-            }
-
-            $base64 = $file['data'];
-            if (strpos($base64, ';base64,') !== false) {
-                $base64 = explode(';base64,', $base64)[1];
-            }
-
-            $parts[] = ['inlineData' => [
-                'mimeType' => $file['type'],
-                'data' => $base64
-            ]];
-        }
-        return ['parts' => $parts];
-    }
-
-    /**
      * Cleans up temporary files after processing.
      *
      * @param array $fileIds
@@ -730,19 +675,6 @@ class GeminiService
         foreach ($fileIds as $fileId) {
             @unlink(WRITEPATH . 'uploads/gemini_temp/' . $userId . '/' . basename($fileId));
         }
-    }
-
-    /**
-     * Saves raw audio data to a file.
-     * Alias/Wrapper for processAudioForServing to match Controller usage.
-     */
-    public function saveAudioFile(int $userId, string $filename, string $rawAudioData): void
-    {
-        $securePath = WRITEPATH . 'uploads/ttsaudio_secure/' . $userId . '/';
-        if (!is_dir($securePath)) {
-            mkdir($securePath, 0755, true);
-        }
-        file_put_contents($securePath . basename($filename), $rawAudioData);
     }
 
     /**

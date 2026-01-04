@@ -585,7 +585,6 @@
             maxFiles: <?= $maxFiles ?? 5 ?>,
             supportedTypes: <?= $supportedMimeTypes ?? '[]' ?>,
         },
-        serverlessMode: <?= json_encode($serverlessMode ?? false) ?>,
         endpoints: {
             upload: '<?= url_to('ollama.upload_media') ?>',
             deleteMedia: '<?= url_to('ollama.delete_media') ?>',
@@ -652,13 +651,12 @@
                 </div>`;
         }
 
-        static renderFileChip(id, name, isUpload = true) {
-            const progress = isUpload ? '<div class="progress-ring"></div>' : '<i class="bi bi-hourglass-split text-warning me-2"></i>';
+        static renderFileChip(id, name) {
             return `
-                <div class="file-chip" id="file-${id}" style="${!isUpload ? 'border-color: var(--bs-warning);' : ''}">
-                    ${progress}
+                <div class="file-chip" id="file-${id}">
+                    <div class="progress-ring"></div>
                     <span class="file-name" title="${name}">${name}</span>
-                    <button type="button" class="btn-close btn-close-white" style="font-size: 0.7rem;" onclick="ollamaApp.uploader.removeFile('${id}', ${!isUpload})"></button>
+                    <button type="button" class="btn-close btn-close-white" style="font-size: 0.7rem;" onclick="ollamaApp.uploader.removeFile('${id}')"></button>
                 </div>`;
         }
 
@@ -822,8 +820,6 @@
             this.csrfHash = hash;
             document.querySelectorAll(`input[name="${APP_CONFIG.csrfName}"]`).forEach(el => el.value = hash);
         }
-
-
 
         /**
          * Unified AJAX Helper
@@ -1106,8 +1102,7 @@
     class MediaUploader {
         constructor(app) {
             this.app = app;
-            this.files = new Map(); // Stores server IDs for standard uploads
-            this.deferredFiles = []; // Stores File objects for serverless mode
+            this.files = new Map();
         }
 
         init() {
@@ -1130,45 +1125,24 @@
             };
         }
 
-        handleFiles(fileList) {
-            const files = Array.from(fileList);
-            if (!this._checkLimits(files.length)) return;
+        async handleFiles(fileList) {
+            if (this.files.size + fileList.length > APP_CONFIG.limits.maxFiles) {
+                this.app.ui.showToast(`Max ${APP_CONFIG.limits.maxFiles} files allowed.`);
+                return;
+            }
 
-            files.forEach(file => {
-                if (this.validateFile(file)) {
-                    APP_CONFIG.serverlessMode ?
-                        this.addDeferredFile(file) :
-                        this.uploadFile(file);
+            Array.from(fileList).forEach(file => {
+                if (file.size > APP_CONFIG.limits.maxFileSize) {
+                    this.app.ui.showToast(`File ${file.name} too large.`);
+                    return;
                 }
+                this.uploadFile(file);
             });
         }
 
-        _checkLimits(count) {
-            const currentCount = APP_CONFIG.serverlessMode ? this.deferredFiles.length : this.files.size;
-            if (currentCount + count > APP_CONFIG.limits.maxFiles) {
-                this.app.ui.showToast(`Max ${APP_CONFIG.limits.maxFiles} files allowed.`);
-                return false;
-            }
-            return true;
-        }
-
-        validateFile(file) {
-            if (file.size > APP_CONFIG.limits.maxFileSize) {
-                this.app.ui.showToast(`File ${file.name} too large.`);
-                return false;
-            }
-            // Basic type check if configured
-            if (APP_CONFIG.limits.supportedTypes && !APP_CONFIG.limits.supportedTypes.includes(file.type)) {
-                this.app.ui.showToast(`Invalid file type: ${file.name}`);
-                return false;
-            }
-            return true;
-        }
-
-        // --- Standard Mode ---
         async uploadFile(file) {
             const id = Math.random().toString(36).substr(2, 9);
-            this.renderFileChip(id, file.name, true);
+            this.renderFileChip(id, file.name);
 
             const fd = new FormData();
             fd.append('file', file);
@@ -1189,35 +1163,9 @@
             }
         }
 
-        // --- Serverless Mode ---
-        addDeferredFile(file) {
-            const id = 'def_' + Math.random().toString(36).substr(2, 9);
-            this.deferredFiles.push({
-                id,
-                file
-            });
-            this.renderFileChip(id, file.name, false);
-            // In deferred mode, we mark as 'ready' immediately (visually distinct in renderFileChip)
-        }
-
-        async getBundledFiles() {
-            const promises = this.deferredFiles.map(item => {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve({
-                        name: item.file.name,
-                        type: item.file.type,
-                        data: reader.result
-                    });
-                    reader.onerror = reject;
-                    reader.readAsDataURL(item.file);
-                });
-            });
-            return Promise.all(promises);
-        }
-
-        renderFileChip(id, name, isUpload = true) {
-            document.getElementById('upload-list-wrapper').insertAdjacentHTML('beforeend', ViewRenderer.renderFileChip(id, name, isUpload));
+        renderFileChip(id, name) {
+            // Use ViewRenderer
+            document.getElementById('upload-list-wrapper').insertAdjacentHTML('beforeend', ViewRenderer.renderFileChip(id, name));
         }
 
         updateFileChip(id, success) {
@@ -1225,19 +1173,10 @@
             if (chip) {
                 chip.querySelector('.progress-ring').remove();
                 chip.querySelector('.file-name').classList.add('text-success');
-                const i = document.createElement('i');
-                i.className = 'bi bi-check-circle-fill text-success me-2';
-                chip.prepend(i);
             }
         }
 
-        async removeFile(id, isDeferred = false) {
-            if (isDeferred) {
-                this.deferredFiles = this.deferredFiles.filter(f => f.id !== id);
-                document.getElementById(`file-${id}`)?.remove();
-                return;
-            }
-
+        async removeFile(id) {
             const serverId = this.files.get(id);
             if (serverId) {
                 const fd = new FormData();
@@ -1259,13 +1198,6 @@
                 input.value = serverId;
                 container.appendChild(input);
             });
-        }
-
-        clear() {
-            document.getElementById('upload-list-wrapper').innerHTML = '';
-            document.getElementById('uploaded-files-container').innerHTML = '';
-            this.files.clear();
-            this.deferredFiles = [];
         }
     }
 
@@ -1871,9 +1803,6 @@
             // Create FormData
             const fd = new FormData(form);
 
-            // [NEW] Hybrid Architecture: Bundle Deferred Files
-            await this._appendInlineMedia(fd);
-
             try {
                 if (document.getElementById('streamOutput')?.checked) {
                     await this.app.streamer.start(fd);
@@ -1935,14 +1864,6 @@
             if (data.used_interaction_ids) {
                 // Determine if we need to call highlightContext on history
                 // (requires implementation in HistoryManager if desired)
-            }
-        }
-        async _appendInlineMedia(fd) {
-            if (APP_CONFIG.serverlessMode) {
-                const deferred = await this.app.uploader.getBundledFiles();
-                if (deferred.length) {
-                    fd.append('inline_media', JSON.stringify(deferred));
-                }
             }
         }
     }
