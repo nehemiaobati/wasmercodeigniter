@@ -70,6 +70,7 @@ class BlogController extends BaseController
         $data = [
             'pageTitle'       => esc($post->title) . ' | Afrikenkid Blog',
             'metaDescription' => esc($post->meta_description),
+            'metaImage'       => $post->featured_image_url,
             'canonicalUrl'    => url_to('blog.show', $slug),
             'post'            => $post,
             'robotsTag'       => 'index, follow',
