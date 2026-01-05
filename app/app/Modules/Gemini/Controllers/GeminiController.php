@@ -139,7 +139,7 @@ class GeminiController extends BaseController
             'audio_url'              => session()->getFlashdata('audio_url'),
             // Re-define constants locally or fetch from config if needed
             'maxFileSize'            => GeminiService::MAX_FILE_SIZE,
-            'maxFiles'               => 5,
+            'maxFiles'               => GeminiService::MAX_FILES,
             'supportedMimeTypes'     => json_encode(GeminiService::SUPPORTED_MIME_TYPES),
             'mediaConfigs'           => $mediaConfigs, // Pass to view
         ];
@@ -222,41 +222,31 @@ class GeminiController extends BaseController
     public function generate()
     {
         $userId = (int) session()->get('userId');
-        $user = $this->userModel->find($userId);
 
-        if (!$user) {
-            return $this->_respondError('User not found.');
-        }
-
-        // Input Validation
-        if (!$this->validate([
-            'prompt' => 'max_length[200000]'
-        ])) {
+        // Validation Guard Clause
+        if (!$this->validate(['prompt' => 'max_length[200000]'])) {
             return $this->_respondError('Prompt is too long. Maximum 200,000 characters allowed.');
         }
 
         // 1. Prepare Inputs
-        $userSetting = $this->geminiService->getUserSettings($userId);
-        $options = [
-            'assistant_mode' => $userSetting ? $userSetting->assistant_mode_enabled : true,
-            'voice_mode' => $userSetting ? $userSetting->voice_output_enabled : false,
-        ];
-
         $inputText = (string) $this->request->getPost('prompt');
         $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
 
-        // Handle File Parts via Service
-        $filesResult = $this->geminiService->prepareUploadedFiles($uploadedFileIds, $userId);
-        if (isset($filesResult['error'])) {
-            $this->geminiService->cleanupTempFiles($uploadedFileIds, $userId);
-            return $this->_respondError($filesResult['error']);
-        }
-        $fileParts = $filesResult['parts'];
+        // 2. Delegate to Service
+        // Transfers detailed request processing to the Service layer to maintain a 'Skinny Controller'.
+        // Service handles file encoding, context retrieval (RAG), cost calculation, and API interaction.
+        $userSetting = $this->geminiService->getUserSettings($userId);
+        $options = [
+            'assistant_mode' => $userSetting ? $userSetting->assistant_mode_enabled : true,
+            'voice_mode'     => $userSetting ? $userSetting->voice_output_enabled : false,
+        ];
 
-        // 2. Process Interaction via Service
-        $result = $this->geminiService->processInteraction($userId, $inputText, $fileParts, $options);
+        // We moved the file prep and cost check INSIDE processInteraction to make the controller thinner
+        $result = $this->geminiService->processInteraction($userId, $inputText, $uploadedFileIds, $options);
 
-        $this->geminiService->cleanupTempFiles($uploadedFileIds, $userId); // Always cleanup
+        // Cleanup Check
+        // Ensures temporary files are removed regardless of success/failure to prevent disk clutter.
+        $this->geminiService->cleanupTempFiles($uploadedFileIds, $userId);
 
         if (isset($result['error'])) {
             return $this->_respondError($result['error']);
@@ -271,14 +261,14 @@ class GeminiController extends BaseController
      *
      * @return ResponseInterface
      */
+    /**
+     * Handles streaming text generation via Server-Sent Events (SSE).
+     *
+     * @return ResponseInterface
+     */
     public function stream(): ResponseInterface
     {
         $userId = (int) session()->get('userId');
-        $user = $this->userModel->find($userId);
-
-        if (!$user) {
-            return $this->response->setStatusCode(401)->setJSON(['error' => 'User not found']);
-        }
 
         // Setup SSE Headers
         $this->_setupSSEHeaders();
@@ -288,68 +278,42 @@ class GeminiController extends BaseController
         $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
 
         if (empty(trim($inputText)) && empty($uploadedFileIds)) {
-            $this->response->setBody("data: " . json_encode([
-                'error' => 'Please provide a prompt.',
-                'csrf_token' => csrf_hash()
-            ]) . "\n\n");
+            $this->_sendSSEError('Please provide a prompt.');
             return $this->response;
         }
 
-        // 1. Prepare Context & Files
+        // 1. Prepare Context & Files via Service
         $userSetting = $this->geminiService->getUserSettings($userId);
-        $isAssistantMode = $userSetting ? $userSetting->assistant_mode_enabled : true;
-        // Check for voice output preference
-        $isVoiceEnabled = $userSetting ? $userSetting->voice_output_enabled : false;
+        $options = [
+            'assistant_mode' => $userSetting ? $userSetting->assistant_mode_enabled : true,
+            'voice_mode'     => $userSetting ? $userSetting->voice_output_enabled : false,
+        ];
 
-        $memoryService = service('memory', $userId);
-        $contextData = $isAssistantMode
-            ? $memoryService->buildContextualPrompt($inputText)
-            : ['finalPrompt' => $inputText, 'memoryService' => null, 'usedInteractionIds' => []];
+        // This handles files, context building, and balance checks
+        $prep = $this->geminiService->prepareStreamContext($userId, $inputText, $uploadedFileIds, $options);
 
-        $filesResult = $this->geminiService->prepareUploadedFiles($uploadedFileIds, $userId);
-        if (isset($filesResult['error'])) {
-            $this->response->setBody("data: " . json_encode([
-                'error' => $filesResult['error'],
-                'csrf_token' => csrf_hash()
-            ]) . "\n\n");
+        if (isset($prep['error'])) {
+            $this->_sendSSEError($prep['error']);
             return $this->response;
         }
 
-        $parts = $filesResult['parts'];
-        if ($contextData['finalPrompt']) {
-            array_unshift($parts, ['text' => $contextData['finalPrompt']]);
-        }
-
-        // 2. Estimate Cost & Check Balance
-        $estimate = $this->geminiService->estimateCost($parts);
-        if ($estimate['status'] && $user->balance < $estimate['costKSH']) {
-            $this->geminiService->cleanupTempFiles($uploadedFileIds, $userId);
-            $this->response->setBody("data: " . json_encode([
-                'error' => "Insufficient balance. Estimated: KSH " . number_format($estimate['costKSH'], 2),
-                'csrf_token' => csrf_hash()
-            ]) . "\n\n");
-            return $this->response;
-        }
-
-        // Session Locking Prevention (Critical for CSRF verification on subsequent requests)
+        // 2. Session Locking Prevention
         session_write_close();
 
         $this->response->sendHeaders();
         if (ob_get_level() > 0) ob_end_flush();
 
-        // Send CSRF token immediately to ensure client has it even if stream fails later
+        // Send CSRF token immediately
         echo "data: " . json_encode(['csrf_token' => csrf_hash()]) . "\n\n";
         flush();
 
         // 3. Call Stream Service
         $this->geminiService->generateStream(
-            $parts,
+            $prep['parts'],
+            // Chunk Callback
             function ($chunk) {
                 if (is_array($chunk) && isset($chunk['error'])) {
-                    echo "data: " . json_encode([
-                        'error' => $chunk['error'],
-                        'csrf_token' => csrf_hash() // Inject fresh token for recovery
-                    ]) . "\n\n";
+                    echo "data: " . json_encode(['error' => $chunk['error'], 'csrf_token' => csrf_hash()]) . "\n\n";
                 } elseif (is_array($chunk) && isset($chunk['thought'])) {
                     echo "data: " . json_encode(['thought' => $chunk['thought']]) . "\n\n";
                 } else {
@@ -358,7 +322,8 @@ class GeminiController extends BaseController
                 if (ob_get_level() > 0) ob_flush();
                 flush();
             },
-            function ($fullText, $usageMetadata, $rawChunks = []) use ($userId, $contextData, $inputText, $isVoiceEnabled) {
+            // Complete Callback
+            function ($fullText, $usageMetadata, $rawChunks = []) use ($userId, $prep, $inputText, $options, $uploadedFileIds) {
                 // Delegate all business logic to Service
                 $result = $this->geminiService->finalizeStreamInteraction(
                     $userId,
@@ -366,11 +331,11 @@ class GeminiController extends BaseController
                     $fullText,
                     $usageMetadata,
                     $rawChunks,
-                    $contextData,
-                    $isVoiceEnabled
+                    $prep['contextData'],
+                    $options['voice_mode']
                 );
 
-                // Prepare Audio URL if audio data was generated
+                // Process Audio URL
                 $audioUrl = null;
                 if (!empty($result['audioData'])) {
                     $audioFilename = $this->geminiService->processAudioForServing($result['audioData'], $userId);
@@ -386,23 +351,30 @@ class GeminiController extends BaseController
                     'used_interaction_ids' => $result['used_interaction_ids'] ?? [],
                     'new_interaction_id' => $result['new_interaction_id'] ?? null,
                     'timestamp' => $result['timestamp'] ?? null,
-                    'user_input' => $inputText
+                    'user_input' => $inputText,
+                    'audio_url'  => $audioUrl // Just append if robust
                 ];
-
-                if ($audioUrl) {
-                    $finalPayload['audio_url'] = $audioUrl;
-                }
 
                 echo "event: close\n";
                 echo "data: " . json_encode($finalPayload) . "\n\n";
 
                 if (ob_get_level() > 0) ob_flush();
                 flush();
+
+                // Cleanup
+                $this->geminiService->cleanupTempFiles($uploadedFileIds, $userId);
             }
         );
 
-        $this->geminiService->cleanupTempFiles($uploadedFileIds, $userId);
         exit;
+    }
+
+    private function _sendSSEError(string $msg)
+    {
+        $this->response->setBody("data: " . json_encode([
+            'error' => $msg,
+            'csrf_token' => csrf_hash()
+        ]) . "\n\n");
     }
 
 
@@ -560,7 +532,9 @@ class GeminiController extends BaseController
 
         // Serve and delete in one go for serverless compliance (ephemeral storage)
         if (readfile($path) !== false) {
-            @unlink($path);
+            if (!unlink($path)) {
+                log_message('error', "[GeminiController] Failed to delete audio file after serve: {$path}");
+            }
         }
         return $this->response;
     }

@@ -66,14 +66,21 @@ class PandocService
         // Using 2>&1 to capture stderr in case of issues
         exec($cmd . ' 2>&1', $output, $returnVar);
 
-        // 3. Cleanup Input immediately
-        if (file_exists($inputFilePath)) @unlink($inputFilePath);
+        if (file_exists($inputFilePath)) {
+            if (!unlink($inputFilePath)) {
+                log_message('error', "[PandocService] Failed to delete input temporary file: {$inputFilePath}");
+            }
+        }
 
         // 4. Validate Output
         if ($returnVar !== 0 || !file_exists($outputFilePath)) {
             log_message('error', '[PandocService] Failed: ' . implode("\n", $output));
             // Try to cleanup output if it was partially created (0 bytes)
-            if (file_exists($outputFilePath)) @unlink($outputFilePath);
+            if (file_exists($outputFilePath)) {
+                if (!unlink($outputFilePath)) {
+                    log_message('error', "[PandocService] Failed to delete failed output file: {$outputFilePath}");
+                }
+            }
 
             return ['status' => 'error', 'message' => 'Conversion process failed.'];
         }

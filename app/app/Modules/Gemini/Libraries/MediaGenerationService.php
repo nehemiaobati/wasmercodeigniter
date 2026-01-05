@@ -111,7 +111,7 @@ class MediaGenerationService
         }
 
         // 2. Deduct Balance
-        $this->userModel->deductBalance($userId, number_format($cost, 4, '.', ''));
+        $this->userModel->deductBalance($userId, number_format($cost, 4, '.', ''), true);
 
         // 3. Insert DB Record
         $this->db->table('generated_media')->insert([
@@ -170,7 +170,7 @@ class MediaGenerationService
         $this->db->transStart();
 
         // Deduct upfront for async video
-        $this->userModel->deductBalance($userId, number_format($cost, 4, '.', ''));
+        $this->userModel->deductBalance($userId, number_format($cost, 4, '.', ''), true);
 
         $this->db->table('generated_media')->insert([
             'user_id' => $userId,

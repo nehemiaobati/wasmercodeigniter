@@ -6,15 +6,18 @@ namespace App\Modules\Blog\Controllers;
 
 use App\Controllers\BaseController;
 use App\Modules\Blog\Models\PostModel;
+use App\Modules\Blog\Libraries\BlogService;
 use CodeIgniter\Exceptions\PageNotFoundException;
 
 class BlogController extends BaseController
 {
     protected PostModel $postModel;
+    protected BlogService $blogService;
 
     public function __construct()
     {
-        $this->postModel = new PostModel();
+        $this->postModel   = new PostModel();
+        $this->blogService = new BlogService();
         helper('form');
     }
 
@@ -130,7 +133,12 @@ class BlogController extends BaseController
         if (!session()->get('is_admin')) {
             return redirect()->to(url_to('home'));
         }
-        return $this->_processPost();
+
+        if ($this->blogService->createPost($this->request->getPost())) {
+            return redirect()->to(url_to('admin.blog.index'))->with('success', 'Post created successfully.');
+        }
+
+        return redirect()->back()->withInput()->with('errors', $this->blogService->getErrors());
     }
 
     public function update(int $id)
@@ -138,68 +146,12 @@ class BlogController extends BaseController
         if (!session()->get('is_admin')) {
             return redirect()->to(url_to('home'));
         }
-        return $this->_processPost($id);
-    }
 
-    private function _processPost(?int $id = null)
-    {
-        $contentBlocks = [];
-
-        // Validation: Ensure we actually have content types to process
-        $contentTypes = $this->request->getPost('content_type');
-
-        if (is_array($contentTypes)) {
-            // Fetch arrays once to avoid repeated calls
-            $contentText = $this->request->getPost('content_text');
-            $contentLang = $this->request->getPost('content_language');
-
-            foreach ($contentTypes as $index => $type) {
-                $block = ['type' => $type];
-                $text = $contentText[$index] ?? null;
-                $language = $contentLang[$index] ?? null;
-
-                // Logic: Only add valid blocks with actual content
-                if ($text !== null && trim($text) !== '') {
-                    switch ($type) {
-                        case 'text':
-                            $block['content'] = $text;
-                            $contentBlocks[] = $block;
-                            break;
-                        case 'image':
-                            $block['url'] = $text;
-                            $contentBlocks[] = $block;
-                            break;
-                        case 'code':
-                            $block['code'] = $text;
-                            $block['language'] = !empty($language) ? $language : 'plaintext';
-                            $contentBlocks[] = $block;
-                            break;
-                    }
-                }
-            }
+        if ($this->blogService->updatePost($id, $this->request->getPost())) {
+            return redirect()->to(url_to('admin.blog.index'))->with('success', 'Post updated successfully.');
         }
 
-        $payload = [
-            'title'              => $this->request->getPost('title') ?: null,
-            'excerpt'            => $this->request->getPost('excerpt') ?: null,
-            'status'             => $this->request->getPost('status') ?: 'draft',
-            'published_at'       => $this->request->getPost('published_at') ? str_replace('T', ' ', $this->request->getPost('published_at')) . ':00' : null,
-            'featured_image_url' => $this->request->getPost('featured_image_url') ?: null,
-            'category_name'      => $this->request->getPost('category_name') ?: null,
-            'author_name'        => $this->request->getPost('author_name') ?: 'Nehemia Obati',
-            'meta_description'   => $this->request->getPost('meta_description') ?: null,
-            'body_content'       => json_encode($contentBlocks)
-        ];
-
-        if ($id !== null) {
-            $payload['id'] = $id;
-        }
-
-        if ($this->postModel->save($payload)) {
-            return redirect()->to(url_to('admin.blog.index'))->with('success', 'Post ' . ($id ? 'updated' : 'created') . ' successfully.');
-        }
-
-        return redirect()->back()->withInput()->with('errors', $this->postModel->errors());
+        return redirect()->back()->withInput()->with('errors', $this->blogService->getErrors());
     }
 
     public function delete(int $id)
@@ -213,7 +165,7 @@ class BlogController extends BaseController
             throw PageNotFoundException::forPageNotFound('Cannot delete a post that does not exist.');
         }
 
-        if ($this->postModel->delete($id)) {
+        if ($this->blogService->deletePost($id)) {
             return redirect()->to(url_to('admin.blog.index'))->with('success', 'Post deleted successfully.');
         }
 

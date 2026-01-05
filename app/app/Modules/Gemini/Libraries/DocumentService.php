@@ -53,7 +53,9 @@ class DocumentService
                 // READ -> DELETE -> RETURN
                 // This ensures no files are left in the path, making it behave like Dompdf (memory only)
                 $fileData = file_get_contents($pandocResult['filePath']);
-                @unlink($pandocResult['filePath']);
+                if (!unlink($pandocResult['filePath'])) {
+                    log_message('error', "[DocumentService] Failed to delete Pandoc temporary file: " . $pandocResult['filePath']);
+                }
 
                 return [
                     'status' => 'success',
@@ -229,7 +231,9 @@ class DocumentService
             }
 
             $fileData = file_get_contents($tempFile);
-            @unlink($tempFile);
+            if (!unlink($tempFile)) {
+                log_message('error', "[DocumentService] Failed to delete PHPWord temporary file: {$tempFile}");
+            }
 
             return [
                 'status' => 'success',

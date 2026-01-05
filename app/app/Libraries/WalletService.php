@@ -43,7 +43,7 @@ class WalletService
             }
 
             // Deduct
-            $success = $this->userModel->deductBalance($userId, (string)$amount);
+            $success = $this->userModel->deductBalance($userId, (string)$amount, false);
             if (!$success) {
                 // Note: deductBalance returns false if user not found, but we checked above. 
                 // It returns 'sufficientBalance' status actually, which is confusing in the model design.

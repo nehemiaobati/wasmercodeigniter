@@ -129,11 +129,8 @@ class OllamaController extends BaseController
     {
         set_time_limit(300);
         $userId = (int) session()->get('userId');
-        $user = $this->userModel->find($userId);
 
-        if (!$user) return $this->_respondError('User not found.');
-
-        // Validation
+        // Validation Guard Clause
         if (!$this->validate([
             'prompt' => 'max_length[100000]',
             'model'  => 'required'
@@ -141,7 +138,7 @@ class OllamaController extends BaseController
             return $this->_respondError('Invalid input.');
         }
 
-        // Prepare Inputs
+        // 1. Prepare Inputs
         $inputText = strip_tags((string) $this->request->getPost('prompt'));
         $selectedModel = (string) $this->request->getPost('model');
         $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
@@ -151,10 +148,13 @@ class OllamaController extends BaseController
             'assistant_mode' => $userSetting ? $userSetting->assistant_mode_enabled : true,
         ];
 
-        // Process via Service
+        // 2. Service Delegation
+        // Offloads entire logic chain (Files -> Balance -> Context -> API) to Service.
+        // Controller remains unaware of specific implementation details (Model prioritization, etc).
         $result = $this->ollamaService->processInteraction($userId, $inputText, $uploadedFileIds, $selectedModel, $options);
 
-        // Cleanup always
+        // Cleanup Assurance
+        // Idempotent cleanup to guarantee no orphaned files remain on disk.
         $this->ollamaService->cleanupTempFiles($uploadedFileIds, $userId);
 
         if (isset($result['status']) && $result['status'] === 'error') {
@@ -168,9 +168,6 @@ class OllamaController extends BaseController
     public function stream(): ResponseInterface
     {
         $userId = (int) session()->get('userId');
-        $user = $this->userModel->find($userId);
-
-        if (!$user) return $this->response->setStatusCode(401)->setJSON(['error' => 'User not found']);
 
         // SSE Headers
         $this->_setupSSEHeaders();
@@ -184,45 +181,31 @@ class OllamaController extends BaseController
             return $this->response;
         }
 
-        // Check Balance
-        if ($user->balance < 1.00) {
-            $this->_sendSSEError('Insufficient balance.');
+        // 1. Prepare Context & Files via Service
+        $userSetting = $this->ollamaService->getUserSettings($userId);
+        $options = [
+            'assistant_mode' => $userSetting ? $userSetting->assistant_mode_enabled : true,
+        ];
+
+        // Handles file prep, context building, and balance check
+        $prep = $this->ollamaService->prepareStreamContext($userId, $inputText, $uploadedFileIds, $options);
+
+        if (isset($prep['error'])) {
+            $this->_sendSSEError($prep['error']);
             return $this->response;
         }
 
-        // Context Preparation
-        $images = $this->ollamaService->prepareUploadedFiles($uploadedFileIds, $userId);
-
-        $userSetting = $this->ollamaService->getUserSettings($userId);
-        $isAssistantMode = $userSetting ? $userSetting->assistant_mode_enabled : true;
-
-        $memoryService = new \App\Modules\Ollama\Libraries\OllamaMemoryService($userId);
-
-        $messages = [];
-        $usedInteractionIds = [];
-
-        if ($isAssistantMode) {
-            $contextData = $memoryService->buildContextualMessages($inputText);
-            $messages = $contextData['messages'];
-            $usedInteractionIds = $contextData['used_interaction_ids'];
-        } else {
-            $messages = [['role' => 'user', 'content' => $inputText]];
-        }
-
-        // Add images to the last message if present
-        if (!empty($images)) {
-            $lastIdx = count($messages) - 1;
-            $messages[$lastIdx]['images'] = $images;
-        }
-
+        // 2. Session Locking Prevention
         session_write_close();
+
         $this->response->sendHeaders();
         echo "data: " . json_encode(['csrf_token' => csrf_hash()]) . "\n\n";
         flush();
 
+        // 3. Delegate Stream
         $this->ollamaService->generateStream(
             $selectedModel,
-            $messages,
+            $prep['messages'],
             function ($chunk) {
                 if (is_array($chunk)) {
                     if (isset($chunk['error'])) {
@@ -233,15 +216,23 @@ class OllamaController extends BaseController
                         echo "data: " . json_encode(['text' => $chunk['text']]) . "\n\n";
                     }
                 } else {
-                    // Fallback for string chunk
                     echo "data: " . json_encode(['text' => $chunk]) . "\n\n";
                 }
                 if (ob_get_level() > 0) ob_flush();
                 flush();
             },
-            function ($fullText, $usage) use ($userId, $inputText, $uploadedFileIds, $selectedModel, $usedInteractionIds) {
+            function ($fullText, $usage) use ($userId, $inputText, $selectedModel, $prep, $uploadedFileIds) {
                 // Finalize via Service (deduct cost & update memory)
-                $result = $this->ollamaService->finalizeStreamInteraction($userId, $inputText, $fullText, $selectedModel, $usedInteractionIds);
+                // Note: prepareStreamContext returns 'used_interaction_ids' in prep result for consistency
+                $result = $this->ollamaService->finalizeStreamInteraction(
+                    $userId,
+                    $inputText,
+                    $fullText,
+                    $selectedModel,
+                    $prep['used_interaction_ids'] ?? []
+                );
+
+                // Cleanup
                 $this->ollamaService->cleanupTempFiles($uploadedFileIds, $userId);
 
                 $finalPayload = [

@@ -32,7 +32,8 @@ class GeminiService
         "gemini-2.0-flash-lite",    // Legacy Fallback
     ];
 
-    public const MAX_FILE_SIZE = 50 * 1024 * 1024; // 10MB
+    public const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    public const MAX_FILES = 5;
     public const SUPPORTED_MIME_TYPES = [
         'image/png',
         'image/jpeg',
@@ -84,12 +85,19 @@ class GeminiService
         $this->userSettingsModel = $userSettingsModel ?? new UserSettingsModel();
     }
 
-    public function processInteraction(int $userId, string $prompt, array $fileParts, array $options): array
+    public function processInteraction(int $userId, string $prompt, array $uploadedFileIds, array $options): array
     {
-        // 1. Context & Setup
-        $allParts = $fileParts;
-        if (!empty($options['assistant_mode'] ?? true)) {
-            // Use centralized prompt construction from MemoryService
+        // 1. Prepare Files Internally
+        $filesResult = $this->prepareUploadedFiles($uploadedFileIds, $userId);
+        if (isset($filesResult['error'])) {
+            return ['error' => $filesResult['error']];
+        }
+        $allParts = $filesResult['parts'];
+
+        // 2. Context Setup
+        $contextData = ['memoryService' => null, 'usedInteractionIds' => []];
+
+        if ($options['assistant_mode'] ?? true) {
             $memoryService = service('memory', $userId);
             $contextData = $memoryService->buildContextualPrompt($prompt);
 
@@ -98,35 +106,43 @@ class GeminiService
             }
         } else {
             array_unshift($allParts, ['text' => $prompt]);
-            $contextData = ['memoryService' => null, 'usedInteractionIds' => []];
         }
 
-        if (empty($allParts)) return ['error' => 'No content provided.'];
+        if (empty($allParts)) {
+            return ['error' => 'No content provided.'];
+        }
 
-        // 2. Cost Estimation
+        // 3. Cost Estimation & Balance Check
         $estimate = $this->estimateCost($allParts);
         $user = $this->userModel->find($userId);
+
         if ($estimate['status'] && $user->balance < $estimate['costKSH']) {
             return ['error' => "Insufficient balance. Need KSH " . number_format($estimate['costKSH'], 2)];
         }
 
-        // 3. Execution
+        // 4. API Execution
+        // Calls Gemini API. Returns generated text or error.
         $apiResponse = $this->generateContent($allParts);
-        if (isset($apiResponse['error'])) return ['error' => $apiResponse['error']];
+        if (isset($apiResponse['error'])) {
+            return ['error' => $apiResponse['error']];
+        }
 
-        // 4. TTS (Optional)
+        // 5. Post-Processing (TTS)
+        // Generates audio buffer if voice mode is enabled and content exists.
         $audioResult = null;
         if (($options['voice_mode'] ?? false) && !empty($apiResponse['result'])) {
             $audioResult = $this->generateSpeech($apiResponse['result']);
         }
 
-        // 5. Transaction
+        // 6. Transactional Persistence
+        // Atomic block: Deducts actual cost and saves conversation memory.
+        // Failure here rolls back the balance deduction.
         $this->db->transStart();
 
         $costData = $this->calculateCost($apiResponse['usage'] ?? [], $audioResult['usage'] ?? null);
-        $this->userModel->deductBalance($userId, number_format($costData['costKSH'], 4, '.', ''));
+        $this->userModel->deductBalance($userId, number_format($costData['costKSH'], 4, '.', ''), true);
 
-        // Memory updates
+        // Memory Persistence
         $memoryResult = [];
         if (!empty($options['assistant_mode'] ?? true) && isset($contextData['memoryService'])) {
             $newId = $contextData['memoryService']->updateMemory(
@@ -246,6 +262,55 @@ class GeminiService
         }
         log_message('error', "[GeminiService] Request failed after all retries for model: {$model}");
         return ['error' => 'Request failed after retries.'];
+    }
+
+    /**
+     * Prepares all context, files, and checks balance for a streaming interaction.
+     * Segregates all "pre-flight" checks to keep the controller clean.
+     *
+     * @return array Result containing 'parts', 'contextData', or 'error'
+     */
+    public function prepareStreamContext(int $userId, string $prompt, array $uploadedFileIds, array $options): array
+    {
+        // 1. Prepare Files
+        $filesResult = $this->prepareUploadedFiles($uploadedFileIds, $userId);
+        if (isset($filesResult['error'])) {
+            return ['error' => $filesResult['error']];
+        }
+        $allParts = $filesResult['parts'];
+
+        // 2. Context Setup
+        $contextData = ['memoryService' => null, 'usedInteractionIds' => []];
+
+        if ($options['assistant_mode'] ?? true) {
+            $memoryService = service('memory', $userId);
+            $contextData = $memoryService->buildContextualPrompt($prompt);
+
+            if ($contextData['finalPrompt']) {
+                array_unshift($allParts, ['text' => $contextData['finalPrompt']]);
+            }
+        } else {
+            array_unshift($allParts, ['text' => $prompt]);
+        }
+
+        if (empty($allParts)) {
+            $this->cleanupTempFiles($uploadedFileIds, $userId);
+            return ['error' => 'No content provided.'];
+        }
+
+        // 3. Cost & Balance Check
+        $estimate = $this->estimateCost($allParts);
+        $user = $this->userModel->find($userId);
+
+        if ($estimate['status'] && $user->balance < $estimate['costKSH']) {
+            $this->cleanupTempFiles($uploadedFileIds, $userId);
+            return ['error' => "Insufficient balance. Estimated: KSH " . number_format($estimate['costKSH'], 2)];
+        }
+
+        return [
+            'parts' => $allParts,
+            'contextData' => $contextData
+        ];
     }
 
     public function generateStream(array $parts, callable $chunkCallback, callable $completeCallback): void
@@ -575,7 +640,7 @@ class GeminiService
         if ($usageMetadata) {
             $costData = $this->calculateCost($usageMetadata, $audioUsage);
             $deduction = number_format($costData['costKSH'], 4, '.', '');
-            $this->userModel->deductBalance($userId, $deduction);
+            $this->userModel->deductBalance($userId, $deduction, true);
         }
 
         // Update Memory
@@ -673,7 +738,12 @@ class GeminiService
     public function cleanupTempFiles(array $fileIds, int $userId): void
     {
         foreach ($fileIds as $fileId) {
-            @unlink(WRITEPATH . 'uploads/gemini_temp/' . $userId . '/' . basename($fileId));
+            $filePath = WRITEPATH . 'uploads/gemini_temp/' . $userId . '/' . basename($fileId);
+            if (file_exists($filePath)) {
+                if (!unlink($filePath)) {
+                    log_message('error', "[GeminiService] Failed to delete temporary file: {$filePath}");
+                }
+            }
         }
     }
 

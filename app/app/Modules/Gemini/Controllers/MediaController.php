@@ -69,7 +69,9 @@ class MediaController extends BaseController
                     ]];
                     // Cleanup handled in service or separate job, but for now we leave it or clean up here?
                     // GeminiController cleans up after generation. We should probably do the same.
-                    @unlink($filePath);
+                    if (!unlink($filePath)) {
+                        log_message('error', "[MediaController] Failed to delete temporary uploaded file: {$filePath}");
+                    }
                 }
             }
             $input = $parts;
@@ -153,7 +155,9 @@ class MediaController extends BaseController
         }
 
         if (readfile($path) !== false) {
-            @unlink($path); // SERVERLESS COMPLIANCE: Delete immediately
+            if (!unlink($path)) {
+                log_message('error', "[MediaController] Failed to delete file after serve: {$path}");
+            }
         }
         exit;
     }

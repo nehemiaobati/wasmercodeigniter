@@ -1,11 +1,13 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Crypto\Controllers; // Updated namespace
 
 use App\Controllers\BaseController; // Keep BaseController from core
 use App\Models\UserModel;
 use CodeIgniter\HTTP\RedirectResponse;
-use App\Modules\Crypto\Libraries\CryptoService; 
+use App\Modules\Crypto\Libraries\CryptoService;
 
 class CryptoController extends BaseController
 {
@@ -104,7 +106,7 @@ class CryptoController extends BaseController
         $queryType = $this->request->getPost('query_type');
         $address = $this->request->getPost('address');
         $limit = $this->request->getPost('limit');
-        
+
         $result = [];
         $errors = [];
 
@@ -119,26 +121,25 @@ class CryptoController extends BaseController
 
         if (bccomp((string) $user->balance, (string) $deductionAmount, 2) < 0) {
             $error = "Insufficient balance. This query costs approx. KSH " . number_format($deductionAmount, 2) .
-                     ", but you only have KSH " . $user->balance . ".";
+                ", but you only have KSH " . $user->balance . ".";
             return redirect()->back()->withInput()->with('error', $error);
         }
-        
+
         try {
             // --- Execute Query ---
             if ($asset === 'btc') {
-                $result = ($queryType === 'balance') 
-                    ? $this->cryptoService->getBtcBalance($address) 
+                $result = ($queryType === 'balance')
+                    ? $this->cryptoService->getBtcBalance($address)
                     : $this->cryptoService->getBtcTransactions($address, $limit);
             } elseif ($asset === 'ltc') {
-                $result = ($queryType === 'balance') 
-                    ? $this->cryptoService->getLtcBalance($address) 
+                $result = ($queryType === 'balance')
+                    ? $this->cryptoService->getLtcBalance($address)
                     : $this->cryptoService->getLtcTransactions($address, $limit);
             }
 
             if (isset($result['error'])) {
                 $errors[] = $result['error'];
             }
-
         } catch (\Exception $e) {
             $errors[] = 'An error occurred while fetching crypto data: ' . $e->getMessage();
             log_message('error', 'Crypto query API error: ' . $e->getMessage());
@@ -147,13 +148,13 @@ class CryptoController extends BaseController
         if (!empty($errors)) {
             return redirect()->back()->withInput()->with('error', $errors);
         }
-        
+
         // --- Deduct Cost within a Transaction ---
         $db = \Config\Database::connect();
         $db->transStart();
 
-        $deductionSuccess = $this->userModel->deductBalance($userId, (string)$deductionAmount);
-        
+        $deductionSuccess = $this->userModel->deductBalance($userId, (string)$deductionAmount, true);
+
         $db->transComplete();
 
         if ($db->transStatus() === false || !$deductionSuccess) {

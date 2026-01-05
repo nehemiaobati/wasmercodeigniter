@@ -78,7 +78,9 @@ class OllamaDocumentService
             if ($pandocResult['status'] === 'success' && file_exists($pandocResult['filePath'])) {
                 // Read, delete temp file, return binary data (ephemeral storage pattern)
                 $fileData = file_get_contents($pandocResult['filePath']);
-                @unlink($pandocResult['filePath']);
+                if (!unlink($pandocResult['filePath'])) {
+                    log_message('error', "[OllamaDocumentService] Failed to delete Pandoc temporary file: " . $pandocResult['filePath']);
+                }
 
                 return [
                     'status' => 'success',
@@ -197,7 +199,9 @@ class OllamaDocumentService
             }
 
             $fileData = file_get_contents($tempFile);
-            @unlink($tempFile);
+            if (!unlink($tempFile)) {
+                log_message('error', "[OllamaDocumentService] Failed to delete PHPWord temporary file: {$tempFile}");
+            }
 
             return [
                 'status' => 'success',

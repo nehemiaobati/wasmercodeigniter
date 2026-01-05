@@ -68,26 +68,30 @@ class OllamaService
      */
     public function processInteraction(int $userId, string $prompt, array $uploadedFileIds, string $model, array $options = []): array
     {
-        // 1. Balance Check
+        // 1. File Preparation
+        // Standardizes uploaded media into Base64 for Ollama API consumption.
+        $images = $this->prepareUploadedFiles($uploadedFileIds, $userId);
+
+        // 2. Pre-Flight Balance Check
+        // Enforces payment requirement before any heavy processing or context building.
         $cost = 1.00; // Fixed cost for now
         $user = $this->userModel->find($userId);
         if (!$user || $user->balance < $cost) {
+            $this->cleanupTempFiles($uploadedFileIds, $userId);
             return ['status' => 'error', 'message' => 'Insufficient balance.'];
         }
 
-        // 2. Prepare Files
-        $images = $this->prepareUploadedFiles($uploadedFileIds, $userId);
-
-        // 3. Execution (Assistant vs Standard)
+        // 3. Contextual Execution
+        // Determining if we need memory-enhanced chat (Assistant) or raw stateless chat.
         $isAssistantMode = $options['assistant_mode'] ?? true;
+        $response = [];
 
         if ($isAssistantMode) {
-            // Delegate to MemoryService for advanced context
-            // Note: We instantiate here to avoid circular dependencies in constructor if MemoryService depends on OllamaService
+            // Invokes MemoryService to retrieve relevant past interactions and build a prompt with history.
             $memoryService = new \App\Modules\Ollama\Libraries\OllamaMemoryService($userId, null, null, null, $this);
             $response = $memoryService->processChat($prompt, $model, $images);
         } else {
-            // Standard Stateless Chat
+            // Direct pass-through to Ollama API without memory overhead.
             $messages = [['role' => 'user', 'content' => $prompt]];
             if (!empty($images)) {
                 $messages[0]['images'] = $images;
@@ -95,40 +99,86 @@ class OllamaService
             $response = $this->generateChat($model, $messages);
         }
 
-        // 4. Handle Errors
+        // 4. Cleanup & Error Handling
+        // Immediate removal of temp files to maintain stateless server design.
+        $this->cleanupTempFiles($uploadedFileIds, $userId);
+
         if (isset($response['status']) && $response['status'] === 'error') {
             return $response;
         }
-        // Legacy error support from MemoryService
         if (isset($response['success']) && !$response['success']) {
             return ['status' => 'error', 'message' => $response['error'] ?? 'Unknown error'];
         }
 
         // 5. Transaction & Deduct Balance
-        // Note: MemoryService already marks memory/interaction. We just need to handle the billing here if not done.
-        // The previous controller logic deducted balance AFTER generation.
-        // MemoryService::processChat -> calls api->chat -> but DOES NOT deduct balance.
-        // MemoryService::processChat -> calls _saveInteraction to save history.
-
+        // Wrap strict transaction around balance update
         $this->db->transStart();
-        $this->userModel->deductBalance($userId, (string)$cost);
+        $this->userModel->deductBalance($userId, (string)$cost, true);
         $this->db->transComplete();
 
-        // 6. Return Result
-        // Normalize response
-        $resultText = $response['data']['result'] ?? $response['response'] ?? $response['data']['response'] ?? '';
-        $thoughts   = $response['thoughts'] ?? $response['data']['thoughts'] ?? '';
-        $usage      = $response['data']['usage'] ?? $response['usage'] ?? [];
+        if ($this->db->transStatus() === false) {
+            log_message('error', "Transaction failed for Ollama interaction user: $userId");
+            // We return success for generation but log error for billing? Or fail?
+            // Simple: Fail.
+            return ['status' => 'error', 'message' => 'Transaction failed.'];
+        }
 
+        // 6. Return Result
         return [
             'status'               => 'success',
-            'result'               => $resultText,
-            'thoughts'             => $thoughts,
+            'result'               => $response['data']['result'] ?? $response['response'] ?? '',
+            'thoughts'             => $response['thoughts'] ?? $response['data']['thoughts'] ?? '',
             'cost'                 => $cost,
-            'usage'                => $usage,
+            'usage'                => $response['data']['usage'] ?? $response['usage'] ?? [],
             'new_interaction_id'   => $response['new_interaction_id'] ?? null,
             'timestamp'            => $response['timestamp'] ?? null,
             'used_interaction_ids' => $response['used_interaction_ids'] ?? []
+        ];
+    }
+
+    /**
+     * Prepares stream context (Consistency with GeminiService)
+     */
+    public function prepareStreamContext(int $userId, string $prompt, array $uploadedFileIds, array $options): array
+    {
+        // 1. Prepare Files
+        $images = $this->prepareUploadedFiles($uploadedFileIds, $userId);
+
+        // 2. Balance Check
+        $cost = 1.00;
+        $user = $this->userModel->find($userId);
+        if (!$user || $user->balance < $cost) {
+            $this->cleanupTempFiles($uploadedFileIds, $userId);
+            return ['error' => 'Insufficient balance.'];
+        }
+
+        // 3. Context & Message Construction
+        $memoryService = new \App\Modules\Ollama\Libraries\OllamaMemoryService($userId);
+        $messages = [];
+        $usedIds = [];
+
+        if ($options['assistant_mode'] ?? true) {
+            $contextData = $memoryService->buildContextualMessages($prompt);
+            $messages = $contextData['messages'];
+            $usedIds = $contextData['used_interaction_ids'];
+        } else {
+            $messages = [['role' => 'user', 'content' => $prompt]];
+        }
+
+        if (!empty($images)) {
+            $lastIdx = count($messages) - 1;
+            $messages[$lastIdx]['images'] = $images;
+        }
+
+        // We do NOT cleanup here for stream, as stream needs to run first? 
+        // Actually images are base64 encoded into $images array, so we CAN cleanup files now!
+        // This is safer for serverless 'unlink' pattern.
+        $this->cleanupTempFiles($uploadedFileIds, $userId);
+
+        return [
+            'messages' => $messages,
+            'used_interaction_ids' => $usedIds,
+            'cost' => $cost
         ];
     }
 
@@ -292,13 +342,11 @@ class OllamaService
 
         $config = $this->payloadService->getPayloadConfig($model, $messages, true);
 
+        // Stream State
         $buffer = '';
         $fullText = '';
         $usage = null;
-
-        // State for thinking block detection
         $inThinkingBlock = false;
-        $tagBuffer = '';
 
         try {
             $ch = curl_init();
@@ -307,7 +355,7 @@ class OllamaService
                 CURLOPT_POST => true,
                 CURLOPT_POSTFIELDS => $config['body'],
                 CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-                CURLOPT_WRITEFUNCTION => function ($ch, $chunk) use (&$buffer, &$fullText, &$usage, &$inThinkingBlock, &$tagBuffer, $chunkCallback) {
+                CURLOPT_WRITEFUNCTION => function ($ch, $chunk) use (&$buffer, &$fullText, &$usage, &$inThinkingBlock, $chunkCallback) {
                     $buffer .= $chunk;
                     while (($pos = strpos($buffer, "\n")) !== false) {
                         $line = substr($buffer, 0, $pos);
@@ -318,54 +366,7 @@ class OllamaService
 
                         $data = json_decode($line, true);
                         if ($data) {
-                            if (isset($data['message']['content'])) {
-                                $text = $data['message']['content'];
-                                $fullText .= $text;
-
-                                // Process text for thinking blocks
-                                $remainingText = $text;
-                                while ($remainingText !== '') {
-                                    if (!$inThinkingBlock) {
-                                        $startPos = strpos($remainingText, '<think>');
-                                        if ($startPos !== false) {
-                                            // Text before <think>
-                                            $before = substr($remainingText, 0, $startPos);
-                                            if ($before !== '') $chunkCallback(['text' => $before]);
-
-                                            $inThinkingBlock = true;
-                                            $remainingText = substr($remainingText, $startPos + 7);
-                                        } else {
-                                            // No <think> tag, but check for partial tag at end
-                                            // Handle edge case where <think> is split: <th... ink>
-                                            // For simplicity, we just send as text if no <think> is found in current chunk
-                                            // But a better way is to buffer potential tags
-                                            $chunkCallback(['text' => $remainingText]);
-                                            $remainingText = '';
-                                        }
-                                    } else {
-                                        $endPos = strpos($remainingText, '</think>');
-                                        if ($endPos !== false) {
-                                            $thought = substr($remainingText, 0, $endPos);
-                                            if ($thought !== '') $chunkCallback(['thought' => $thought]);
-
-                                            $inThinkingBlock = false;
-                                            $remainingText = substr($remainingText, $endPos + 8);
-                                        } else {
-                                            $chunkCallback(['thought' => $remainingText]);
-                                            $remainingText = '';
-                                        }
-                                    }
-                                }
-                            }
-                            if (isset($data['done']) && $data['done'] === true) {
-                                $usage = [
-                                    'total_duration' => $data['total_duration'] ?? 0,
-                                    'eval_count' => $data['eval_count'] ?? 0,
-                                ];
-                            }
-                            if (isset($data['error'])) {
-                                $chunkCallback(['error' => $data['error']]);
-                            }
+                            $this->_handleStreamData($data, $fullText, $usage, $inThinkingBlock, $chunkCallback);
                         }
                     }
                     return strlen($chunk);
@@ -390,6 +391,59 @@ class OllamaService
             $completeCallback($fullText, $usage);
         } catch (\Throwable $e) {
             $chunkCallback(['error' => 'Streaming failed: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Handles a single decoded JSON object from the Ollama stream.
+     */
+    private function _handleStreamData(array $data, string &$fullText, &$usage, bool &$inThinkingBlock, callable $chunkCallback): void
+    {
+        if (isset($data['message']['content'])) {
+            $text = $data['message']['content'];
+            $fullText .= $text;
+
+            // Process text for thinking blocks
+            $remainingText = $text;
+            while ($remainingText !== '') {
+                if (!$inThinkingBlock) {
+                    $startPos = strpos($remainingText, '<think>');
+                    if ($startPos !== false) {
+                        // Text before <think>
+                        $before = substr($remainingText, 0, $startPos);
+                        if ($before !== '') $chunkCallback(['text' => $before]);
+
+                        $inThinkingBlock = true;
+                        $remainingText = substr($remainingText, $startPos + 7);
+                    } else {
+                        $chunkCallback(['text' => $remainingText]);
+                        $remainingText = '';
+                    }
+                } else {
+                    $endPos = strpos($remainingText, '</think>');
+                    if ($endPos !== false) {
+                        $thought = substr($remainingText, 0, $endPos);
+                        if ($thought !== '') $chunkCallback(['thought' => $thought]);
+
+                        $inThinkingBlock = false;
+                        $remainingText = substr($remainingText, $endPos + 8);
+                    } else {
+                        $chunkCallback(['thought' => $remainingText]);
+                        $remainingText = '';
+                    }
+                }
+            }
+        }
+
+        if (isset($data['done']) && $data['done'] === true) {
+            $usage = [
+                'total_duration' => $data['total_duration'] ?? 0,
+                'eval_count' => $data['eval_count'] ?? 0,
+            ];
+        }
+
+        if (isset($data['error'])) {
+            $chunkCallback(['error' => $data['error']]);
         }
     }
 
@@ -463,7 +517,7 @@ class OllamaService
     {
         $cost = 1.00; // Fixed cost for now
         $this->db->transStart();
-        $this->userModel->deductBalance($userId, (string)$cost);
+        $this->userModel->deductBalance($userId, (string)$cost, true);
 
         // Update Memory
         $memoryResult = [];
@@ -517,7 +571,9 @@ class OllamaService
             $filePath = $userTempPath . basename($fileId);
             if (file_exists($filePath)) {
                 $images[] = base64_encode(file_get_contents($filePath));
-                @unlink($filePath);
+                if (!unlink($filePath)) {
+                    log_message('error', "[OllamaService] Failed to delete temporary file during preparation: {$filePath}");
+                }
             }
         }
         return $images;
@@ -531,7 +587,12 @@ class OllamaService
     {
         $userTempPath = WRITEPATH . 'uploads/ollama_temp/' . $userId . '/';
         foreach ($fileIds as $fileId) {
-            @unlink($userTempPath . basename($fileId));
+            $filePath = $userTempPath . basename($fileId);
+            if (file_exists($filePath)) {
+                if (!unlink($filePath)) {
+                    log_message('error', "[OllamaService] Failed to delete temporary file in cleanup: {$filePath}");
+                }
+            }
         }
     }
 
