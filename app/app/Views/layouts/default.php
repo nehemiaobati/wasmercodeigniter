@@ -26,7 +26,7 @@
     <meta property="og:url" content="<?= esc($canonicalUrl ?? current_url()) ?>">
     <meta property="og:title" content="<?= esc($pageTitle ?? 'AFRIKENKID | Generative AI & Crypto Data') ?>">
     <meta property="og:description" content="<?= esc($metaDescription ?? 'Explore generative AI and real-time crypto data with Afrikenkid. Pay easily with Mobile Money or Credit Card.') ?>">
-    <meta property="og:image" content="<?= base_url('public/assets/images/afrikenkid_og_image.jpg') ?>">
+    <meta property="og:image" content="<?= esc($metaImage ?? base_url('public/assets/images/afrikenkid_og_image.jpg')) ?>">
     <meta name="twitter:card" content="summary_large_image">
 
     <!-- Structured Data -->

@@ -19,6 +19,7 @@ class PortfolioController extends BaseController
         $data = [
             'pageTitle'       => 'Nehemia Obati | Software Developer Portfolio',
             'metaDescription' => 'The professional portfolio of Nehemia Obati, a full-stack software developer specializing in PHP (CodeIgniter), Python, and cloud solutions for clients in Kenya and beyond.',
+            'metaImage'       => base_url('public/assets/images/potraitwebp.webp'),
             'canonicalUrl'    => url_to('portfolio.index'),
         ];
 
