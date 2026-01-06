@@ -50,6 +50,7 @@ class HomeController extends BaseController
             'heroTitle'       => 'The All-in-One Platform for AI & Crypto Insights',
             'heroSubtitle'    => 'Leverage Google\'s Gemini AI for text, image, and video generation and analyze blockchain trends with simple, pay-as-you-go pricing.',
             'canonicalUrl'    => url_to('landing'),
+            'robotsTag'       => 'index, follow',
         ];
         return view('home/landing_page', $data);
     }
@@ -60,6 +61,7 @@ class HomeController extends BaseController
             'pageTitle' => 'Terms of Service | Afrikenkid',
             'metaDescription' => 'Read the official Terms of Service for using the platform, its AI tools, and cryptocurrency data services.',
             'canonicalUrl' => url_to('terms'),
+            'robotsTag'    => 'index, follow',
         ];
         return view('home/terms', $data);
     }
@@ -70,6 +72,7 @@ class HomeController extends BaseController
             'pageTitle' => 'Privacy Policy | Afrikenkid',
             'metaDescription' => 'Our Privacy Policy outlines how we collect, use, and protect your personal data when you use services.',
             'canonicalUrl' => url_to('privacy'),
+            'robotsTag'    => 'index, follow',
         ];
         return view('home/privacy', $data);
     }

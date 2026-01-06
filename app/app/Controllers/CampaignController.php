@@ -36,6 +36,7 @@ class CampaignController extends BaseController
             'pageTitle'       => 'Create Email Campaign | Admin',
             'metaDescription' => 'Compose and send a new email campaign to all registered users.',
             'canonicalUrl'    => url_to('admin.campaign.create'),
+            'robotsTag'       => 'noindex, nofollow',
             // Fetch campaigns ordered by creation date, descending
             'campaigns'       => $campaignModel->orderBy('created_at', 'DESC')->findAll(),
         ];

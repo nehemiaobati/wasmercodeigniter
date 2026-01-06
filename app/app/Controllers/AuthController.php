@@ -30,6 +30,7 @@ class AuthController extends BaseController
             'pageTitle'       => 'Create Your Account | Afrikenkid',
             'metaDescription' => 'Sign up for a free account and get KSH 30 in starter credits. Generate content, text-to-speech ouput, and view crypto market data instantly.',
             'canonicalUrl'    => url_to('register'),
+            'robotsTag'       => 'noindex, follow',
         ];
         return view('auth/register', $data);
     }
@@ -125,6 +126,7 @@ class AuthController extends BaseController
             'pageTitle'       => 'Login | Afrikenkid',
             'metaDescription' => 'Access your dashboard. Log in to use the AI Studio, run crypto queries, and manage your account balance.',
             'canonicalUrl'    => url_to('login'),
+            'robotsTag'       => 'noindex, follow',
         ];
         return view('auth/login', $data);
     }
@@ -260,7 +262,8 @@ class AuthController extends BaseController
         $data = [
             'pageTitle' => 'Forgot Password | Afrikenkid',
             'metaDescription' => 'Reset your account password. Enter your email to receive a password reset link.',
-            'canonicalUrl' => url_to('auth.forgot_password'), // Added this line
+            'canonicalUrl' => url_to('auth.forgot_password'),
+            'robotsTag'    => 'noindex, follow',
         ];
         return view('auth/forgot_password', $data);
     }
@@ -342,7 +345,14 @@ class AuthController extends BaseController
         }
 
         // Render the reset password form, passing the token.
-        return view('auth/reset_password', ['token' => $token]);
+        $data = [
+            'pageTitle'       => 'Reset Your Password | Afrikenkid',
+            'metaDescription' => 'Choose a new, secure password for your account.',
+            'canonicalUrl'    => current_url(),
+            'robotsTag'       => 'noindex, follow',
+            'token'           => $token,
+        ];
+        return view('auth/reset_password', $data);
     }
 
     /**

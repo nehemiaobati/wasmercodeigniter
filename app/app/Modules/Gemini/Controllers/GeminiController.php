@@ -103,6 +103,7 @@ class GeminiController extends BaseController
             'pageTitle'       => 'Intelligent Content & Document Analysis Platform | Powered by Gemini',
             'metaDescription' => 'Transform how you work with AI. Generate professional content, create stunning images, synthesize videos, and extract insights from PDFs using our advanced platform.',
             'canonicalUrl'    => url_to('gemini.public'),
+            'robotsTag'       => 'index, follow',
             'heroTitle'       => 'Enterprise-Grade AI Solutions',
             'heroSubtitle'    => 'A complete suite for content generation, image creation, video synthesis, and intelligent document processing - tailored for your workflow.'
         ];

@@ -28,6 +28,10 @@ class AdminController extends BaseController
         $data['total_users'] = $userModel->pager->getTotal();
         // Retrieve the total balance of all users, assuming UserModel has getTotalBalance().
         $data['total_balance'] = $userModel->getTotalBalance();
+
+        $data['pageTitle']       = 'User Management | Admin';
+        $data['metaDescription'] = 'Manage registered users, view statistics, and update account balances.';
+        $data['canonicalUrl']    = url_to('admin.index');
         // Add noindex directive for authenticated pages
         $data['robotsTag'] = 'noindex, follow';
 
@@ -63,6 +67,10 @@ class AdminController extends BaseController
         $data['search_query'] = $searchQuery;
         // Count the number of users found in the search results.
         $data['total_users'] = count($data['users']);
+
+        $data['pageTitle']       = 'Search Users | Admin';
+        $data['metaDescription'] = 'Search results for users matching: ' . esc($searchQuery);
+        $data['canonicalUrl']    = current_url();
         // Add noindex directive for authenticated pages
         $data['robotsTag'] = 'noindex, follow';
 
@@ -80,6 +88,13 @@ class AdminController extends BaseController
     {
         $userModel = new UserModel();
         $data['user'] = $userModel->find($id);
+
+        if ($data['user']) {
+            $data['pageTitle']       = 'User Details: ' . esc($data['user']->username) . ' | Admin';
+            $data['metaDescription'] = 'View and manage profile details for ' . esc($data['user']->username);
+            $data['canonicalUrl']    = url_to('admin.users.show', $id);
+        }
+
         // Add noindex directive for authenticated pages
         $data['robotsTag'] = 'noindex, follow';
 
@@ -181,6 +196,8 @@ class AdminController extends BaseController
 
         $data = [
             'pageTitle'    => 'Application Logs | Admin',
+            'metaDescription' => 'Review system log files for debugging and monitoring.',
+            'canonicalUrl' => url_to('admin.logs'),
             'logFiles'     => $logFiles,
             'selectedFile' => $selectedFile,
             'logContent'   => $logContent,

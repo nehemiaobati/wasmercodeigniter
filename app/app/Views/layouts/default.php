@@ -8,8 +8,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <!-- SEO Meta Tags -->
-    <title><?= esc($pageTitle ?? 'AFRIKENKID | Generative AI & Crypto Data') ?></title>
-    <meta name="description" content="<?= esc($metaDescription ?? 'Explore generative AI and real-time crypto data. Query Bitcoin & Litecoin, and interact with advanced AI. Pay easily with Mobile Money or Credit Card.') ?>">
+    <title><?= esc($pageTitle ?? 'AFRIKENKID | Generative AI & Crypto Data for Africa') ?></title>
+    <meta name="description" content="<?= esc($metaDescription ?? 'Access powerful Generative AI tools and real-time blockchain analytics. Pay easily via M-Pesa or Credit Card. Your all-in-one platform for AI and Crypto insights.') ?>">
     <meta name="keywords" content="Generative AI, Google Gemini, Crypto Data, Bitcoin Wallet, Litecoin Wallet, Blockchain Query, AI Tools, Kenya, M-Pesa, Lipa na Mpesa, Mobile Money Africa, CodeIgniter Development">
 
     <!-- Geo-targeting -->
@@ -24,8 +24,8 @@
     <!-- Social Media Meta -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="<?= esc($canonicalUrl ?? current_url()) ?>">
-    <meta property="og:title" content="<?= esc($pageTitle ?? 'AFRIKENKID | Generative AI & Crypto Data') ?>">
-    <meta property="og:description" content="<?= esc($metaDescription ?? 'Explore generative AI and real-time crypto data with Afrikenkid. Pay easily with Mobile Money or Credit Card.') ?>">
+    <meta property="og:title" content="<?= esc($pageTitle ?? 'AFRIKENKID | Generative AI & Crypto Data for Africa') ?>">
+    <meta property="og:description" content="<?= esc($metaDescription ?? 'Access powerful Generative AI tools and real-time blockchain analytics. Pay easily via M-Pesa or Credit Card. Your all-in-one platform for AI and Crypto insights.') ?>">
     <meta property="og:image" content="<?= esc($metaImage ?? base_url('public/assets/images/afrikenkid_og_image.jpg')) ?>">
     <meta name="twitter:card" content="summary_large_image">
 
@@ -37,7 +37,7 @@
             "name": "AFRIKENKID",
             "applicationCategory": "DeveloperApplication",
             "operatingSystem": "Web",
-            "description": "<?= esc($metaDescription ?? 'A platform offering generative AI insights and real-time cryptocurrency data queries, with payment options including Mobile Money and Credit Cards for the African market.') ?>",
+            "description": "<?= esc($metaDescription ?? 'Access powerful Generative AI tools and real-time blockchain analytics. Pay easily via M-Pesa or Credit Card. Your all-in-one platform for AI and Crypto insights.') ?>",
             "url": "<?= esc($canonicalUrl ?? current_url()) ?>",
             "offers": {
                 "@type": "Offer",

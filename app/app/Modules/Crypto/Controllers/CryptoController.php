@@ -43,6 +43,7 @@ class CryptoController extends BaseController
             'pageTitle'       => 'Crypto Wallet Insights & Analytics | BTC & LTC Tracker',
             'metaDescription' => 'Track Bitcoin (BTC) and Litecoin (LTC) wallet activities instantly. Audit balances and visualize transaction histories with our professional blockchain analytics solution.',
             'canonicalUrl'    => url_to('crypto.public'),
+            'robotsTag'       => 'index, follow',
         ];
 
         // Updated view path to reflect module structure
