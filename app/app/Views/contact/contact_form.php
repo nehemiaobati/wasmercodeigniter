@@ -2,6 +2,11 @@
 
 <?= $this->section('styles') ?>
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+<style>
+    .contact-icon {
+        font-size: 3rem;
+    }
+</style>
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
@@ -40,7 +45,7 @@
             <div class="card blueprint-card">
                 <div class="card-body p-5">
                     <div class="text-center mb-5">
-                        <i class="bi bi-envelope-heart-fill text-primary" style="font-size: 3rem;"></i>
+                        <i class="bi bi-envelope-heart-fill text-primary contact-icon"></i>
                         <h2 class="fw-bold mt-3">Get in Touch</h2>
                         <p class="text-muted">Have a question, a project idea, or need support? Fill out the form below and I'll get back to you shortly.</p>
                     </div>

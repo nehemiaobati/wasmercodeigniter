@@ -36,6 +36,11 @@
     html[data-bs-theme="light"] .illustration-content p {
         color: white;
     }
+
+    .illustration-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+    }
 </style>
 
 <script>
@@ -61,11 +66,7 @@
                     <div class="col-lg-6">
                         <div class="card-body p-4 p-md-5">
                             <h3 class="text-center mb-4 fw-bold">Unlock Your Digital Toolkit</h3>
-                            <?php if (isset($validation)): ?>
-                                <div class="alert alert-danger" role="alert">
-                                    <?= $validation->listErrors() ?>
-                                </div>
-                            <?php endif; ?>
+
                             <form action="<?= url_to('register.store') ?>" method="post">
                                 <?= csrf_field() ?>
                                 <div class="form-floating mb-3">
@@ -100,7 +101,7 @@
                     </div>
                     <div class="col-lg-6 d-none d-lg-block auth-illustration">
                         <div class="illustration-content text-center">
-                            <i class="bi bi-gift-fill text-primary" style="font-size: 4rem; margin-bottom: 1rem;"></i>
+                            <i class="bi bi-gift-fill text-primary illustration-icon"></i>
                             <h4>Join Our Platform</h4>
                             <p>Your free account comes with <strong>Ksh. 30</strong> in starter credits to try our AI and Crypto tools right away.</p>
                         </div>

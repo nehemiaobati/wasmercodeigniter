@@ -68,7 +68,8 @@ class AuthController extends BaseController
         // Verify the reCAPTCHA response.
         if (! $recaptchaService->verify($recaptchaResponse)) {
             // If reCAPTCHA verification fails, add a validation error and redirect back.
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+            // If reCAPTCHA verification fails, add a validation error and redirect back.
+            return redirect()->back()->withInput()->with('error', 'reCAPTCHA verification failed. Please try again.');
         }
 
         $userModel = new UserModel();
@@ -162,7 +163,8 @@ class AuthController extends BaseController
         // Verify the reCAPTCHA response.
         if (! $recaptchaService->verify($recaptchaResponse)) {
             // If reCAPTCHA verification fails, add a validation error and redirect back.
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+            // If reCAPTCHA verification fails, add a validation error and redirect back.
+            return redirect()->back()->withInput()->with('error', 'reCAPTCHA verification failed. Please try again.');
         }
 
         $userModel = new UserModel();

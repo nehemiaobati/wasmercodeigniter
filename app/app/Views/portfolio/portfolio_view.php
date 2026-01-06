@@ -121,6 +121,25 @@
         width: 100%;
         border-bottom: 1px solid var(--bs-border-color);
     }
+
+    .hero-bg-blur {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 110%;
+        height: 110%;
+        background-color: var(--bs-primary);
+        opacity: 0.4;
+        border-radius: 50%;
+        filter: blur(50px);
+        z-index: -1;
+    }
+
+    .icon-circle-lg {
+        width: 40px;
+        height: 40px;
+    }
 </style>
 <?= $this->endSection() ?>
 
@@ -159,7 +178,7 @@
                 </div>
                 <div class="col-lg-5 order-1 order-lg-2 text-center">
                     <div class="position-relative d-inline-block">
-                        <div class="position-absolute top-50 start-50 translate-middle w-100 h-100 bg-primary opacity-10 rounded-circle blur-3xl filter-blur" style="filter: blur(60px); z-index: -1;"></div>
+                        <div class="hero-bg-blur"></div>
                         <img src="<?= base_url('public/assets/images/potraitwebp.webp') ?>" alt="Nehemia Obati" class="hero-img rounded-circle shadow-lg">
                     </div>
                 </div>
@@ -386,7 +405,7 @@
 
                     <div class="d-flex flex-column gap-3">
                         <div class="d-flex align-items-center p-3 rounded-3 bg-body-tertiary border">
-                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center icon-circle-lg">
                                 <i class="bi bi-geo-alt-fill"></i>
                             </div>
                             <div class="ms-3">
@@ -395,7 +414,7 @@
                             </div>
                         </div>
                         <div class="d-flex align-items-center p-3 rounded-3 bg-body-tertiary border">
-                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center icon-circle-lg">
                                 <i class="bi bi-envelope-fill"></i>
                             </div>
                             <div class="ms-3">
@@ -404,7 +423,7 @@
                             </div>
                         </div>
                         <div class="d-flex align-items-center p-3 rounded-3 bg-body-tertiary border">
-                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center icon-circle-lg">
                                 <i class="bi bi-telephone-fill"></i>
                             </div>
                             <div class="ms-3">

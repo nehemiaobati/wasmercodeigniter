@@ -44,8 +44,7 @@ class ContactController extends BaseController
         // Verify the reCAPTCHA response.
         if (! $recaptchaService->verify($recaptchaResponse)) {
             // If reCAPTCHA verification fails, add a validation error and redirect back.
-            $this->validator->setError('recaptcha', 'Please complete the reCAPTCHA.');
-            return redirect()->back()->withInput()->with('error', $this->validator->getErrors());
+            return redirect()->back()->withInput()->with('error', 'reCAPTCHA verification failed. Please try again.');
         }
 
         // Get raw POST data. Sanitization will happen at the point of output.
