@@ -106,18 +106,23 @@ class GeminiService
                 }
 
                 $client = \Config\Services::curlrequest([], null, null, false);
+                $startTime = microtime(true);
+
                 $response = $client->post($url, [
                     'body' => $body,
                     'headers' => ['Content-Type' => 'application/json'],
                     'http_errors' => false,
-                    'timeout' => 90
+                    'timeout' => 90,
+                    'connect_timeout' => 15, // Explicitly set connect timeout
                 ]);
 
+                $totalTime = microtime(true) - $startTime;
                 $code = $response->getStatusCode();
 
                 if ($code === 429 || $code >= 500) {
                     $backoffSeconds = 1 * ($i + 1);
-                    log_message('warning', "[GeminiService] HTTP {$code} for model: {$model}, attempt {$i}/{$maxRetries}, backing off {$backoffSeconds}s");
+                    $responseBody = $response->getBody();
+                    log_message('warning', "[GeminiService] HTTP {$code} for model: {$model}, attempt {$i}/{$maxRetries}, time: " . number_format($totalTime, 2) . "s. Backing off {$backoffSeconds}s. Body: " . substr($responseBody, 0, 500));
                     sleep($backoffSeconds);
                     continue;
                 }
