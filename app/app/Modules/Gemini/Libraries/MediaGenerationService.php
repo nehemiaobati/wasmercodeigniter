@@ -171,7 +171,7 @@ class MediaGenerationService
             }
         } catch (\Exception $e) {
             $this->db->transRollback();
-            log_message('error', '[AtomicTrans] Action failed: ' . $e->getMessage());
+            log_message('error', '[MediaGenerationService] Atomic Action failed: ' . $e->getMessage());
             return ['status' => 'error', 'message' => 'System error during transaction.'];
         }
 
@@ -448,8 +448,11 @@ class MediaGenerationService
             ]);
 
             if ($response->getStatusCode() !== 200) {
-                log_message('error', "[Model: {$modelId}] Gemini Media Error: " . $response->getBody());
-                return ['status' => 'error', 'message' => 'Generation failed at provider.'];
+                $errorData = json_decode($response->getBody(), true);
+                $errorMessage = $errorData['error']['message'] ?? $errorData['error']['status'] ?? 'Unknown API error';
+
+                log_message('error', "[MediaGenerationService] Model: {$modelId}. Error: {$errorMessage}. Body: " . $response->getBody());
+                return ['status' => 'error', 'message' => "Provider Error: " . $errorMessage];
             }
 
             $responseData = json_decode($response->getBody(), true);
@@ -459,7 +462,7 @@ class MediaGenerationService
             if ($isTokenModel) {
                 if (!isset($responseData['usageMetadata'])) {
                     // Fallback if metadata is missing (should not happen for Gemini) - use safe buffer or minimum
-                    log_message('error', 'Missing usageMetadata for token model: ' . $modelId);
+                    log_message('warning', "[MediaGenerationService] Missing usageMetadata for token model: {$modelId}");
                     $finalCostKsh = $requiredBalanceKsh;
                 } else {
                     $finalCostKsh = $this->_calculateTokenCost($responseData['usageMetadata'], $config);
@@ -483,7 +486,7 @@ class MediaGenerationService
             // Persist Artifact with Final Cost
             return $this->_finalizeArtifact($userId, 'image', $parsed['data'], $parsed['ext'], $finalCostKsh, $modelId);
         } catch (\Exception $e) {
-            log_message('error', "[Model: {$modelId}] Media Gen Exception: " . $e->getMessage());
+            log_message('error', "[MediaGenerationService] Model: {$modelId}. Exception: " . $e->getMessage());
             return ['status' => 'error', 'message' => 'System error during generation. No credits deducted.'];
         }
     }
@@ -518,7 +521,7 @@ class MediaGenerationService
             }
             return ['status' => 'pending'];
         } catch (\Exception $e) {
-            log_message('error', '[MediaGenerationService::pollVideoStatus] ' . $e->getMessage());
+            log_message('error', "[MediaGenerationService] Poll Error for OpID {$opId}: " . $e->getMessage());
             return ['status' => 'error', 'message' => 'Polling error.'];
         }
     }

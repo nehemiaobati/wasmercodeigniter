@@ -1475,7 +1475,7 @@
                 }
             } catch (e) {
                 this._stop();
-                document.getElementById('flash-container').innerHTML = ViewRenderer.renderFlashMessage(e.message || 'Video processing failed.', 'danger');
+                document.getElementById('flash-messages-container').innerHTML = ViewRenderer.renderFlashMessage(e.message || 'Video processing failed.', 'danger');
                 this.app.ui.setLoading(false);
             }
         }
@@ -1564,7 +1564,7 @@
         async generateMedia(fd) {
             // Frontend Gatekeeper via JobManager
             if (this.app.jobs.isActive()) {
-                document.getElementById('flash-container').innerHTML = ViewRenderer.renderFlashMessage('You have a pending video generation. Please wait.', 'warning');
+                document.getElementById('flash-messages-container').innerHTML = ViewRenderer.renderFlashMessage('You have a pending video generation. Please wait.', 'warning');
                 this.app.ui.setLoading(false);
                 return;
             }
@@ -1587,9 +1587,9 @@
 
                 // Check if it's the 409 response text
                 if (e.message && e.message.includes('pending video')) {
-                    document.getElementById('flash-container').innerHTML = ViewRenderer.renderFlashMessage(e.message, 'warning');
+                    document.getElementById('flash-messages-container').innerHTML = ViewRenderer.renderFlashMessage(e.message, 'warning');
                 } else {
-                    document.getElementById('flash-container').innerHTML = ViewRenderer.renderFlashMessage(msg, 'danger');
+                    document.getElementById('flash-messages-container').innerHTML = ViewRenderer.renderFlashMessage(msg, 'danger');
                 }
 
                 // Clear the main card if it was stuck

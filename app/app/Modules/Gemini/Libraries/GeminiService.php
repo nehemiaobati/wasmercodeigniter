@@ -30,7 +30,7 @@ class GeminiService
         "gemini-2.0-flash-lite",    // Legacy Fallback
     ];
 
-    public const MAX_FILE_SIZE = 50 * 1024 * 1024; // 10MB
+    public const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     public const MAX_FILES = 5;
     public const SUPPORTED_MIME_TYPES = [
         'image/png',
@@ -123,15 +123,16 @@ class GeminiService
                 }
 
                 if ($code !== 200) {
-                    $err = json_decode($response->getBody(), true);
+                    $responseBody = $response->getBody();
+                    $err = json_decode($responseBody, true);
                     $errorMsg = $err['error']['message'] ?? "API Error $code";
-                    log_message('error', "[GeminiService] HTTP {$code} error for model: {$model} - {$errorMsg}");
+                    log_message('error', "[GeminiService] HTTP {$code} error for model: {$model}. URL: {$url}. Response: {$responseBody}. Message: {$errorMsg}");
                     return ['error' => $errorMsg];
                 }
 
                 $data = json_decode($response->getBody(), true);
                 if (json_last_error() !== JSON_ERROR_NONE) {
-                    log_message('error', "[GeminiService] JSON Decode Error: " . json_last_error_msg());
+                    log_message('error', "[GeminiService] JSON Decode Error for model {$model}: " . json_last_error_msg() . " | Body: " . $response->getBody());
                     return ['error' => 'Failed to decode API response.'];
                 }
 
@@ -339,8 +340,6 @@ class GeminiService
         if (!$this->apiKey) return ['error' => 'API Key missing.'];
 
         foreach (self::MODEL_PRIORITIES as $model) {
-            log_message('info', "[GeminiService] Attempting generation with model: {$model}");
-
             $config = $this->payloadService->getPayloadConfig($model, $this->apiKey, $parts);
             if (!$config) {
                 log_message('warning', "[GeminiService] No payload config found for model: {$model}");
@@ -355,7 +354,6 @@ class GeminiService
             }
 
             if (isset($result['result'])) {
-                log_message('info', "[GeminiService] Successfully generated content with model: {$model}");
                 return $result;
             }
         }
@@ -426,6 +424,7 @@ class GeminiService
     public function generateStream(array $parts, callable $chunkCallback, callable $completeCallback): void
     {
         if (!$this->apiKey) {
+            log_message('error', '[GeminiService] Streaming failed: API Key missing');
             $chunkCallback(['error' => "Error: API Key missing."]);
             return;
         }
@@ -537,20 +536,20 @@ class GeminiService
             if ($statusCode !== 200) {
                 $errorData = json_decode($responseBody, true);
                 $errorMessage = $errorData['error']['message'] ?? 'Unknown API error during token count.';
-                log_message('error', "Gemini API countTokens Error: Status {$statusCode} - {$errorMessage}");
+                log_message('error', "[GeminiService] countTokens Error: Status {$statusCode} - {$errorMessage}. Body: {$responseBody}");
                 return ['status' => false, 'error' => $errorMessage];
             }
 
             $responseData = json_decode($responseBody, true);
             if (json_last_error() !== JSON_ERROR_NONE) {
-                log_message('error', 'Gemini API countTokens JSON Decode Error: ' . json_last_error_msg());
+                log_message('error', "[GeminiService] countTokens JSON Decode Error: " . json_last_error_msg() . " | Body: " . $responseBody);
                 return ['status' => false, 'error' => 'Failed to decode API response.'];
             }
             $totalTokens = $responseData['totalTokens'] ?? 0;
 
             return ['status' => true, 'totalTokens' => $totalTokens];
         } catch (\Exception $e) {
-            log_message('error', 'Gemini API countTokens Exception: ' . $e->getMessage());
+            log_message('error', "[GeminiService] countTokens Exception: " . $e->getMessage() . " | Trace: " . $e->getTraceAsString());
             return ['status' => false, 'error' => 'Could not connect to the AI service to estimate cost.'];
         }
     }
@@ -633,13 +632,13 @@ class GeminiService
             if ($statusCode !== 200) {
                 $errorData = json_decode($responseBody, true);
                 $errorMessage = $errorData[0]['error']['message'] ?? $errorData['error']['message'] ?? 'Unknown API error during speech generation.';
-                log_message('error', "Gemini TTS Error: Status {$statusCode} - {$errorMessage}");
+                log_message('error', "[GeminiService] TTS Error: Status {$statusCode} - {$errorMessage}. Body: {$responseBody}");
                 return ['status' => false, 'error' => $errorMessage];
             }
 
             $responseDataArray = json_decode($responseBody, true);
             if (json_last_error() !== JSON_ERROR_NONE) {
-                log_message('error', 'Gemini TTS Response JSON Decode Error: ' . json_last_error_msg() . ' | Response: ' . $responseBody);
+                log_message('error', "[GeminiService] TTS Response JSON Decode Error: " . json_last_error_msg() . ' | Response: ' . $responseBody);
                 return ['status' => false, 'error' => 'Failed to decode API speech response.'];
             }
 
@@ -666,13 +665,13 @@ class GeminiService
             }
 
             if (!$foundAudio) {
-                log_message('error', 'Gemini TTS Error: Audio data not found in the expected location in the response.');
+                log_message('error', '[GeminiService] TTS Error: Audio data not found in response chunks.');
                 return ['status' => false, 'error' => 'Failed to retrieve audio data from the AI service.'];
             }
 
             return ['status' => true, 'audioData' => $audioData, 'usage' => $usageMetadata];
         } catch (\Exception $e) {
-            log_message('error', 'Gemini TTS Exception: ' . $e->getMessage());
+            log_message('error', "[GeminiService] TTS Exception: " . $e->getMessage() . " | Trace: " . $e->getTraceAsString());
             return ['status' => false, 'error' => 'Could not connect to the speech synthesis service.'];
         }
     }

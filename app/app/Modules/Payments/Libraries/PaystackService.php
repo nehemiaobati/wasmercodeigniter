@@ -121,16 +121,25 @@ class PaystackService
                 $response = $client->post($url, [
                     'headers' => $headers,
                     'json'    => $fields,
+                    'http_errors' => false,
                 ]);
             } else {
                 $response = $client->get($url, [
                     'headers' => $headers,
+                    'http_errors' => false,
                 ]);
             }
 
-            return json_decode($response->getBody(), true);
+            $body = $response->getBody();
+            $statusCode = $response->getStatusCode();
+
+            if ($statusCode >= 400) {
+                log_message('error', "[PaystackService] HTTP {$statusCode} error. URL: {$url}. Method: {$method}. Response: {$body}");
+            }
+
+            return json_decode($body, true);
         } catch (\Exception $e) {
-            log_message('error', 'Paystack API Error: ' . $e->getMessage());
+            log_message('error', "[PaystackService] API Exception. URL: {$url}. Method: {$method}. Error: " . $e->getMessage());
 
             return [
                 'status'  => false,

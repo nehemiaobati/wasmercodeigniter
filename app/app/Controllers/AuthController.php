@@ -67,8 +67,7 @@ class AuthController extends BaseController
 
         // Verify the reCAPTCHA response.
         if (! $recaptchaService->verify($recaptchaResponse)) {
-            // If reCAPTCHA verification fails, add a validation error and redirect back.
-            // If reCAPTCHA verification fails, add a validation error and redirect back.
+            log_message('warning', "[AuthController] reCAPTCHA verification failed for registration. Email: " . $this->request->getVar('email'));
             return redirect()->back()->withInput()->with('error', 'reCAPTCHA verification failed. Please try again.');
         }
 
@@ -107,7 +106,7 @@ class AuthController extends BaseController
         }
 
         // Log an error if email sending fails and redirect back with an error message.
-        log_message('error', 'Email sending failed: ' . print_r($emailService->printDebugger(['headers']), true));
+        log_message('error', "[AuthController] Registration email sending failed for {$user->email}: " . print_r($emailService->printDebugger(['headers']), true));
         return redirect()->back()->withInput()->with('error', 'Registration failed. Could not send verification email.');
     }
 
@@ -161,8 +160,7 @@ class AuthController extends BaseController
 
         // Verify the reCAPTCHA response.
         if (! $recaptchaService->verify($recaptchaResponse)) {
-            // If reCAPTCHA verification fails, add a validation error and redirect back.
-            // If reCAPTCHA verification fails, add a validation error and redirect back.
+            log_message('warning', "[AuthController] reCAPTCHA verification failed for login attempt. Email: " . $this->request->getVar('email'));
             return redirect()->back()->withInput()->with('error', 'reCAPTCHA verification failed. Please try again.');
         }
 
@@ -175,6 +173,7 @@ class AuthController extends BaseController
 
         // Verify the password and check if the user exists.
         if (! $user || ! password_verify($password, $user->password)) {
+            log_message('warning', "[AuthController] Failed login attempt for email: {$email}");
             return redirect()->back()->withInput()->with('error', 'Invalid login credentials.');
         }
 
@@ -316,8 +315,7 @@ class AuthController extends BaseController
 
             // Log an error if email sending fails.
             if (! $emailService->send()) {
-                log_message('error', '[AuthController] Password reset email sending failed: ' . print_r($emailService->printDebugger(['headers']), true));
-                log_message('error', '[AuthController] SMTP Host: ' . config('Email')->SMTPHost);
+                log_message('error', "[AuthController] Password reset email sending failed for {$user->email}: " . print_r($emailService->printDebugger(['headers']), true));
                 return redirect()->back()->with('error', 'Could not send password reset email. Please try again later.');
             }
         }

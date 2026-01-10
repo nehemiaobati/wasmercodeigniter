@@ -212,22 +212,30 @@ class CryptoService
                     'User-Agent' => 'My-PHP-Crypto-Checker/1.0',
                 ],
                 'timeout' => 10, // Set a timeout for the request
+                'http_errors' => false,
             ]);
 
-            $data = json_decode($response->getBody(), true);
+            $body = $response->getBody();
+            $statusCode = $response->getStatusCode();
+
+            if ($statusCode >= 400) {
+                log_message('error', "[CryptoService] HTTP {$statusCode} error. URL: {$url}. Response: {$body}");
+            }
+
+            $data = json_decode($body, true);
 
             if ($data === null) {
-                log_message('error', 'Failed to decode JSON response from API: ' . $response->getBody());
+                log_message('error', "[CryptoService] Failed to decode JSON response from API. URL: {$url}. Body: {$body}");
                 return ['error' => 'Failed to decode API response.'];
             }
 
             return $data;
         } catch (\CodeIgniter\HTTP\Exceptions\HTTPException $e) {
-            log_message('error', 'Crypto API HTTP Error: ' . $e->getMessage());
+            log_message('error', "[CryptoService] HTTP Exception. URL: {$url}. Error: " . $e->getMessage());
             // Re-throw or return an error structure that indicates the specific exception type
             throw $e;
         } catch (\Exception $e) {
-            log_message('error', 'Crypto API Error: ' . $e->getMessage());
+            log_message('error', "[CryptoService] API Error. URL: {$url}. Error: " . $e->getMessage());
             // Re-throw or return an error structure that indicates the specific exception type
             throw $e;
         }

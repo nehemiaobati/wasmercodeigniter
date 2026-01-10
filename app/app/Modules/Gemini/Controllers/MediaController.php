@@ -37,6 +37,19 @@ class MediaController extends BaseController
      *
      * @return \CodeIgniter\HTTP\ResponseInterface JSON response containing the result or error details.
      */
+    private function _respondError(string $message, int $code = 400, array $data = [])
+    {
+        if ($this->request->isAJAX()) {
+            return $this->respond(array_merge([
+                'status' => 'error',
+                'message' => $message,
+                'csrf_token' => csrf_hash()
+            ], $data), $code);
+        }
+
+        return redirect()->back()->withInput()->with('error', $message);
+    }
+
     public function generate()
     {
         $rules = [
@@ -45,7 +58,10 @@ class MediaController extends BaseController
         ];
 
         if (!$this->validate($rules)) {
-            return $this->failValidationErrors($this->validator->getErrors());
+            // Flatten errors for simple flash message, send full object for AJAX
+            $errors = $this->validator->getErrors();
+            $msg = implode('. ', $errors);
+            return $this->_respondError($msg, 400, ['errors' => $errors]);
         }
 
         $userId = (int) session()->get('userId');
@@ -80,7 +96,7 @@ class MediaController extends BaseController
         // Validate that the requested model ID exists in the configuration
         $configs = MediaGenerationService::MEDIA_CONFIGS;
         if (!array_key_exists($modelId, $configs)) {
-            return $this->fail('Invalid model ID selected.');
+            return $this->_respondError('Invalid model ID selected.');
         }
 
         try {
@@ -88,26 +104,28 @@ class MediaController extends BaseController
 
             // Handle Concurrency Conflict
             if (isset($result['status']) && $result['status'] === 'conflict') {
-                return $this->respond([
-                    'status' => 'error', // Keep 'error' for frontend handling or use 'conflict'
-                    'message' => $result['message'],
-                    'csrf_token' => csrf_hash()
-                ], 409);
+                return $this->_respondError($result['message'], 409);
+            }
+
+            // General Error from Service (e.g. Provider Error)
+            if (isset($result['status']) && $result['status'] === 'error') {
+                log_message('error', "[MediaController] Service error for User {$userId}: " . $result['message']);
+                return $this->_respondError($result['message']);
             }
 
             // Append CSRF token to response for frontend refresh
             $result['csrf_token'] = csrf_hash();
 
-            return $this->respond($result);
-        } catch (\Exception $e) {
-            log_message('error', '[MediaController::generate] ' . $e->getMessage());
+            // Success Response - Handle Redirection for non-AJAX if needed, or consistent JSON
+            if ($this->request->isAJAX()) {
+                return $this->respond($result);
+            }
 
-            // Return error with CSRF token to keep frontend in sync
-            return $this->respond([
-                'status' => 'error',
-                'message' => 'An unexpected error occurred during media generation.',
-                'csrf_token' => csrf_hash()
-            ], 500);
+            // Standard Post Back (e.g. form submission)
+            return redirect()->back()->with('success', 'Media generated successfully.');
+        } catch (\Exception $e) {
+            log_message('error', '[MediaController] Exception: ' . $e->getMessage());
+            return $this->_respondError('An unexpected error occurred during media generation.', 500);
         }
     }
 
@@ -153,7 +171,7 @@ class MediaController extends BaseController
 
             return $this->respond($result);
         } catch (\Exception $e) {
-            log_message('error', '[MediaController::poll] ' . $e->getMessage());
+            log_message('error', '[MediaController] Poll Exception: ' . $e->getMessage());
 
             return $this->respond([
                 'status' => 'error',

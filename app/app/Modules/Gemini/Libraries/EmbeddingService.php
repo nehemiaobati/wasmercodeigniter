@@ -45,19 +45,27 @@ class EmbeddingService
                 'json' => [
                     'model'   => "models/{$this->modelId}",
                     'content' => ['parts' => [['text' => $text]]]
-                ]
+                ],
+                'http_errors' => false,
             ]);
 
-            $decodedResponse = json_decode($response->getBody(), true);
+            $body = $response->getBody();
+            $statusCode = $response->getStatusCode();
+
+            if ($statusCode >= 400) {
+                log_message('error', "[EmbeddingService] HTTP {$statusCode} error. URL: {$this->apiUrl}. Response: {$body}");
+            }
+
+            $decodedResponse = json_decode($body, true);
             $embedding = $decodedResponse['embedding']['values'] ?? null;
 
             if ($embedding === null) {
-                log_message('error', "Failed to find embedding in API response: " . $response->getBody());
+                log_message('error', "[EmbeddingService] Failed to find embedding in API response. URL: {$this->apiUrl}. Body: {$body}");
                 return null;
             }
             return $embedding;
         } catch (\Exception $e) {
-            log_message('error', "cURL Error getting embedding: " . $e->getMessage());
+            log_message('error', "[EmbeddingService] Exception getting embedding. URL: {$this->apiUrl}. Error: " . $e->getMessage());
             return null;
         }
     }

@@ -75,6 +75,7 @@ class PaymentsController extends BaseController
             return redirect()->to($response['data']['authorization_url']);
         }
 
+        log_message('error', "[PaymentsController] Payment initiation failed for User ID {$userId}. Reference: {$reference}. Error: " . ($response['message'] ?? 'Unknown Paystack error'));
         return redirect()->back()->with('error', ['paystack' => $response['message']]);
     }
 

@@ -360,6 +360,7 @@ class GeminiController extends BaseController
         $this->geminiService->cleanupTempFiles($uploadedFileIds, $userId);
 
         if (isset($result['error'])) {
+            log_message('error', "[GeminiController] Generation failed for User ID {$userId}: " . $result['error']);
             return $this->_respondError($result['error']);
         }
 
@@ -399,6 +400,7 @@ class GeminiController extends BaseController
         $prep = $this->geminiService->prepareStreamContext($userId, $inputText, $uploadedFileIds, $options);
 
         if (isset($prep['error'])) {
+            log_message('error', "[GeminiController] Stream preparation failed for User ID {$userId}: " . $prep['error']);
             $this->_sendSSEError($prep['error']);
             return $this->response;
         }
@@ -417,8 +419,9 @@ class GeminiController extends BaseController
         $this->geminiService->generateStream(
             $prep['parts'],
             // Chunk Callback
-            function ($chunk) {
+            function ($chunk) use ($userId) {
                 if (is_array($chunk) && isset($chunk['error'])) {
+                    log_message('error', "[GeminiController] Stream chunk error for User ID {$userId}: " . $chunk['error']);
                     echo "data: " . json_encode(['error' => $chunk['error'], 'csrf_token' => csrf_hash()]) . "\n\n";
                 } elseif (is_array($chunk) && isset($chunk['thought'])) {
                     echo "data: " . json_encode(['thought' => $chunk['thought']]) . "\n\n";
@@ -643,11 +646,14 @@ class GeminiController extends BaseController
      */
     public function downloadDocument()
     {
+        $userId = (int) session()->get('userId');
+
         // Basic Validation
         if (!$this->validate([
             'raw_response' => 'required',
             'format'       => 'required|in_list[pdf,docx]'
         ])) {
+            log_message('error', "[GeminiController] Document download validation failed for User ID {$userId}. Errors: " . json_encode($this->validator->getErrors()));
             return redirect()->back()->with('error', 'Invalid request parameters.');
         }
 
@@ -659,6 +665,7 @@ class GeminiController extends BaseController
         $result = $this->geminiService->generateDocument($content, $format);
 
         if ($result['status'] === 'success') {
+            // ... (keep existing doc download logic)
             $mime = $format === 'docx'
                 ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
                 : 'application/pdf';
@@ -673,6 +680,7 @@ class GeminiController extends BaseController
 
         // Error handling
         $errorMsg = $result['message'] ?? 'Document generation failed.';
+        log_message('error', "[GeminiController] Document generation failed for User ID " . session()->get('userId') . ": " . $errorMsg);
         return redirect()->back()->with('error', $errorMsg);
     }
 }
