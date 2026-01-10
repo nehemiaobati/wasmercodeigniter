@@ -25,18 +25,88 @@ class MediaGenerationService
     /** @var \CodeIgniter\HTTP\CURLRequest */
     protected $curl;
 
-    /** @var array<string, array{type: string, cost: float, name: string}> */
+    /**
+     * Pricing Configuration.
+     * 
+     * Pricing Models:
+     * - 'flat': Fixed cost per generation.
+     * - 'token': Dynamic cost based on Input/Output token usage.
+     * 
+     * Exchange Rate: 1 USD = 129 KSH (Hardcoded).
+     */
     public const MEDIA_CONFIGS = [
-        'imagen-4.0-generate-preview-06-06' => ['type' => 'image', 'cost' => 0.04, 'name' => 'Imagen 4.0 Preview'],
-        'imagen-4.0-ultra-generate-preview-06-06' => ['type' => 'image', 'cost' => 0.06, 'name' => 'Imagen 4.0 Ultra Preview'],
-        'imagen-4.0-ultra-generate-001' => ['type' => 'image', 'cost' => 0.06, 'name' => 'Imagen 4.0 Ultra'],
-        'gemini-3-pro-image-preview' => ['type' => 'image_generation_content', 'cost' => 0.05, 'name' => 'Gemini 3 Pro (Image)'],
-        'gemini-2.5-flash-image' => ['type' => 'image_generation_content', 'cost' => 0.03, 'name' => 'Gemini 2.5 Flash (Image)'],
-        'veo-2.0-generate-001' => ['type' => 'video', 'cost' => 0.10, 'name' => 'Veo 2.0'],
-        'veo-3.1-generate-preview' => ['type' => 'video', 'cost' => 0.15, 'name' => 'Veo 3.1 Preview'],
-        'veo-3.1-fast-generate-preview' => ['type' => 'video', 'cost' => 0.10, 'name' => 'Veo 3.1 Fast Preview'],
-        'veo-3.0-generate-001' => ['type' => 'video', 'cost' => 0.12, 'name' => 'Veo 3.0'],
-        'veo-3.0-fast-generate-001' => ['type' => 'video', 'cost' => 0.08, 'name' => 'Veo 3.0 Fast']
+        // --- Imagen (Flat Rate) ---
+        'imagen-4.0-generate-preview-06-06' => [
+            'type' => 'image',
+            'pricing_model' => 'flat',
+            'cost' => 0.2412,
+            'name' => 'Imagen 4.0 Preview'
+        ],
+        'imagen-4.0-ultra-generate-preview-06-06' => [
+            'type' => 'image',
+            'pricing_model' => 'flat',
+            'cost' => 0.2412,
+            'name' => 'Imagen 4.0 Ultra Preview'
+        ],
+        'imagen-4.0-ultra-generate-001' => [
+            'type' => 'image',
+            'pricing_model' => 'flat',
+            'cost' => 0.2412,
+            'name' => 'Imagen 4.0 Ultra'
+        ],
+
+        // --- Gemini (Token Based) ---
+        // Input: $2.00 / 1M tokens | Output: $120.00 / 1M tokens
+        'gemini-3-pro-image-preview' => [
+            'type' => 'image_generation_content',
+            'pricing_model' => 'token',
+            'input_cost_per_1m' => 3.60,
+            'output_cost_per_1m' => 216.00,
+            'safe_buffer' => 0.36,     // Minimum balance required to attempt ($0.36)
+            'name' => 'Gemini 3 Pro (Image)'
+        ],
+
+        // Gemini Flash (Token Based)
+        'gemini-2.5-flash-image' => [
+            'type' => 'image_generation_content',
+            'pricing_model' => 'token',
+            'input_cost_per_1m' => 0.54,
+            'output_cost_per_1m' => 54.00,
+            'safe_buffer' => 0.09,
+            'name' => 'Gemini 2.5 Flash (Image)'
+        ],
+
+        // --- Veo (Flat Rate) ---
+        'veo-2.0-generate-001' => [
+            'type' => 'video',
+            'pricing_model' => 'flat',
+            'cost' => 0.18,
+            'name' => 'Veo 2.0'
+        ],
+        'veo-3.1-generate-preview' => [
+            'type' => 'video',
+            'pricing_model' => 'flat',
+            'cost' => 0.27,
+            'name' => 'Veo 3.1 Preview'
+        ],
+        'veo-3.1-fast-generate-preview' => [
+            'type' => 'video',
+            'pricing_model' => 'flat',
+            'cost' => 0.18,
+            'name' => 'Veo 3.1 Fast Preview'
+        ],
+        'veo-3.0-generate-001' => [
+            'type' => 'video',
+            'pricing_model' => 'flat',
+            'cost' => 0.216,
+            'name' => 'Veo 3.0'
+        ],
+        'veo-3.0-fast-generate-001' => [
+            'type' => 'video',
+            'pricing_model' => 'flat',
+            'cost' => 0.144,
+            'name' => 'Veo 3.0 Fast'
+        ]
     ];
 
     /**
@@ -51,6 +121,26 @@ class MediaGenerationService
     }
 
     // --- Helper Methods ---
+
+    /**
+     * Calculates the cost in KSH based on token usage.
+     * 
+     * @param array $usageMetadata The usage metadata from the API response.
+     * @param array $config The model configuration.
+     * @return float Cost in KSH.
+     */
+    private function _calculateTokenCost(array $usageMetadata, array $config): float
+    {
+        $inputTokens = $usageMetadata['promptTokenCount'] ?? 0;
+        $outputTokens = $usageMetadata['candidatesTokenCount'] ?? 0; // candidatesTokenCount includes generated image tokens
+
+        $inputCostUSD = ($inputTokens / 1000000) * $config['input_cost_per_1m'];
+        $outputCostUSD = ($outputTokens / 1000000) * $config['output_cost_per_1m'];
+
+        $totalUSD = $inputCostUSD + $outputCostUSD;
+
+        return $totalUSD * 129; // Convert to KSH
+    }
 
     /**
      * Executes a callback within a financial transaction.
@@ -127,7 +217,8 @@ class MediaGenerationService
             return [
                 'status' => 'success',
                 'type' => $type,
-                'url' => site_url('gemini/media/serve/' . $fileName)
+                'url' => site_url('gemini/media/serve/' . $fileName),
+                'cost_deducted' => $cost // Info for UI
             ];
         };
 
@@ -318,7 +409,18 @@ class MediaGenerationService
         if (!isset(self::MEDIA_CONFIGS[$modelId])) return ['status' => 'error', 'message' => 'Invalid model ID.'];
 
         $config = self::MEDIA_CONFIGS[$modelId];
-        $costKsh = $config['cost'] * 129; // 1 USD = 129 KSH
+        $isTokenModel = ($config['pricing_model'] ?? 'flat') === 'token';
+
+        // Determine required balance (Safe Buffer or Exact Cost)
+        $requiredBalanceKsh = 0.0;
+        if ($isTokenModel) {
+            // Use safe buffer for token models (converted to KSH)
+            $requiredBalanceKsh = ($config['safe_buffer'] ?? 0.20) * 129;
+        } else {
+            // Use exact pre-calculated cost for flat models
+            $requiredBalanceKsh = $config['cost'] * 129;
+        }
+
         $parts = is_string($input) ? [['text' => $input]] : $input;
         $apiKey = getenv('GEMINI_API_KEY');
 
@@ -331,7 +433,7 @@ class MediaGenerationService
 
         // 1. Balance Check
         $user = $this->userModel->find($userId);
-        if (!$user || $user->balance < $costKsh) return ['status' => 'error', 'message' => 'Insufficient credits.'];
+        if (!$user || $user->balance < $requiredBalanceKsh) return ['status' => 'error', 'message' => 'Insufficient credits.'];
 
         // 2. Build Payload
         $payloadData = $this->modelPayloadService->getPayloadConfig($modelId, $apiKey, $parts);
@@ -352,9 +454,23 @@ class MediaGenerationService
 
             $responseData = json_decode($response->getBody(), true);
 
-            // 4. Parse & Finalize based on Type
+            // 4. Calculate Final Cost
+            $finalCostKsh = 0.0;
+            if ($isTokenModel) {
+                if (!isset($responseData['usageMetadata'])) {
+                    // Fallback if metadata is missing (should not happen for Gemini) - use safe buffer or minimum
+                    log_message('error', 'Missing usageMetadata for token model: ' . $modelId);
+                    $finalCostKsh = $requiredBalanceKsh;
+                } else {
+                    $finalCostKsh = $this->_calculateTokenCost($responseData['usageMetadata'], $config);
+                }
+            } else {
+                $finalCostKsh = $requiredBalanceKsh; // Flat rate
+            }
+
+            // 5. Parse & Finalize based on Type
             if ($config['type'] === 'video') {
-                return $this->_handleVideoRequest($userId, $modelId, $responseData, $costKsh);
+                return $this->_handleVideoRequest($userId, $modelId, $responseData, $finalCostKsh);
             }
 
             // Parse Image Data
@@ -364,16 +480,10 @@ class MediaGenerationService
 
             if (!$parsed) return ['status' => 'error', 'message' => 'No image data in response.'];
 
-            // Persist Artifact
-            return $this->_finalizeArtifact($userId, 'image', $parsed['data'], $parsed['ext'], $costKsh, $modelId);
+            // Persist Artifact with Final Cost
+            return $this->_finalizeArtifact($userId, 'image', $parsed['data'], $parsed['ext'], $finalCostKsh, $modelId);
         } catch (\Exception $e) {
             log_message('error', "[Model: {$modelId}] Media Gen Exception: " . $e->getMessage());
-
-            // Note: Deductions happen inside _handleVideoRequest and _finalizeArtifact (Image).
-            // If those methods fail, transactions roll back.
-            // If we are here, deduction likely NEVER happened or was rolled back.
-            // But if we ever implement pre-deduction outside transaction, we call refund here.
-
             return ['status' => 'error', 'message' => 'System error during generation. No credits deducted.'];
         }
     }

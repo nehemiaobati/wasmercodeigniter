@@ -52,9 +52,9 @@ class GeminiService
     ];
 
     private const PRICING = [
-        'tier1' => ['input' => 2.00, 'output' => 12.00, 'limit' => 200000],
-        'tier2' => ['input' => 4.00, 'output' => 18.00],
-        'audio' => ['input' => 0.50, 'output' => 10.00]
+        'tier1' => ['input' => 3.60, 'output' => 21.60, 'limit' => 200000],
+        'tier2' => ['input' => 7.20, 'output' => 32.40],
+        'audio' => ['input' => 0.90, 'output' => 18.00]
     ];
 
     /**
