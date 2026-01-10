@@ -1127,13 +1127,19 @@
 
         async handleFiles(fileList) {
             if (this.files.size + fileList.length > APP_CONFIG.limits.maxFiles) {
-                this.app.ui.showToast(`Max ${APP_CONFIG.limits.maxFiles} files allowed.`);
+                this.app.ui.showToast(`File limit reached (Max: ${APP_CONFIG.limits.maxFiles} files)`);
                 return;
             }
 
             Array.from(fileList).forEach(file => {
+                // Check both type and size with specific error messages
+                if (!APP_CONFIG.limits.supportedTypes.includes(file.type)) {
+                    this.app.ui.showToast(`Unsupported file type: ${file.name}`);
+                    return;
+                }
                 if (file.size > APP_CONFIG.limits.maxFileSize) {
-                    this.app.ui.showToast(`File ${file.name} too large.`);
+                    const maxMB = (APP_CONFIG.limits.maxFileSize / (1024 * 1024)).toFixed(1);
+                    this.app.ui.showToast(`File too large: ${file.name} (Max: ${maxMB}MB)`);
                     return;
                 }
                 this.uploadFile(file);

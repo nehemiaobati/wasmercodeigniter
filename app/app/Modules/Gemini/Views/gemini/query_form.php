@@ -1758,7 +1758,9 @@
         }
 
         handleFiles(files) {
-            if ((files.length + document.querySelectorAll('.file-chip').length) > APP_CONFIG.limits.maxFiles) return this.app.ui.showToast(`Limit reached.`);
+            if ((files.length + document.querySelectorAll('.file-chip').length) > APP_CONFIG.limits.maxFiles) {
+                return this.app.ui.showToast(`File limit reached (Max: ${APP_CONFIG.limits.maxFiles} files)`);
+            }
             Array.from(files).forEach(f => {
                 if (APP_CONFIG.limits.supportedTypes.includes(f.type) && f.size <= APP_CONFIG.limits.maxFileSize) {
                     const id = Math.random().toString(36).substr(2, 9);
@@ -1771,7 +1773,15 @@
                         id: id,
                         ui: chip
                     });
-                } else this.app.ui.showToast(`Invalid file: ${f.name}`);
+                } else {
+                    // Specific validation error messages
+                    if (!APP_CONFIG.limits.supportedTypes.includes(f.type)) {
+                        this.app.ui.showToast(`Unsupported file type: ${f.name}`);
+                    } else if (f.size > APP_CONFIG.limits.maxFileSize) {
+                        const maxMB = (APP_CONFIG.limits.maxFileSize / (1024 * 1024)).toFixed(1);
+                        this.app.ui.showToast(`File too large: ${f.name} (Max: ${maxMB}MB)`);
+                    }
+                }
             });
             if (this.queue.length) this.processQueue();
         }
