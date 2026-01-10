@@ -13,26 +13,306 @@ use CodeIgniter\I18n\Time;
  */
 class MediaGenerationService
 {
+    /** @var ModelPayloadService */
     protected $modelPayloadService;
+
+    /** @var UserModel */
     protected $userModel;
+
+    /** @var \CodeIgniter\Database\BaseConnection */
     protected $db;
 
+    /** @var \CodeIgniter\HTTP\CURLRequest */
+    protected $curl;
+
+    /** @var array<string, array{type: string, cost: float, name: string}> */
     public const MEDIA_CONFIGS = [
         'imagen-4.0-generate-preview-06-06' => ['type' => 'image', 'cost' => 0.04, 'name' => 'Imagen 4.0 Preview'],
         'imagen-4.0-ultra-generate-preview-06-06' => ['type' => 'image', 'cost' => 0.06, 'name' => 'Imagen 4.0 Ultra Preview'],
         'imagen-4.0-ultra-generate-001' => ['type' => 'image', 'cost' => 0.06, 'name' => 'Imagen 4.0 Ultra'],
         'gemini-3-pro-image-preview' => ['type' => 'image_generation_content', 'cost' => 0.05, 'name' => 'Gemini 3 Pro (Image)'],
         'gemini-2.5-flash-image' => ['type' => 'image_generation_content', 'cost' => 0.03, 'name' => 'Gemini 2.5 Flash (Image)'],
-        'veo-2.0-generate-001' => ['type' => 'video', 'cost' => 0.10, 'name' => 'Veo 2.0']
+        'veo-2.0-generate-001' => ['type' => 'video', 'cost' => 0.10, 'name' => 'Veo 2.0'],
+        'veo-3.1-generate-preview' => ['type' => 'video', 'cost' => 0.15, 'name' => 'Veo 3.1 Preview'],
+        'veo-3.1-fast-generate-preview' => ['type' => 'video', 'cost' => 0.10, 'name' => 'Veo 3.1 Fast Preview'],
+        'veo-3.0-generate-001' => ['type' => 'video', 'cost' => 0.12, 'name' => 'Veo 3.0'],
+        'veo-3.0-fast-generate-001' => ['type' => 'video', 'cost' => 0.08, 'name' => 'Veo 3.0 Fast']
     ];
 
+    /**
+     * Constructor.
+     */
     public function __construct()
     {
         $this->modelPayloadService = service('modelPayloadService');
         $this->userModel = new UserModel();
         $this->db = \Config\Database::connect();
+        $this->curl = \Config\Services::curlrequest();
     }
 
+    // --- Helper Methods ---
+
+    /**
+     * Executes a callback within a financial transaction.
+     * Handles Deduction -> Action -> Commit -> Rollback loop.
+     *
+     * @param int $userId The user ID to charge.
+     * @param float $cost The cost to deduct.
+     * @param callable $action The action to perform (e.g., DB insert).
+     * @return array The result of the action or error details.
+     */
+    private function _executeAtomicTransaction(int $userId, float $cost, callable $action): array
+    {
+        $this->db->transStart();
+
+        // 1. Deduct Balance
+        if (!$this->userModel->deductBalance($userId, number_format($cost, 4, '.', ''), true)) {
+            $this->db->transRollback();
+            return ['status' => 'error', 'message' => 'Insufficient credits or deduction failed.'];
+        }
+
+        // 2. Perform Action (Insert DB, etc)
+        try {
+            $result = $action();
+            if (isset($result['status']) && $result['status'] === 'error') {
+                // Logic inside action failed, rollback
+                $this->db->transRollback();
+                return $result;
+            }
+        } catch (\Exception $e) {
+            $this->db->transRollback();
+            log_message('error', '[AtomicTrans] Action failed: ' . $e->getMessage());
+            return ['status' => 'error', 'message' => 'System error during transaction.'];
+        }
+
+        $this->db->transComplete();
+
+        if ($this->db->transStatus() === false) {
+            return ['status' => 'error', 'message' => 'Transaction failed. Credits not deducted.'];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Handles file writing and persistence for Image Generation.
+     *
+     * @param int $userId
+     * @param string $type
+     * @param string $binaryData
+     * @param string $ext
+     * @param float $cost
+     * @param string $modelId
+     * @return array
+     */
+    private function _finalizeArtifact(int $userId, string $type, string $binaryData, string $ext, float $cost, string $modelId): array
+    {
+        $fileName = ($type === 'video' ? 'vid_' : 'gen_') . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+        $uploadPath = WRITEPATH . 'uploads/generated/' . $userId . '/';
+
+        if (!is_dir($uploadPath)) mkdir($uploadPath, 0755, true);
+
+        // Define the DB Action
+        $dbAction = function () use ($userId, $type, $modelId, $fileName, $cost) {
+            $this->db->table('generated_media')->insert([
+                'user_id' => $userId,
+                'type' => $type,
+                'model_id' => $modelId,
+                'local_path' => $fileName,
+                'status' => 'completed',
+                'cost' => $cost,
+                'created_at' => Time::now()->toDateTimeString(),
+                'updated_at' => Time::now()->toDateTimeString(),
+            ]);
+            return [
+                'status' => 'success',
+                'type' => $type,
+                'url' => site_url('gemini/media/serve/' . $fileName)
+            ];
+        };
+
+        // File Write (Non-Transactional IO)
+        if (file_put_contents($uploadPath . $fileName, $binaryData) === false) {
+            return ['status' => 'error', 'message' => 'Failed to write artifact to disk.'];
+        }
+
+        // Execute Transaction
+        $result = $this->_executeAtomicTransaction($userId, $cost, $dbAction);
+
+        // Cleanup if transaction failed
+        if ($result['status'] === 'error' && file_exists($uploadPath . $fileName)) {
+            @unlink($uploadPath . $fileName);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Handles initial persistence for Video Generation (Upfront Charge).
+     *
+     * @param int $userId
+     * @param string $modelId
+     * @param array $response
+     * @param float $cost
+     * @return array
+     */
+    private function _handleVideoRequest(int $userId, string $modelId, array $response, float $cost): array
+    {
+        if (!isset($response['name'])) return ['status' => 'error', 'message' => 'No operation ID returned.'];
+
+        return $this->_executeAtomicTransaction($userId, $cost, function () use ($userId, $modelId, $response, $cost) {
+            $this->db->table('generated_media')->insert([
+                'user_id' => $userId,
+                'type' => 'video',
+                'model_id' => $modelId,
+                'remote_op_id' => $response['name'],
+                'status' => 'pending',
+                'cost' => $cost,
+                'created_at' => Time::now()->toDateTimeString(),
+                'updated_at' => Time::now()->toDateTimeString(),
+            ]);
+            return ['status' => 'pending', 'type' => 'video', 'op_id' => $response['name']];
+        });
+    }
+
+    /**
+     * Parses Imagen response format.
+     *
+     * @param array $response
+     * @return array|null
+     */
+    private function _parseImagenResponse(array $response): ?array
+    {
+        if (isset($response['predictions'][0]['bytesBase64Encoded'])) {
+            return ['data' => base64_decode($response['predictions'][0]['bytesBase64Encoded']), 'ext' => 'jpg'];
+        }
+        return null;
+    }
+
+    /**
+     * Parses Gemini Image response format.
+     *
+     * @param array $response
+     * @return array|null
+     */
+    private function _parseGeminiImageResponse(array $response): ?array
+    {
+        $parts = $response['candidates'][0]['content']['parts'] ?? [];
+        foreach ($parts as $part) {
+            if (isset($part['inlineData']['data'])) {
+                return ['data' => base64_decode($part['inlineData']['data']), 'ext' => 'jpg'];
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Helper to download video and update DB record.
+     *
+     * @param string $opId
+     * @param string $videoUri
+     * @param string $apiKey
+     * @return array
+     */
+    private function _downloadAndSaveVideo(string $opId, string $videoUri, string $apiKey): array
+    {
+        $dlResp = $this->curl->get($videoUri . '&key=' . urlencode($apiKey), ['http_errors' => false]);
+        if ($dlResp->getStatusCode() !== 200) {
+            $this->_refundFailedJob($opId);
+            return ['status' => 'failed', 'message' => 'Download failed. Credits refunded.'];
+        }
+
+        $record = $this->db->table('generated_media')->where('remote_op_id', $opId)->get()->getRow();
+        if (!$record) return ['status' => 'error', 'message' => 'Record not found.'];
+
+        $fileName = 'vid_' . time() . '_' . bin2hex(random_bytes(4)) . '.mp4';
+        $uploadPath = WRITEPATH . 'uploads/generated/' . $record->user_id . '/';
+        if (!is_dir($uploadPath)) mkdir($uploadPath, 0755, true);
+
+        // Save File
+        file_put_contents($uploadPath . $fileName, $dlResp->getBody());
+
+        // Update DB
+        if ($this->db->table('generated_media')->where('id', $record->id)->update([
+            'status' => 'completed',
+            'local_path' => $fileName,
+            'updated_at' => Time::now()->toDateTimeString(),
+        ])) {
+            return ['status' => 'completed', 'url' => site_url('gemini/media/serve/' . $fileName)];
+        }
+
+        // Cleanup if DB update fails
+        @unlink($uploadPath . $fileName);
+        return ['status' => 'error', 'message' => 'Failed to update record.'];
+    }
+
+    /**
+     * Helper to mark job as failed and refund user.
+     *
+     * @param string $opId
+     * @return void
+     */
+    private function _refundFailedJob(string $opId): void
+    {
+        $record = $this->db->table('generated_media')->where('remote_op_id', $opId)->get()->getRow();
+        if ($record) {
+            $this->db->table('generated_media')->where('id', $record->id)->update(['status' => 'failed']);
+            $this->userModel->refundBalance($record->user_id, (string)$record->cost);
+        }
+    }
+
+    // --- Public API ---
+
+    /**
+     * Checks if a user has a pending video generation.
+     *
+     * @param int $userId
+     * @return bool
+     */
+    public function hasPendingVideo(int $userId): bool
+    {
+        return $this->db->table('generated_media')
+            ->where('user_id', $userId)
+            ->where('status', 'pending')
+            ->where('type', 'video') // Ensure we only block videos
+            ->countAllResults() > 0;
+    }
+
+    /**
+     * Retrieves the most recent active job details.
+     *
+     * @param int $userId
+     * @return array|null
+     */
+    public function getActiveJob(int $userId): ?array
+    {
+        $job = $this->db->table('generated_media')
+            ->where('user_id', $userId)
+            ->where('status', 'pending')
+            ->where('type', 'video')
+            ->orderBy('created_at', 'DESC')
+            ->get()
+            ->getRowArray();
+
+        if (!$job) return null;
+
+        return [
+            'op_id' => $job['remote_op_id'],
+            'model_id' => $job['model_id'],
+            'created_at' => $job['created_at'],
+            // Calculate elapsed time in seconds
+            'elapsed' => time() - strtotime($job['created_at'])
+        ];
+    }
+
+    /**
+     * Generates media based on input and model ID.
+     *
+     * @param int $userId
+     * @param mixed $input
+     * @param string $modelId
+     * @return array
+     */
     public function generateMedia(int $userId, mixed $input, string $modelId): array
     {
         if (!isset(self::MEDIA_CONFIGS[$modelId])) return ['status' => 'error', 'message' => 'Invalid model ID.'];
@@ -41,6 +321,13 @@ class MediaGenerationService
         $costKsh = $config['cost'] * 129; // 1 USD = 129 KSH
         $parts = is_string($input) ? [['text' => $input]] : $input;
         $apiKey = getenv('GEMINI_API_KEY');
+
+        // 0. Concurrency Check (Gatekeeper)
+        // Strictly block new VIDEO requests if one is pending.
+        if ($config['type'] === 'video' && $this->hasPendingVideo($userId)) {
+            // Return specific status for 409 Conflict handling in Controller
+            return ['status' => 'conflict', 'message' => 'You have a pending video generation. Please wait for it to complete.'];
+        }
 
         // 1. Balance Check
         $user = $this->userModel->find($userId);
@@ -51,16 +338,15 @@ class MediaGenerationService
         if (!$payloadData) return ['status' => 'error', 'message' => 'Payload config failed.'];
 
         // 3. Execute Request
-        $client = \Config\Services::curlrequest();
         try {
-            $response = $client->post($payloadData['url'], [
+            $response = $this->curl->post($payloadData['url'], [
                 'headers' => ['Content-Type' => 'application/json'],
                 'body'    => $payloadData['body'],
                 'http_errors' => false
             ]);
 
             if ($response->getStatusCode() !== 200) {
-                log_message('error', "Gemini Media Error: " . $response->getBody());
+                log_message('error', "[Model: {$modelId}] Gemini Media Error: " . $response->getBody());
                 return ['status' => 'error', 'message' => 'Generation failed at provider.'];
             }
 
@@ -81,157 +367,48 @@ class MediaGenerationService
             // Persist Artifact
             return $this->_finalizeArtifact($userId, 'image', $parsed['data'], $parsed['ext'], $costKsh, $modelId);
         } catch (\Exception $e) {
-            log_message('error', 'Media Gen Exception: ' . $e->getMessage());
-            return ['status' => 'error', 'message' => 'System error during generation.'];
+            log_message('error', "[Model: {$modelId}] Media Gen Exception: " . $e->getMessage());
+
+            // Note: Deductions happen inside _handleVideoRequest and _finalizeArtifact (Image).
+            // If those methods fail, transactions roll back.
+            // If we are here, deduction likely NEVER happened or was rolled back.
+            // But if we ever implement pre-deduction outside transaction, we call refund here.
+
+            return ['status' => 'error', 'message' => 'System error during generation. No credits deducted.'];
         }
     }
-
-    // --- Unified Artifact Handler ---
 
     /**
-     * Handles file writing, balance deduction, and DB logging in one atomic flow.
-     * Compliant with serverless (creates path on fly) and state management.
-     * REFACTOR: Wrapped in Transaction to prevent phantom charges.
+     * Polls the status of a video generation operation.
+     *
+     * @param string $opId
+     * @return array
      */
-    private function _finalizeArtifact(int $userId, string $type, string $binaryData, string $ext, float $cost, string $modelId, ?string $remoteOpId = null): array
-    {
-        $fileName = ($type === 'video' ? 'vid_' : 'gen_') . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-        $uploadPath = WRITEPATH . 'uploads/generated/' . $userId . '/';
-
-        if (!is_dir($uploadPath)) mkdir($uploadPath, 0755, true);
-
-        // Transaction Start
-        $this->db->transStart();
-
-        // 1. Write File
-        // Note: In strict ACID, file IO is not transactional, but we ensure DB consistency.
-        if (file_put_contents($uploadPath . $fileName, $binaryData) === false) {
-            $this->db->transRollback(); // Nothing happened in DB yet, but good practice
-            return ['status' => 'error', 'message' => 'Failed to write artifact to disk.'];
-        }
-
-        // 2. Deduct Balance
-        $this->userModel->deductBalance($userId, number_format($cost, 4, '.', ''), true);
-
-        // 3. Insert DB Record
-        $this->db->table('generated_media')->insert([
-            'user_id' => $userId,
-            'type' => $type,
-            'model_id' => $modelId,
-            'local_path' => $fileName,
-            'remote_op_id' => $remoteOpId,
-            'status' => 'completed', // Videos finalized here are completed
-            'cost' => $cost,
-            'created_at' => Time::now()->toDateTimeString(),
-            'updated_at' => Time::now()->toDateTimeString(),
-        ]);
-
-        // Transaction Complete
-        $this->db->transComplete();
-
-        if ($this->db->transStatus() === false) {
-            // Optional: Orphan file cleanup could happen here, but failure to write to DB after writing file is rare.
-            return ['status' => 'error', 'message' => 'Transaction failed. Credits not deducted.'];
-        }
-
-        return [
-            'status' => 'success',
-            'type' => $type,
-            'url' => site_url('gemini/media/serve/' . $fileName)
-        ];
-    }
-
-    // --- Pure Parsers ---
-
-    private function _parseImagenResponse(array $response): ?array
-    {
-        if (isset($response['predictions'][0]['bytesBase64Encoded'])) {
-            return ['data' => base64_decode($response['predictions'][0]['bytesBase64Encoded']), 'ext' => 'jpg'];
-        }
-        return null;
-    }
-
-    private function _parseGeminiImageResponse(array $response): ?array
-    {
-        $parts = $response['candidates'][0]['content']['parts'] ?? [];
-        foreach ($parts as $part) {
-            if (isset($part['inlineData']['data'])) {
-                return ['data' => base64_decode($part['inlineData']['data']), 'ext' => 'jpg'];
-            }
-        }
-        return null;
-    }
-
-    private function _handleVideoRequest(int $userId, string $modelId, array $response, float $cost): array
-    {
-        if (!isset($response['name'])) return ['status' => 'error', 'message' => 'No operation ID returned.'];
-
-        // Transaction Start
-        $this->db->transStart();
-
-        // Deduct upfront for async video
-        $this->userModel->deductBalance($userId, number_format($cost, 4, '.', ''), true);
-
-        $this->db->table('generated_media')->insert([
-            'user_id' => $userId,
-            'type' => 'video',
-            'model_id' => $modelId,
-            'remote_op_id' => $response['name'],
-            'status' => 'pending',
-            'cost' => $cost,
-            'created_at' => Time::now()->toDateTimeString(),
-            'updated_at' => Time::now()->toDateTimeString(),
-        ]);
-
-        $this->db->transComplete();
-
-        if ($this->db->transStatus() === false) {
-            return ['status' => 'error', 'message' => 'Transaction failed.'];
-        }
-
-        return ['status' => 'pending', 'type' => 'video', 'op_id' => $response['name']];
-    }
-
     public function pollVideoStatus(string $opId): array
     {
         $apiKey = getenv('GEMINI_API_KEY');
         $url = "https://generativelanguage.googleapis.com/v1beta/{$opId}?key=" . urlencode($apiKey);
-        $client = \Config\Services::curlrequest();
 
         try {
-            $response = $client->get($url, ['http_errors' => false]);
+            $response = $this->curl->get($url, ['http_errors' => false]);
             $data = json_decode($response->getBody(), true);
 
             if (isset($data['done']) && $data['done'] === true) {
-                if (isset($data['response']['generatedSamples'][0]['video']['uri'])) {
-                    // Download Video
-                    $videoUri = $data['response']['generatedSamples'][0]['video']['uri'];
-                    $dlResp = $client->get($videoUri . '&key=' . urlencode($apiKey), ['http_errors' => false]);
+                // Determine Video URI
+                $videoUri = $data['response']['generateVideoResponse']['generatedSamples'][0]['video']['uri']
+                    ?? $data['response']['generatedSamples'][0]['video']['uri']
+                    ?? null;
 
-                    if ($dlResp->getStatusCode() === 200) {
-                        // Find record to update
-                        $record = $this->db->table('generated_media')->where('remote_op_id', $opId)->get()->getRow();
-                        if (!$record) return ['status' => 'error', 'message' => 'Record not found.'];
-
-                        $fileName = 'vid_' . time() . '_' . bin2hex(random_bytes(4)) . '.mp4';
-                        $uploadPath = WRITEPATH . 'uploads/generated/' . $record->user_id . '/';
-                        if (!is_dir($uploadPath)) mkdir($uploadPath, 0755, true);
-
-                        file_put_contents($uploadPath . $fileName, $dlResp->getBody());
-
-                        $this->db->table('generated_media')->where('id', $record->id)->update([
-                            'status' => 'completed',
-                            'local_path' => $fileName,
-                            'updated_at' => Time::now()->toDateTimeString(),
-                        ]);
-
-                        return ['status' => 'completed', 'url' => site_url('gemini/media/serve/' . $fileName)];
-                    }
+                if ($videoUri) {
+                    return $this->_downloadAndSaveVideo($opId, $videoUri, $apiKey);
                 }
-                return ['status' => 'failed', 'message' => 'Generation failed API side.'];
+
+                $this->_refundFailedJob($opId);
+                return ['status' => 'failed', 'message' => 'Generation failed API side. Credits refunded.'];
             }
             return ['status' => 'pending'];
         } catch (\Exception $e) {
+            log_message('error', '[MediaGenerationService::pollVideoStatus] ' . $e->getMessage());
             return ['status' => 'error', 'message' => 'Polling error.'];
         }
     }

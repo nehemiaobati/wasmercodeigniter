@@ -10,8 +10,8 @@ $routes->group('ollama', ['namespace' => 'App\Modules\Ollama\Controllers', 'filt
     $routes->get('/', 'OllamaController::index', ['as' => 'ollama.index']);
 
     // Core Generation
-    $routes->post('generate', 'OllamaController::generate', ['as' => 'ollama.generate']);
-    $routes->post('stream', 'OllamaController::stream', ['as' => 'ollama.stream']);
+    $routes->post('generate', 'OllamaController::generate', ['as' => 'ollama.generate', 'filter' => 'throttle:10,60']);
+    $routes->post('stream', 'OllamaController::stream', ['as' => 'ollama.stream', 'filter' => 'throttle:10,60']);
 
     // File Uploads (reuse Gemini's logic or implement similar)
     $routes->post('upload-media', 'OllamaController::uploadMedia', ['as' => 'ollama.upload_media']);

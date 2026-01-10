@@ -5,6 +5,7 @@
     .table thead {
         background-color: var(--bs-light);
     }
+
     .table th {
         font-weight: 600;
     }
@@ -42,7 +43,7 @@
                                     <a href="<?= url_to('admin.users.show', $user->id) ?>" class="btn btn-sm btn-outline-primary">Details</a>
                                     <form action="<?= url_to('admin.users.delete', $user->id) ?>" method="post" class="d-inline">
                                         <?= csrf_field() ?>
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this user? This action cannot be undone.');">Delete</button>
+                                        <button type="submit" id="deleteUserSubmit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this user? This action cannot be undone.');">Delete</button>
                                     </form>
                                 </td>
                             </tr>

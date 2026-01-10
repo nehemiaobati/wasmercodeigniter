@@ -32,21 +32,21 @@ $routes->group('', static function ($routes) {
 
     // Authentication Routes
     $routes->get('register', 'AuthController::register', ['as' => 'register']);
-    $routes->post('register/store', 'AuthController::store', ['as' => 'register.store']);
+    $routes->post('register/store', 'AuthController::store', ['as' => 'register.store', 'filter' => 'throttle:3,60']);
     $routes->get('verify-email/(:segment)', 'AuthController::verifyEmail/$1', ['as' => 'verify_email']);
     $routes->get('login', 'AuthController::login', ['as' => 'login']);
-    $routes->post('login/authenticate', 'AuthController::authenticate', ['as' => 'login.authenticate']);
+    $routes->post('login/authenticate', 'AuthController::authenticate', ['as' => 'login.authenticate', 'filter' => 'throttle:5,60']);
     $routes->get('logout', 'AuthController::logout', ['as' => 'logout']); // Moved logout here as it's often accessible before full auth
 
     // Forgot Password Routes
     $routes->get('forgot-password', 'AuthController::forgotPasswordForm', ['as' => 'auth.forgot_password']);
-    $routes->post('forgot-password', 'AuthController::sendResetLink', ['as' => 'auth.send_reset_link']);
+    $routes->post('forgot-password', 'AuthController::sendResetLink', ['as' => 'auth.send_reset_link', 'filter' => 'throttle:2,60']);
     $routes->get('reset-password/(:segment)', 'AuthController::resetPasswordForm/$1', ['as' => 'auth.reset_password']);
-    $routes->post('reset-password', 'AuthController::updatePassword', ['as' => 'auth.update_password']);
+    $routes->post('reset-password', 'AuthController::updatePassword', ['as' => 'auth.update_password', 'filter' => 'throttle:2,60']);
 
     // Contact Routes
     $routes->get('contact', 'ContactController::form', ['as' => 'contact.form']);
-    $routes->post('contact/send', 'ContactController::send', ['as' => 'contact.send']);
+    $routes->post('contact/send', 'ContactController::send', ['as' => 'contact.send', 'filter' => 'throttle:5,60']);
 
     // Portfolio Routes
     $routes->get('portfolio', 'PortfolioController::index', ['as' => 'portfolio.index']);

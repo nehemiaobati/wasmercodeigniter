@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Gemini\Libraries;
 
 use App\Models\UserModel;
+use App\Modules\Gemini\Models\PromptModel;
+use App\Modules\Gemini\Models\UserSettingsModel;
 
 /**
  * Gemini Service
@@ -16,10 +18,6 @@ use App\Models\UserModel;
  *
  * @package App\Modules\Gemini\Libraries
  */
-
-use App\Modules\Gemini\Models\PromptModel;
-use App\Modules\Gemini\Models\UserSettingsModel;
-
 class GeminiService
 {
     public const MODEL_PRIORITIES = [
@@ -66,6 +64,9 @@ class GeminiService
      * @param mixed $payloadService Service for building model-specific payloads
      * @param UserModel|null $userModel User model for balance management
      * @param mixed $db Database connection for transactions
+     * @param mixed $ffmpegService FFMpeg service for audio processing
+     * @param PromptModel|null $promptModel
+     * @param UserSettingsModel|null $userSettingsModel
      */
     public function __construct(
         protected ?string $apiKey = null,
@@ -85,6 +86,165 @@ class GeminiService
         $this->userSettingsModel = $userSettingsModel ?? new UserSettingsModel();
     }
 
+    // --- Helper Methods ---
+
+    /**
+     * Executes the HTTP request to the Gemini API with retries and exponential backoff.
+     *
+     * @param string $url The API endpoint.
+     * @param string $body The JSON body.
+     * @param string $model The model name (for logging).
+     * @return array The result or error array.
+     */
+    private function _executeRequest(string $url, string $body, string $model = 'unknown'): array
+    {
+        $maxRetries = 2;
+        for ($i = 0; $i <= $maxRetries; $i++) {
+            try {
+                if ($i > 0) {
+                    log_message('info', "[GeminiService] Retry attempt {$i}/{$maxRetries} for model: {$model}");
+                }
+
+                $client = \Config\Services::curlrequest();
+                $response = $client->post($url, [
+                    'body' => $body,
+                    'headers' => ['Content-Type' => 'application/json'],
+                    'http_errors' => false,
+                    'timeout' => 90
+                ]);
+
+                $code = $response->getStatusCode();
+
+                if ($code === 429) {
+                    $backoffSeconds = 1 * ($i + 1);
+                    log_message('warning', "[GeminiService] HTTP 429 (Rate Limit) for model: {$model}, attempt {$i}/{$maxRetries}, backing off {$backoffSeconds}s");
+                    sleep($backoffSeconds);
+                    continue;
+                }
+
+                if ($code !== 200) {
+                    $err = json_decode($response->getBody(), true);
+                    $errorMsg = $err['error']['message'] ?? "API Error $code";
+                    log_message('error', "[GeminiService] HTTP {$code} error for model: {$model} - {$errorMsg}");
+                    return ['error' => $errorMsg];
+                }
+
+                $data = json_decode($response->getBody(), true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    log_message('error', "[GeminiService] JSON Decode Error: " . json_last_error_msg());
+                    return ['error' => 'Failed to decode API response.'];
+                }
+
+                $text = '';
+                $thoughts = '';
+                foreach ($data['candidates'][0]['content']['parts'] ?? [] as $part) {
+                    if (isset($part['thought']) && $part['thought'] === true) {
+                        $thoughts .= $part['text'] ?? '';
+                    } else {
+                        $text .= $part['text'] ?? '';
+                    }
+                }
+
+                return [
+                    'result' => $text,
+                    'thoughts' => $thoughts,
+                    'usage' => $data['usageMetadata'] ?? null,
+                    'raw' => $data
+                ];
+            } catch (\Exception $e) {
+                log_message('error', "[GeminiService] Exception for model: {$model}, attempt {$i}/{$maxRetries} - {$e->getMessage()}");
+                if ($i === $maxRetries) {
+                    log_message('error', "[GeminiService] All retries exhausted for model: {$model}");
+                    return ['error' => $e->getMessage()];
+                }
+            }
+        }
+        log_message('error', "[GeminiService] Request failed after all retries for model: {$model}");
+        return ['error' => 'Request failed after retries.'];
+    }
+
+    /**
+     * Parses the streaming buffer to extract complete JSON objects.
+     *
+     * @param string $buffer Passed by reference, modified to remove processed data.
+     * @return array Parsed chunks, thoughts, and usage metadata.
+     */
+    private function _processStreamBuffer(string &$buffer): array
+    {
+        $result = ['chunks' => [], 'thought_chunks' => [], 'usage' => null, 'raw_chunks' => []];
+
+        // 1. Clean framing characters
+        $buffer = ltrim($buffer, ", \n\r\t[");
+
+        // 2. Process all complete objects in buffer
+        while (!empty($buffer) && $buffer[0] === '{') {
+            $objectFound = false;
+            $offset = 0;
+
+            // Search for the matching closing brace
+            while (true) {
+                $pos = strpos($buffer, '}', $offset);
+                if ($pos === false) {
+                    break;
+                }
+
+                // Try to decode substring up to this brace
+                $candidate = substr($buffer, 0, $pos + 1);
+                $data = json_decode($candidate, true);
+
+                if (json_last_error() === JSON_ERROR_NONE && $data !== null) {
+                    // Valid JSON object found!
+                    $objectFound = true;
+
+                    // Extract Data
+                    if (isset($data['candidates'][0]['content']['parts'][0])) {
+                        $part = $data['candidates'][0]['content']['parts'][0];
+
+                        if (isset($part['thought']) && $part['thought'] === true) {
+                            $result['thought_chunks'][] = $part['text'];
+                        } else {
+                            $result['chunks'][] = $part['text'];
+                        }
+                    }
+                    if (isset($data['usageMetadata'])) {
+                        $result['usage'] = $data['usageMetadata'];
+                    }
+                    $result['raw_chunks'][] = $data;
+
+                    // Advance buffer past this object
+                    $buffer = substr($buffer, $pos + 1);
+                    $buffer = ltrim($buffer, ", \n\r\t");
+                    break;
+                }
+
+                // Not a valid object yet, continue search
+                $offset = $pos + 1;
+            }
+
+            if (!$objectFound) {
+                break;
+            }
+        }
+
+        // Handle end of stream array
+        if (!empty($buffer) && $buffer[0] === ']') {
+            $buffer = '';
+        }
+
+        return $result;
+    }
+
+    // --- Public API ---
+
+    /**
+     * Processes a standard interaction (Text/Multimodal -> Response).
+     *
+     * @param int $userId
+     * @param string $prompt
+     * @param array $uploadedFileIds
+     * @param array $options
+     * @return array
+     */
     public function processInteraction(int $userId, string $prompt, array $uploadedFileIds, array $options): array
     {
         // 1. Prepare Files Internally
@@ -168,6 +328,12 @@ class GeminiService
         ];
     }
 
+    /**
+     * Generates content using the configured priority fallback mechanism.
+     *
+     * @param array $parts Input parts.
+     * @return array Result or error.
+     */
     public function generateContent(array $parts): array
     {
         if (!$this->apiKey) return ['error' => 'API Key missing.'];
@@ -197,77 +363,14 @@ class GeminiService
         return ['error' => 'All models failed or quota exceeded.'];
     }
 
-    private function _executeRequest(string $url, string $body, string $model = 'unknown'): array
-    {
-        $maxRetries = 2;
-        for ($i = 0; $i <= $maxRetries; $i++) {
-            try {
-                if ($i > 0) {
-                    log_message('info', "[GeminiService] Retry attempt {$i}/{$maxRetries} for model: {$model}");
-                }
-
-                $client = \Config\Services::curlrequest();
-                $response = $client->post($url, [
-                    'body' => $body,
-                    'headers' => ['Content-Type' => 'application/json'],
-                    'http_errors' => false,
-                    'timeout' => 90
-                ]);
-
-                $code = $response->getStatusCode();
-
-                if ($code === 429) {
-                    $backoffSeconds = 1 * ($i + 1);
-                    log_message('warning', "[GeminiService] HTTP 429 (Rate Limit) for model: {$model}, attempt {$i}/{$maxRetries}, backing off {$backoffSeconds}s");
-                    sleep($backoffSeconds);
-                    continue;
-                }
-
-                if ($code !== 200) {
-                    $err = json_decode($response->getBody(), true);
-                    $errorMsg = $err['error']['message'] ?? "API Error $code";
-                    log_message('error', "[GeminiService] HTTP {$code} error for model: {$model} - {$errorMsg}");
-                    return ['error' => $errorMsg];
-                }
-
-                $data = json_decode($response->getBody(), true);
-                if (json_last_error() !== JSON_ERROR_NONE) {
-                    log_message('error', "[GeminiService] JSON Decode Error: " . json_last_error_msg());
-                    return ['error' => 'Failed to decode API response.'];
-                }
-
-                $text = '';
-                $thoughts = '';
-                foreach ($data['candidates'][0]['content']['parts'] ?? [] as $part) {
-                    if (isset($part['thought']) && $part['thought'] === true) {
-                        $thoughts .= $part['text'] ?? '';
-                    } else {
-                        $text .= $part['text'] ?? '';
-                    }
-                }
-
-                return [
-                    'result' => $text,
-                    'thoughts' => $thoughts,
-                    'usage' => $data['usageMetadata'] ?? null,
-                    'raw' => $data
-                ];
-            } catch (\Exception $e) {
-                log_message('error', "[GeminiService] Exception for model: {$model}, attempt {$i}/{$maxRetries} - {$e->getMessage()}");
-                if ($i === $maxRetries) {
-                    log_message('error', "[GeminiService] All retries exhausted for model: {$model}");
-                    return ['error' => $e->getMessage()];
-                }
-            }
-        }
-        log_message('error', "[GeminiService] Request failed after all retries for model: {$model}");
-        return ['error' => 'Request failed after retries.'];
-    }
-
     /**
      * Prepares all context, files, and checks balance for a streaming interaction.
      * Segregates all "pre-flight" checks to keep the controller clean.
      *
+     * @param int $userId
+     * @param string $prompt
+     * @param array $uploadedFileIds
+     * @param array $options
      * @return array Result containing 'parts', 'contextData', or 'error'
      */
     public function prepareStreamContext(int $userId, string $prompt, array $uploadedFileIds, array $options): array
@@ -313,6 +416,13 @@ class GeminiService
         ];
     }
 
+    /**
+     * Executed the streaming request to Gemini API.
+     *
+     * @param array $parts Input parts.
+     * @param callable $chunkCallback Callback for each chunk (text or thought).
+     * @param callable $completeCallback Callback for completion.
+     */
     public function generateStream(array $parts, callable $chunkCallback, callable $completeCallback): void
     {
         if (!$this->apiKey) {
@@ -365,71 +475,13 @@ class GeminiService
         $chunkCallback(['error' => "Error: Stream failed."]);
     }
 
-    private function _processStreamBuffer(string &$buffer): array
-    {
-        $result = ['chunks' => [], 'thought_chunks' => [], 'usage' => null, 'raw_chunks' => []];
-
-        // 1. Clean framing characters
-        $buffer = ltrim($buffer, ", \n\r\t[");
-
-        // 2. Process all complete objects in buffer
-        while (!empty($buffer) && $buffer[0] === '{') {
-            $objectFound = false;
-            $offset = 0;
-
-            // Search for the matching closing brace
-            while (true) {
-                $pos = strpos($buffer, '}', $offset);
-                if ($pos === false) {
-                    break;
-                }
-
-                // Try to decode substring up to this brace
-                $candidate = substr($buffer, 0, $pos + 1);
-                $data = json_decode($candidate, true);
-
-                if (json_last_error() === JSON_ERROR_NONE && $data !== null) {
-                    // Valid JSON object found!
-                    $objectFound = true;
-
-                    // Extract Data
-                    if (isset($data['candidates'][0]['content']['parts'][0])) {
-                        $part = $data['candidates'][0]['content']['parts'][0];
-
-                        if (isset($part['thought']) && $part['thought'] === true) {
-                            $result['thought_chunks'][] = $part['text'];
-                        } else {
-                            $result['chunks'][] = $part['text'];
-                        }
-                    }
-                    if (isset($data['usageMetadata'])) {
-                        $result['usage'] = $data['usageMetadata'];
-                    }
-                    $result['raw_chunks'][] = $data;
-
-                    // Advance buffer past this object
-                    $buffer = substr($buffer, $pos + 1);
-                    $buffer = ltrim($buffer, ", \n\r\t");
-                    break;
-                }
-
-                // Not a valid object yet, continue search
-                $offset = $pos + 1;
-            }
-
-            if (!$objectFound) {
-                break;
-            }
-        }
-
-        // Handle end of stream array
-        if (!empty($buffer) && $buffer[0] === ']') {
-            $buffer = '';
-        }
-
-        return $result;
-    }
-
+    /**
+     * Calculates the estimated or actual cost of a request.
+     *
+     * @param array $textUsage Text token usage.
+     * @param array|null $audioUsage Audio token usage.
+     * @return array
+     */
     public function calculateCost(array $textUsage, ?array $audioUsage = null): array
     {
         $pricing = self::PRICING;
@@ -452,6 +504,12 @@ class GeminiService
         return ['costKSH' => $usd * 129];
     }
 
+    /**
+     * Counts tokens for input parts using Gemini API.
+     *
+     * @param array $parts
+     * @return array
+     */
     public function countTokens(array $parts): array
     {
         $apiKey = trim($this->apiKey);
@@ -497,6 +555,12 @@ class GeminiService
         }
     }
 
+    /**
+     * Estimates cost before generation.
+     *
+     * @param array $parts
+     * @return array
+     */
     public function estimateCost(array $parts): array
     {
         $response = $this->countTokens($parts);
@@ -520,6 +584,12 @@ class GeminiService
         ];
     }
 
+    /**
+     * Generates speech using Google TTS.
+     *
+     * @param string $text
+     * @return array
+     */
     public function generateSpeech(string $text): array
     {
         $apiKey = trim($this->apiKey);
@@ -606,9 +676,19 @@ class GeminiService
             return ['status' => false, 'error' => 'Could not connect to the speech synthesis service.'];
         }
     }
+
     /**
      * Finalizes the streaming interaction by handling billing, memory updates, and audio generation.
      * Use this to keep the Controller 'skinny'.
+     *
+     * @param int $userId
+     * @param string $inputText
+     * @param string $fullText
+     * @param array|null $usageMetadata
+     * @param array $rawChunks
+     * @param array $contextData
+     * @param bool $isVoiceEnabled
+     * @return array
      */
     public function finalizeStreamInteraction(
         int $userId,
@@ -670,6 +750,7 @@ class GeminiService
             'timestamp' => $memoryResult['timestamp'] ?? null,
         ];
     }
+
     /**
      * Stores a temporary file for Gemini multimodal context.
      *
@@ -694,6 +775,7 @@ class GeminiService
 
         return ['status' => true, 'filename' => $fileName, 'original_name' => $file->getClientName()];
     }
+
     /**
      * Processing uploaded files for Gemini API.
      *
@@ -726,6 +808,22 @@ class GeminiService
             ]];
         }
         return ['parts' => $parts];
+    }
+
+    /**
+     * Deletes a single temporary file.
+     *
+     * @param int $userId
+     * @param string $fileId
+     * @return bool
+     */
+    public function deleteTempMedia(int $userId, string $fileId): bool
+    {
+        $filePath = WRITEPATH . 'uploads/gemini_temp/' . $userId . '/' . basename($fileId);
+        if (file_exists($filePath)) {
+            return unlink($filePath);
+        }
+        return false;
     }
 
     /**
@@ -777,6 +875,26 @@ class GeminiService
 
         return $result['fileName'];
     }
+
+    /**
+     * Retrieves the absolute path for a served audio file.
+     *
+     * @param int $userId
+     * @param string $fileName
+     * @return string|null Absolute path or null if not found/invalid
+     */
+    public function getAudioFilePath(int $userId, string $fileName): ?string
+    {
+        $securePath = WRITEPATH . 'uploads/ttsaudio_secure/' . $userId . '/';
+        $fullPath = $securePath . basename($fileName);
+
+        if (file_exists($fullPath)) {
+            return $fullPath;
+        }
+
+        return null;
+    }
+
     /**
      * Retrieves user settings.
      *
@@ -798,16 +916,11 @@ class GeminiService
      */
     public function updateUserSetting(int $userId, string $key, bool $value): bool
     {
-        $setting = $this->getUserSettings($userId);
-
-        if ($setting) {
-            return $this->userSettingsModel->update($setting->id, [$key => $value]);
+        $existing = $this->userSettingsModel->where('user_id', $userId)->first();
+        if ($existing) {
+            return $this->userSettingsModel->update($existing->id, [$key => $value]);
         }
-
-        return (bool) $this->userSettingsModel->save([
-            'user_id' => $userId,
-            $key      => $value
-        ]);
+        return (bool) $this->userSettingsModel->insert(['user_id' => $userId, $key => $value]);
     }
 
     /**
@@ -822,23 +935,59 @@ class GeminiService
     }
 
     /**
-     * Adds a new prompt.
+     * Adds a prompt for the user.
      *
      * @param int $userId
      * @param array $data
-     * @return int|bool Insert ID or false
+     * @return int|bool ID or false
      */
     public function addPrompt(int $userId, array $data)
     {
-        return $this->promptModel->insert([
-            'user_id'     => $userId,
-            'title'       => $data['title'],
-            'prompt_text' => $data['prompt_text']
-        ]);
+        $data['user_id'] = $userId;
+        return $this->promptModel->insert($data);
     }
 
     /**
-     * Deletes a prompt if it belongs to the user.
+     * Clears all memory and entities for a user.
+     * Facade for MemoryService.
+     *
+     * @param int $userId
+     * @return bool
+     */
+    public function clearUserMemory(int $userId): bool
+    {
+        return service('memory', $userId)->clearAll();
+    }
+
+    /**
+     * Fetches user interaction history.
+     * Facade for MemoryService.
+     *
+     * @param int $userId
+     * @param int $limit
+     * @param int $offset
+     * @return array
+     */
+    public function getUserHistory(int $userId, int $limit, int $offset): array
+    {
+        return service('memory', $userId)->getUserHistory($userId, $limit, $offset);
+    }
+
+    /**
+     * Deletes a specific interaction.
+     * Facade for MemoryService.
+     *
+     * @param int $userId
+     * @param string $uniqueId
+     * @return bool
+     */
+    public function deleteUserInteraction(int $userId, string $uniqueId): bool
+    {
+        return service('memory', $userId)->deleteInteraction($userId, $uniqueId);
+    }
+
+    /**
+     * Deletes a prompt for the user.
      *
      * @param int $userId
      * @param int $promptId
@@ -846,39 +995,28 @@ class GeminiService
      */
     public function deletePrompt(int $userId, int $promptId): bool
     {
-        $prompt = $this->promptModel->find($promptId);
-        if ($prompt && $prompt->user_id == $userId) {
-            return $this->promptModel->delete($promptId);
-        }
-        return false;
+        return $this->promptModel
+            ->where('user_id', $userId)
+            ->where('id', $promptId)
+            ->delete();
     }
 
     /**
-     * Deletes a specific temporary media file.
+     * Generates a document from markdown content.
+     * Facade method for DocumentService to maintain parallel architecture.
      *
-     * @param int $userId
-     * @param string $fileId
-     * @return bool
-     */
-    public function deleteTempMedia(int $userId, string $fileId): bool
-    {
-        $filePath = WRITEPATH . 'uploads/gemini_temp/' . $userId . '/' . basename($fileId);
-        if (file_exists($filePath) && unlink($filePath)) {
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Resolves the path for a served audio file.
+     * This method prevents "ping-pong" dependencies by providing a single
+     * point of entry through GeminiService, rather than having the controller
+     * directly access DocumentService.
      *
-     * @param int $userId
-     * @param string $fileName
-     * @return string|null Absolute path or null if not found
+     * @param string $markdownContent The markdown content to convert
+     * @param string $format Output format: 'pdf' or 'docx'
+     * @param array $metadata Optional document metadata (title, author, subject, keywords, etc.)
+     * @return array ['status' => 'success'|'error', 'fileData' => string|null, 'message' => string|null]
      */
-    public function getAudioFilePath(int $userId, string $fileName): ?string
+    public function generateDocument(string $markdownContent, string $format, array $metadata = []): array
     {
-        $path = WRITEPATH . 'uploads/ttsaudio_secure/' . $userId . '/' . basename($fileName);
-        return file_exists($path) ? $path : null;
+        $documentService = service('documentService');
+        return $documentService->generate($markdownContent, $format, $metadata);
     }
 }

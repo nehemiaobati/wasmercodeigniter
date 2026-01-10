@@ -639,4 +639,61 @@ class OllamaService
         }
         return false;
     }
+
+    /**
+     * Get user interaction history.
+     * Facade method for OllamaMemoryService.
+     *
+     * @param int $userId
+     * @param int $limit
+     * @param int $offset
+     * @return array
+     */
+    public function getUserHistory(int $userId, int $limit = 20, int $offset = 0): array
+    {
+        $memoryService = service('ollamaMemory', $userId);
+        return $memoryService->getUserHistory($userId, $limit, $offset);
+    }
+
+    /**
+     * Delete a specific interaction.
+     * Facade method for OllamaMemoryService.
+     *
+     * @param int $userId
+     * @param string $uniqueId
+     * @return bool
+     */
+    public function deleteUserInteraction(int $userId, string $uniqueId): bool
+    {
+        $memoryService = service('ollamaMemory', $userId);
+        return $memoryService->deleteInteraction($userId, $uniqueId);
+    }
+
+    /**
+     * Clear all user memory.
+     *
+     * @param int $userId
+     * @return bool
+     */
+    public function clearUserMemory(int $userId): bool
+    {
+        (new \App\Modules\Ollama\Models\OllamaInteractionModel())->where('user_id', $userId)->delete();
+        (new \App\Modules\Ollama\Models\OllamaEntityModel())->where('user_id', $userId)->delete();
+        return true;
+    }
+
+    /**
+     * Generates a document from markdown content.
+     * Facade method for OllamaDocumentService to maintain parallel architecture.
+     *
+     * @param string $markdownContent
+     * @param string $format 'pdf' or 'docx'
+     * @param array $metadata
+     * @return array
+     */
+    public function generateDocument(string $markdownContent, string $format, array $metadata = []): array
+    {
+        $documentService = service('ollamaDocumentService');
+        return $documentService->generate($markdownContent, $format, $metadata);
+    }
 }

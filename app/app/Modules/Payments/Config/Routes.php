@@ -11,7 +11,7 @@ $routes->group('/', ['namespace' => 'App\Modules\Payments\Controllers'], static 
     $routes->group('payment', static function ($routes) {
         $routes->get('/', 'PaymentsController::index', ['as' => 'payment.index']);
         // Note: The commented-out GET route for 'initiate' is not included as per the original file.
-        $routes->post('initiate', 'PaymentsController::initiate', ['as' => 'payment.initiate']);
+        $routes->post('initiate', 'PaymentsController::initiate', ['as' => 'payment.initiate', 'filter' => 'throttle:5,60']);
         $routes->get('verify', 'PaymentsController::verify', ['as' => 'payment.verify']);
     });
 });

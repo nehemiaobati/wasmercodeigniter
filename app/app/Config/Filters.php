@@ -37,6 +37,7 @@ class Filters extends BaseFilters
         'auth'          => \App\Filters\AuthFilter::class,
         'admin'         => \App\Filters\AdminFilter::class,
         'balance'       => \App\Filters\BalanceFilter::class, // Added for balance check
+        'throttle'      => \App\Filters\ThrottleFilter::class,
     ];
 
     /**

@@ -35,7 +35,7 @@ class OllamaController extends BaseController
         protected ?OllamaService $ollamaService = null
     ) {
         $this->userModel = $userModel ?? new UserModel();
-        $this->ollamaService = $ollamaService ?? new OllamaService();
+        $this->ollamaService = $ollamaService ?? service('ollamaService');
     }
 
     // --- Core Methods ---
@@ -306,9 +306,7 @@ class OllamaController extends BaseController
     public function clearMemory(): RedirectResponse
     {
         $userId = (int) session()->get('userId');
-        // Direct model usage for simple clear, or ideally add clearMemory to Service
-        (new \App\Modules\Ollama\Models\OllamaInteractionModel())->where('user_id', $userId)->delete();
-        (new \App\Modules\Ollama\Models\OllamaEntityModel())->where('user_id', $userId)->delete();
+        $this->ollamaService->clearUserMemory($userId);
 
         return redirect()->back()->with('success', 'Memory cleared.');
     }
@@ -324,13 +322,12 @@ class OllamaController extends BaseController
         $limit = $this->request->getVar('limit') ?? 20;
         $offset = $this->request->getVar('offset') ?? 0;
 
-        $memoryService = new \App\Modules\Ollama\Libraries\OllamaMemoryService($userId);
-        $history = $memoryService->getUserHistory($userId, (int)$limit, (int)$offset);
+        $history = $this->ollamaService->getUserHistory($userId, (int)$limit, (int)$offset);
 
         return $this->response->setJSON([
             'status' => 'success',
             'history' => $history,
-            'token' => csrf_hash()
+            'csrf_token' => csrf_hash()
         ]);
     }
 
@@ -348,9 +345,8 @@ class OllamaController extends BaseController
             return $this->_respondError('Invalid ID.');
         }
 
-        $memoryService = new \App\Modules\Ollama\Libraries\OllamaMemoryService($userId);
-        if ($memoryService->deleteInteraction($userId, $uniqueId)) {
-            return $this->response->setJSON(['status' => 'success', 'token' => csrf_hash()]);
+        if ($this->ollamaService->deleteUserInteraction($userId, $uniqueId)) {
+            return $this->response->setJSON(['status' => 'success', 'csrf_token' => csrf_hash()]);
         }
         return $this->_respondError('Failed to delete.');
     }
@@ -363,8 +359,7 @@ class OllamaController extends BaseController
         $content = $this->request->getPost('raw_response');
         $format  = $this->request->getPost('format');
 
-        $docService = new OllamaDocumentService();
-        $result = $docService->generate($content, $format, ['author' => 'Ollama User ' . $userId]);
+        $result = $this->ollamaService->generateDocument($content, $format, ['author' => 'Ollama User ' . $userId]);
 
         if ($result['status'] !== 'success') {
             return redirect()->back()->with('error', $result['message']);
@@ -384,7 +379,7 @@ class OllamaController extends BaseController
     private function _respondSuccess(string $message, array $data = [])
     {
         if ($this->request->isAJAX()) {
-            return $this->response->setJSON(array_merge(['status' => 'success', 'message' => $message, 'token' => csrf_hash()], $data));
+            return $this->response->setJSON(array_merge(['status' => 'success', 'message' => $message, 'csrf_token' => csrf_hash()], $data));
         }
         return redirect()->back()->with('success', $message);
     }
@@ -392,7 +387,7 @@ class OllamaController extends BaseController
     private function _respondError(string $message)
     {
         if ($this->request->isAJAX()) {
-            return $this->response->setJSON(['status' => 'error', 'message' => $message, 'token' => csrf_hash()]);
+            return $this->response->setJSON(['status' => 'error', 'message' => $message, 'csrf_token' => csrf_hash()]);
         }
         return redirect()->back()->withInput()->with('error', $message);
     }
@@ -436,7 +431,7 @@ class OllamaController extends BaseController
                 'new_interaction_id' => $result['new_interaction_id'] ?? null,
                 'timestamp' => $result['timestamp'] ?? null,
                 'user_input' => ($this->request->getPost('prompt') ?? ''),
-                'token' => csrf_hash()
+                'csrf_token' => csrf_hash()
             ];
 
             return $this->response->setJSON($responsePayload);

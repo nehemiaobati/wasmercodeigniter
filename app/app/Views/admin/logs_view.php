@@ -43,7 +43,7 @@
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary w-100">View Log</button>
+                        <button type="submit" id="viewLogSubmit" class="btn btn-primary w-100">View Log</button>
                     </div>
                 </div>
             </form>

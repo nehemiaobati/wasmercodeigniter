@@ -418,7 +418,7 @@
                 <div class="d-flex align-items-end gap-2 bg-body-tertiary p-2 rounded-4 border">
                     <!-- Media Upload Trigger -->
                     <div id="mediaUploadArea" class="d-inline-block p-0 border-0 bg-transparent mb-1">
-                        <input type="file" id="media-input-trigger" multiple class="d-none">
+                        <input type="file" id="media-input-trigger" name="media_files[]" multiple class="d-none">
                         <label for="media-input-trigger" class="btn btn-link text-secondary p-1" title="Attach files">
                             <i class="bi bi-paperclip fs-4"></i>
                         </label>
@@ -427,7 +427,7 @@
                     <!-- Input Fields -->
                     <div class="flex-grow-1">
                         <input type="hidden" name="model" id="selectedModelInput" value="<?= $availableModels[0] ?? 'llama3' ?>">
-                        <input type="hidden" name="generation_type" value="text">
+                        <input type="hidden" id="generation_type" name="generation_type" value="text">
                         <textarea id="prompt" name="prompt" class="form-control border-0 bg-transparent prompt-textarea shadow-none" placeholder="Message Ollama..." rows="1"><?= old('prompt') ?></textarea>
                     </div>
 
@@ -508,7 +508,7 @@
                 <!-- Danger Zone -->
                 <form action="<?= url_to('ollama.memory.clear') ?>" method="post" onsubmit="return confirm('Clear all history?');">
                     <?= csrf_field() ?>
-                    <button type="submit" class="btn btn-outline-danger w-100 btn-sm"><i class="bi bi-trash me-2"></i> Clear History</button>
+                    <button type="submit" id="clearHistorySubmit" class="btn btn-outline-danger w-100 btn-sm"><i class="bi bi-trash me-2"></i> Clear History</button>
                 </form>
 
                 <div class="mt-4 pt-4 text-center">
@@ -549,7 +549,7 @@
                 <h5 class="modal-title">Save Prompt</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="mb-3"><label>Title</label><input type="text" name="title" class="form-control" required></div>
+                <div class="mb-3"><label for="savePromptTitle">Title</label><input type="text" id="savePromptTitle" name="title" class="form-control" required></div>
                 <div class="mb-3"><label>Content</label><textarea name="prompt_text" id="modalPromptText" class="form-control" rows="4" required></textarea></div>
             </div>
             <div class="modal-footer"><button type="submit" class="btn btn-primary">Save</button></div>

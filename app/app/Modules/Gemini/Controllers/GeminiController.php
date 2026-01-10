@@ -20,7 +20,7 @@ use Parsedown;
  * Controller for managing Gemini AI interactions.
  *
  * This controller orchestrates the entire user flow for AI content generation, including:
- * - Handling user input and file uploads.
+ * - Handling user Input and file uploads.
  * - Managing context and memory (Assistant Mode).
  * - Estimating and deducting costs.
  * - Calling the GeminiService for text and speech generation.
@@ -36,9 +36,7 @@ class GeminiController extends BaseController
         $this->geminiService = $geminiService ?? service('geminiService');
     }
 
-    // --- Core Helper Methods ---
-
-
+    // --- Helper Methods ---
 
     /**
      * Returns success response (AJAX JSON or redirect).
@@ -53,7 +51,7 @@ class GeminiController extends BaseController
             return $this->response->setJSON(array_merge([
                 'status' => 'success',
                 'message' => $message,
-                'token' => csrf_hash()
+                'csrf_token' => csrf_hash()
             ], $data));
         }
         return redirect()->back()->with('success', $message);
@@ -73,7 +71,7 @@ class GeminiController extends BaseController
                 'status' => 'error',
                 'message' => $message,
                 'errors' => $errors,
-                'token' => csrf_hash()
+                'csrf_token' => csrf_hash()
             ]);
         }
         return redirect()->back()->withInput()->with('error', $message);
@@ -91,6 +89,118 @@ class GeminiController extends BaseController
         $this->response->setHeader('Connection', 'keep-alive');
         $this->response->setHeader('X-Accel-Buffering', 'no'); // Disable buffering for Nginx
     }
+
+    /**
+     * Builds the final response with parsed markdown and optional audio.
+     * Refactored to support AJAX with rendered partials.
+     *
+     * @param array $result Result array from GeminiService.
+     * @param int $userId User ID for audio file path resolution.
+     * @return RedirectResponse|ResponseInterface
+     */
+    private function _buildGenerationResponse(array $result, int $userId)
+    {
+        // Process Audio if present
+        $audioUrl = null;
+        if (!empty($result['audioData'])) {
+            // REFACTOR: Use GeminiService to persist file and return filename
+            $audioFilename = $this->geminiService->processAudioForServing($result['audioData'], $userId);
+            if ($audioFilename) {
+                // Return URL for serveAudio
+                $audioUrl = url_to('gemini.serve_audio', $audioFilename);
+            }
+        }
+
+        // Set Flash Message
+        if ($result['costKSH'] > 0) {
+            session()->setFlashdata('success', "KSH " . number_format($result['costKSH'], 2) . " deducted.");
+        }
+
+        // Parse markdown
+        $parsedown = new Parsedown();
+        $parsedown->setSafeMode(true);
+        $parsedown->setBreaksEnabled(true);
+
+        $finalResult = $result['result'];
+        $parsedHtml = $parsedown->text($finalResult);
+
+        // Prepare raw result with thoughts (for Plain text view consistency)
+        $rawResult = $result['result'];
+        if (!empty($result['thoughts'])) {
+            $parsedHtml = $this->_buildThinkingBlockHtml($result['thoughts']) . "\n\n" . $parsedHtml;
+            $rawResult = "=== THINKING PROCESS ===\n\n" . $result['thoughts'] . "\n\n=== ANSWER ===\n\n" . $rawResult;
+        }
+
+        // Handle AJAX
+        if ($this->request->isAJAX()) {
+            // Render the flash messages partial to a string to ensure consistency
+            $flashHtml = view('App\Views\partials\flash_messages');
+
+            $responsePayload = [
+                'status' => 'success',
+                'result' => $parsedHtml,
+                'raw_result' => $rawResult,
+                'flash_html' => $flashHtml,
+                'used_interaction_ids' => $result['used_interaction_ids'] ?? [],
+                'new_interaction_id' => $result['new_interaction_id'] ?? null,
+                'timestamp' => $result['timestamp'] ?? null,
+                'user_input' => ($this->request->getPost('prompt') ?? ''),
+                'csrf_token' => csrf_hash()
+            ];
+
+            if ($audioUrl) {
+                // Pass the Serve URL to the frontend
+                $responsePayload['audio_url'] = $audioUrl;
+            }
+
+            return $this->response->setJSON($responsePayload);
+        }
+
+        // Handle Fallback Standard Post
+        $redirect = redirect()->back()->withInput()
+            ->with('result', $parsedHtml)
+            ->with('raw_result', $rawResult);
+
+        if ($audioUrl) {
+            // Pass the Serve URL to flashdata (Session Hygiene: Only string path, not base64)
+            $redirect->with('audio_url', $audioUrl);
+        }
+
+        return $redirect;
+    }
+
+    /**
+     * Build HTML for thinking block display
+     *
+     * @param string $thoughts The thinking content to display
+     * @return string HTML string for thinking block
+     */
+    private function _buildThinkingBlockHtml(string $thoughts): string
+    {
+        return sprintf(
+            '<details class="thinking-block mb-3">' .
+                '<summary class="cursor-pointer text-muted fw-bold small">Thinking Process</summary>' .
+                '<div class="thinking-content fst-italic text-muted p-2 border-start mt-1 small">%s</div>' .
+                '</details>',
+            esc($thoughts)
+        );
+    }
+
+    /**
+     * Sends Server-Sent Events (SSE) Error.
+     *
+     * @param string $msg
+     * @return void
+     */
+    private function _sendSSEError(string $msg)
+    {
+        $this->response->setBody("data: " . json_encode([
+            'error' => $msg,
+            'csrf_token' => csrf_hash()
+        ]) . "\n\n");
+    }
+
+    // --- Public API ---
 
     /**
      * Displays the public landing page.
@@ -262,11 +372,6 @@ class GeminiController extends BaseController
      *
      * @return ResponseInterface
      */
-    /**
-     * Handles streaming text generation via Server-Sent Events (SSE).
-     *
-     * @return ResponseInterface
-     */
     public function stream(): ResponseInterface
     {
         $userId = (int) session()->get('userId');
@@ -370,15 +475,6 @@ class GeminiController extends BaseController
         exit;
     }
 
-    private function _sendSSEError(string $msg)
-    {
-        $this->response->setBody("data: " . json_encode([
-            'error' => $msg,
-            'csrf_token' => csrf_hash()
-        ]) . "\n\n");
-    }
-
-
     /**
      * Updates user settings (Assistant Mode, Voice Output).
      *
@@ -459,7 +555,7 @@ class GeminiController extends BaseController
     public function clearMemory(): RedirectResponse
     {
         $userId = (int) session()->get('userId');
-        $success = service('memory', $userId)->clearAll();
+        $success = $this->geminiService->clearUserMemory($userId);
 
         return redirect()->back()->with(
             $success ? 'success' : 'error',
@@ -478,12 +574,12 @@ class GeminiController extends BaseController
         $limit = $this->request->getVar('limit') ?? 20;
         $offset = $this->request->getVar('offset') ?? 0;
 
-        $history = service('memory', $userId)->getUserHistory($userId, (int)$limit, (int)$offset);
+        $history = $this->geminiService->getUserHistory($userId, (int)$limit, (int)$offset);
 
         return $this->response->setJSON([
             'status' => 'success',
             'history' => $history,
-            'token' => csrf_hash()
+            'csrf_token' => csrf_hash()
         ]);
     }
 
@@ -501,8 +597,8 @@ class GeminiController extends BaseController
             return $this->_respondError('Invalid ID.');
         }
 
-        if (service('memory', $userId)->deleteInteraction($userId, $uniqueId)) {
-            return $this->response->setJSON(['status' => 'success', 'token' => csrf_hash()]);
+        if ($this->geminiService->deleteUserInteraction($userId, $uniqueId)) {
+            return $this->response->setJSON(['status' => 'success', 'csrf_token' => csrf_hash()]);
         }
         return $this->_respondError('Failed to delete.');
     }
@@ -558,8 +654,9 @@ class GeminiController extends BaseController
         $content = $this->request->getPost('raw_response');
         $format = $this->request->getPost('format');
 
-        // Execution: Service now guarantees a 'fileData' string on success
-        $result = service('documentService')->generate($content, $format);
+        // Execution: Use GeminiService facade to maintain parallel architecture
+        // This prevents "ping-pong" dependency by going through the main service layer
+        $result = $this->geminiService->generateDocument($content, $format);
 
         if ($result['status'] === 'success') {
             $mime = $format === 'docx'
@@ -577,106 +674,5 @@ class GeminiController extends BaseController
         // Error handling
         $errorMsg = $result['message'] ?? 'Document generation failed.';
         return redirect()->back()->with('error', $errorMsg);
-    }
-
-    // --- Private Helpers ---
-
-
-
-        // Private Helper Methods Removed: Refactored to GeminiService
-    /**
-     * Builds the final response with parsed markdown and optional audio.
-     * Refactored to support AJAX with rendered partials.
-     *
-     * @param array $result Result array from GeminiService.
-     * @param int $userId User ID for audio file path resolution.
-     * @return RedirectResponse|ResponseInterface
-     */
-    private function _buildGenerationResponse(array $result, int $userId)
-    {
-        // Process Audio if present
-        $audioUrl = null;
-        if (!empty($result['audioData'])) {
-            // REFACTOR: Use GeminiService to persist file and return filename
-            $audioFilename = $this->geminiService->processAudioForServing($result['audioData'], $userId);
-            if ($audioFilename) {
-                // Return URL for serveAudio
-                $audioUrl = url_to('gemini.serve_audio', $audioFilename);
-            }
-        }
-
-        // Set Flash Message
-        if ($result['costKSH'] > 0) {
-            session()->setFlashdata('success', "KSH " . number_format($result['costKSH'], 2) . " deducted.");
-        }
-
-        // Parse markdown
-        $parsedown = new Parsedown();
-        $parsedown->setSafeMode(true);
-        $parsedown->setBreaksEnabled(true);
-
-        $finalResult = $result['result'];
-        $parsedHtml = $parsedown->text($finalResult);
-
-        // Prepare raw result with thoughts (for Plain text view consistency)
-        $rawResult = $result['result'];
-        if (!empty($result['thoughts'])) {
-            $parsedHtml = $this->_buildThinkingBlockHtml($result['thoughts']) . "\n\n" . $parsedHtml;
-            $rawResult = "=== THINKING PROCESS ===\n\n" . $result['thoughts'] . "\n\n=== ANSWER ===\n\n" . $rawResult;
-        }
-
-        // Handle AJAX
-        if ($this->request->isAJAX()) {
-            // Render the flash messages partial to a string to ensure consistency
-            $flashHtml = view('App\Views\partials\flash_messages');
-
-            $responsePayload = [
-                'status' => 'success',
-                'result' => $parsedHtml,
-                'raw_result' => $rawResult,
-                'flash_html' => $flashHtml,
-                'used_interaction_ids' => $result['used_interaction_ids'] ?? [],
-                'new_interaction_id' => $result['new_interaction_id'] ?? null,
-                'timestamp' => $result['timestamp'] ?? null,
-                'user_input' => ($this->request->getPost('prompt') ?? ''),
-                'token' => csrf_hash()
-            ];
-
-            if ($audioUrl) {
-                // Pass the Serve URL to the frontend
-                $responsePayload['audio_url'] = $audioUrl;
-            }
-
-            return $this->response->setJSON($responsePayload);
-        }
-
-        // Handle Fallback Standard Post
-        $redirect = redirect()->back()->withInput()
-            ->with('result', $parsedHtml)
-            ->with('raw_result', $rawResult);
-
-        if ($audioUrl) {
-            // Pass the Serve URL to flashdata (Session Hygiene: Only string path, not base64)
-            $redirect->with('audio_url', $audioUrl);
-        }
-
-        return $redirect;
-    }
-
-    /**
-     * Build HTML for thinking block display
-     *
-     * @param string $thoughts The thinking content to display
-     * @return string HTML string for thinking block
-     */
-    private function _buildThinkingBlockHtml(string $thoughts): string
-    {
-        return sprintf(
-            '<details class="thinking-block mb-3">' .
-                '<summary class="cursor-pointer text-muted fw-bold small">Thinking Process</summary>' .
-                '<div class="thinking-content fst-italic text-muted p-2 border-start mt-1 small">%s</div>' .
-                '</details>',
-            esc($thoughts)
-        );
     }
 }

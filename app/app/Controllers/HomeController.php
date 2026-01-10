@@ -91,7 +91,8 @@ class HomeController extends BaseController
 
         return $this->response->setJSON([
             'status' => 'success',
-            'message' => 'Cookie consent accepted'
+            'message' => 'Cookie consent accepted',
+            'csrf_token' => csrf_hash()
         ]);
     }
 }

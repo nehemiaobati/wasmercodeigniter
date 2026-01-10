@@ -15,7 +15,7 @@
                     <form id="paymentForm" action="<?= url_to('payment.initiate') ?>" method="post">
                         <?= csrf_field() ?>
                         <div class="form-floating mb-3">
-                            <input type="email" class="form-control" id="email" name="email" placeholder="Your Email" value="<?= esc(old('email', $email)) ?>" required>
+                            <input type="email" class="form-control" id="email" name="email" placeholder="Your Email" value="<?= esc(old('email', $email)) ?>" autocomplete="email" required>
                             <label for="email">Email Address</label>
                         </div>
                         <div class="form-floating mb-4">
@@ -36,25 +36,25 @@
 
 <?= $this->section('scripts') ?>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    function handleFormSubmit(form) {
-        const submitButton = form.querySelector('button[type="submit"]');
-        if (submitButton) {
-            const originalButtonText = submitButton.innerHTML;
-            submitButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...`;
-            submitButton.disabled = true;
+    document.addEventListener('DOMContentLoaded', function() {
+        function handleFormSubmit(form) {
+            const submitButton = form.querySelector('button[type="submit"]');
+            if (submitButton) {
+                const originalButtonText = submitButton.innerHTML;
+                submitButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...`;
+                submitButton.disabled = true;
 
-            window.addEventListener('pageshow', function() {
-                submitButton.innerHTML = originalButtonText;
-                submitButton.disabled = false;
-            });
+                window.addEventListener('pageshow', function() {
+                    submitButton.innerHTML = originalButtonText;
+                    submitButton.disabled = false;
+                });
+            }
         }
-    }
 
-    const paymentForm = document.getElementById('paymentForm');
-    if (paymentForm) {
-        paymentForm.addEventListener('submit', () => handleFormSubmit(paymentForm));
-    }
-});
+        const paymentForm = document.getElementById('paymentForm');
+        if (paymentForm) {
+            paymentForm.addEventListener('submit', () => handleFormSubmit(paymentForm));
+        }
+    });
 </script>
 <?= $this->endSection() ?>

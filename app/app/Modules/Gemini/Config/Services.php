@@ -1,0 +1,170 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Gemini\Config;
+
+use CodeIgniter\Config\BaseService;
+use App\Modules\Gemini\Libraries\EmbeddingService;
+use App\Modules\Gemini\Libraries\MemoryService;
+use App\Modules\Gemini\Libraries\TokenService;
+use App\Modules\Gemini\Libraries\TrainingService;
+use App\Modules\Gemini\Libraries\GeminiService;
+use App\Modules\Gemini\Libraries\FfmpegService;
+use App\Modules\Gemini\Libraries\PandocService;
+use App\Modules\Gemini\Libraries\DocumentService;
+use App\Modules\Gemini\Libraries\ModelPayloadService;
+use App\Modules\Gemini\Libraries\MediaGenerationService;
+
+/**
+ * Gemini Module Services Configuration.
+ * 
+ * Allows automatic discovery of Gemini-specific services by the framework.
+ */
+class Services extends BaseService
+{
+    /**
+     * The Gemini service.
+     *
+     * @param bool $getShared
+     * @return GeminiService
+     */
+    public static function geminiService(bool $getShared = true): GeminiService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('geminiService');
+        }
+
+        return new GeminiService();
+    }
+
+    /**
+     * The Embedding service.
+     *
+     * @param bool $getShared
+     * @return EmbeddingService
+     */
+    public static function embedding(bool $getShared = true): EmbeddingService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('embedding');
+        }
+        return new EmbeddingService();
+    }
+
+    /**
+     * The Memory service, which is user-specific.
+     * NOTE: This service defaults to creating a NEW instance on each call.
+     * To get a shared instance for a specific user, you must explicitly pass
+     * true as the second argument (e.g., service('memory', $userId, true)).
+     *
+     * @param int  $userId
+     * @param bool $getShared
+     * @return MemoryService
+     */
+    public static function memory(int $userId, bool $getShared = false): MemoryService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('memory', $userId);
+        }
+        return new MemoryService($userId);
+    }
+
+    /**
+     * The Token service.
+     *
+     * @param bool $getShared
+     * @return TokenService
+     */
+    public static function tokenService(bool $getShared = true): TokenService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('tokenService');
+        }
+        return new TokenService();
+    }
+
+    /**
+     * The Training service.
+     *
+     * @param bool $getShared
+     * @return TrainingService
+     */
+    public static function trainingService(bool $getShared = true): TrainingService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('trainingService');
+        }
+        return new TrainingService();
+    }
+
+    /**
+     * The FFmpeg service for audio conversion.
+     *
+     * @param bool $getShared
+     * @return FfmpegService
+     */
+    public static function ffmpegService(bool $getShared = true): FfmpegService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('ffmpegService');
+        }
+        return new FfmpegService();
+    }
+
+    /**
+     * The Pandoc service for document conversion.
+     *
+     * @param bool $getShared
+     * @return PandocService
+     */
+    public static function pandocService(bool $getShared = true): PandocService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('pandocService');
+        }
+        return new PandocService();
+    }
+
+    /**
+     * The main document generation service with fallback.
+     *
+     * @param bool $getShared
+     * @return DocumentService
+     */
+    public static function documentService(bool $getShared = true): DocumentService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('documentService');
+        }
+        return new DocumentService();
+    }
+
+    /**
+     * The Model Payload service.
+     *
+     * @param bool $getShared
+     * @return ModelPayloadService
+     */
+    public static function modelPayloadService(bool $getShared = true): ModelPayloadService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('modelPayloadService');
+        }
+        return new ModelPayloadService();
+    }
+
+    /**
+     * The Media Generation service.
+     *
+     * @param bool $getShared
+     * @return MediaGenerationService
+     */
+    public static function mediaGenerationService(bool $getShared = true): MediaGenerationService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('mediaGenerationService');
+        }
+        return new MediaGenerationService();
+    }
+}

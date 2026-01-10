@@ -27,7 +27,7 @@
             <div class="d-flex flex-shrink-0">
                 <form action="<?= url_to('cookie.accept') ?>" method="post">
                     <?= csrf_field() ?>
-                    <button type="submit" class="btn btn-primary fw-bold w-100">Accept</button>
+                    <button type="submit" id="acceptCookies" class="btn btn-primary fw-bold w-100">Accept</button>
                 </form>
             </div>
         </div>

@@ -12,6 +12,11 @@ use stdClass;
  * Generates model-specific configurations and payloads for the Gemini API.
  * Implements the "Standalone" pattern for infinite model scalability.
  *
+ * STANDALONE PATTERN MANDATE:
+ * To ensure granular maintenance and prevent unintended regressions, each model configuration
+ * must remain separate and independent. ID grouping (mapping multiple model IDs to a single configuration block)
+ * is strictly permitted ONLY if the payload structures and parameters are 100% identical.
+ *
  * Uses PHP 8.0 match expression with structured configuration for clean,
  * self-contained model definitions.
  *
@@ -19,6 +24,89 @@ use stdClass;
  */
 class ModelPayloadService
 {
+    // --- Helper Methods ---
+
+    /**
+     * Extracts plain text from a parts array, ignoring images/files.
+     * Essential for models (Imagen/legacy Veo) that crash if sent multimodal input arrays.
+     *
+     * @param array $parts
+     * @return string
+     */
+    private function _extractTextPrompt(array $parts): string
+    {
+        $text = '';
+        foreach ($parts as $part) {
+            if (isset($part['text'])) {
+                $text .= $part['text'] . ' ';
+            }
+        }
+        return trim($text);
+    }
+
+    /**
+     * Builds the 'instances' data for Veo models.
+     * Handles prioritization: Video (Extension) > Image (Animation).
+     * Note: referenceImages not supported via REST API predictLongRunning endpoint.
+     *
+     * @param array $parts
+     * @return array
+     */
+    private function _buildVeoData(array $parts): array
+    {
+        $primaryVideo = null;
+        $images = [];
+        $text = '';
+
+        foreach ($parts as $part) {
+            if (isset($part['text'])) {
+                $text .= $part['text'] . ' ';
+            }
+
+            if (isset($part['inlineData'])) {
+                $mimeType = $part['inlineData']['mimeType'] ?? '';
+                $data = $part['inlineData']['data'];
+
+                if (str_starts_with($mimeType, 'video/')) {
+                    if (!$primaryVideo) {
+                        $primaryVideo = ['bytesBase64Encoded' => $data, 'mimeType' => $mimeType];
+                    }
+                } elseif (str_starts_with($mimeType, 'image/')) {
+                    $images[] = ['bytesBase64Encoded' => $data, 'mimeType' => $mimeType];
+                }
+            }
+        }
+
+        $result = [
+            'instance' => ['prompt' => trim($text)]
+        ];
+
+        // Assign primary media to instance
+        if ($primaryVideo) {
+            $result['instance']['video'] = $primaryVideo;
+        } elseif (!empty($images)) {
+            // First image is the animate target
+            $result['instance']['image'] = array_shift($images);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Standardizes the API endpoint construction.
+     *
+     * @param string $modelId
+     * @param string $method
+     * @param string $apiKey
+     * @return string
+     */
+    private function _buildEndpoint(string $modelId, string $method, string $apiKey): string
+    {
+        return "https://generativelanguage.googleapis.com/v1beta/models/{$modelId}:{$method}?key=" . urlencode($apiKey);
+    }
+
+    // --- Public API ---
+
     /**
      * Returns the specific API Endpoint URL and JSON Request Body for a given model.
      *
@@ -37,10 +125,11 @@ class ModelPayloadService
      */
     public function getPayloadConfig(string $modelId, string $apiKey, array $parts, bool $isStream = false): ?array
     {
-        // Match expression returns structured config with method + payload
+        // Standalone pattern: each model has its own entry for maximum maintenance isolation.
         $config = match ($modelId) {
-            // Advanced Thinking Models (Pro) - Standard API
-            'gemini-3-pro-preview', 'gemini-3-flash-preview' => [
+            // --- Advanced Thinking Models (Pro) ---
+            'gemini-3-pro-preview',
+            'gemini-3-flash-preview' => [
                 'method' => $isStream ? 'streamGenerateContent' : 'generateContent',
                 'payload' => [
                     "contents" => [["role" => "user", "parts" => $parts]],
@@ -67,21 +156,11 @@ class ModelPayloadService
                 ]
             ],
 
-            // Standard Flash Models - Standard API
-            'gemini-flash-latest', 'gemini-2.5-flash' => [
-                'method' => $isStream ? 'streamGenerateContent' : 'generateContent',
-                'payload' => [
-                    "contents" => [["role" => "user", "parts" => $parts]],
-                    "generationConfig" => [
-                        "thinkingConfig" => ["thinkingBudget" => 2048, "includeThoughts" => true],
-                        "temperature" => 1,
-                        "topP" => 0.95,
-                        "maxOutputTokens" => 64000,
-                    ],
-                    "tools" => [["googleSearch" => new stdClass()]],
-                ]
-            ],
-            'gemini-flash-lite-latest', 'gemini-2.5-flash-lite' => [
+            // --- Standard Flash Models ---
+            'gemini-flash-latest',
+            'gemini-2.5-flash',
+            'gemini-flash-lite-latest',
+            'gemini-2.5-flash-lite' => [
                 'method' => $isStream ? 'streamGenerateContent' : 'generateContent',
                 'payload' => [
                     "contents" => [["role" => "user", "parts" => $parts]],
@@ -95,7 +174,7 @@ class ModelPayloadService
                 ]
             ],
 
-            // Legacy Flash Models (2.0) - Standard API
+            // --- Legacy Flash Models (2.0) ---
             'gemini-2.0-flash' => [
                 'method' => $isStream ? 'streamGenerateContent' : 'generateContent',
                 'payload' => [
@@ -120,7 +199,7 @@ class ModelPayloadService
                 ]
             ],
 
-            // Multimodal Generation (Image + Text Output) - Standard API
+            // --- Multimodal Generation (Image + Text Output) ---
             'gemini-3-pro-image-preview' => [
                 'method' => $isStream ? 'streamGenerateContent' : 'generateContent',
                 'payload' => [
@@ -135,7 +214,8 @@ class ModelPayloadService
                     "tools" => [["googleSearch" => new stdClass()]],
                 ]
             ],
-            'gemini-2.5-flash-image', 'gemini-2.5-flash-image-preview' => [
+            'gemini-2.5-flash-image',
+            'gemini-2.5-flash-image-preview' => [
                 'method' => $isStream ? 'streamGenerateContent' : 'generateContent',
                 'payload' => [
                     "contents" => [["role" => "user", "parts" => $parts]],
@@ -148,7 +228,7 @@ class ModelPayloadService
                 ]
             ],
 
-            // Imagen 4.0 (Text-to-Image) - Uses predict API
+            // --- Imagen 4.0 Models ---
             'imagen-4.0-generate-preview-06-06',
             'imagen-4.0-ultra-generate-preview-06-06',
             'imagen-4.0-ultra-generate-001',
@@ -158,65 +238,48 @@ class ModelPayloadService
                 'payload' => [
                     "instances" => [["prompt" => $this->_extractTextPrompt($parts)]],
                     "parameters" => [
-                        "outputMimeType" => "image/jpeg",
                         "sampleCount" => 1,
-                        "personGeneration" => "ALLOW_ALL",
+                        "personGeneration" => "allow_all",
                         "aspectRatio" => "1:1",
                         "imageSize" => "1K",
+                        "outputMimeType" => "image/jpeg",
                     ]
                 ]
             ],
 
-            // Veo 2.0 (Text-to-Video) - Uses async predictLongRunning API
+            // --- Veo 3.x Models (REST API does not support referenceImages) ---
+            'veo-3.1-generate-preview',
+            'veo-3.1-fast-generate-preview',
+            'veo-3.0-generate-001',
+            'veo-3.0-fast-generate-001' => [
+                'method' => 'predictLongRunning',
+                'payload' => [
+                    'instances' => [$this->_buildVeoData($parts)['instance']],
+                    'parameters' => [
+                        'aspectRatio' => '16:9',
+                        'sampleCount' => 1
+                    ]
+                ]
+            ],
             'veo-2.0-generate-001' => [
                 'method' => 'predictLongRunning',
                 'payload' => [
-                    "instances" => [["prompt" => $this->_extractTextPrompt($parts)]],
-                    "parameters" => [
-                        "aspectRatio" => "16:9",
-                        "sampleCount" => 1,
-                        "durationSeconds" => 8,
-                        "personGeneration" => "ALLOW_ALL",
+                    'instances' => [$this->_buildVeoData($parts)['instance']],
+                    'parameters' => [
+                        'sampleCount' => 1,
+                        'personGeneration' => 'allow_all'
                     ]
                 ]
             ],
 
-            // Unknown model
             default => null
         };
 
-        // Return null if model not supported
-        if ($config === null) {
-            return null;
-        }
+        if ($config === null) return null;
 
-        // Build and return final URL + payload
         return [
             'url' => $this->_buildEndpoint($modelId, $config['method'], $apiKey),
             'body' => json_encode($config['payload'])
         ];
-    }
-
-    /**
-     * Extracts plain text from a parts array, ignoring images/files.
-     * Essential for models (Imagen/Veo) that crash if sent multimodal input arrays.
-     */
-    private function _extractTextPrompt(array $parts): string
-    {
-        $text = '';
-        foreach ($parts as $part) {
-            if (isset($part['text'])) {
-                $text .= $part['text'] . ' ';
-            }
-        }
-        return trim($text);
-    }
-
-    /**
-     * Standardizes the API endpoint construction.
-     */
-    private function _buildEndpoint(string $modelId, string $method, string $apiKey): string
-    {
-        return "https://generativelanguage.googleapis.com/v1beta/models/{$modelId}:{$method}?key=" . urlencode($apiKey);
     }
 }

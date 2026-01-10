@@ -14,6 +14,7 @@
         align-items: center;
         justify-content: center;
     }
+
     a.action-card {
         text-decoration: none;
         color: inherit;
@@ -29,7 +30,7 @@
         <div class="d-flex align-items-center">
             <a href="<?= url_to('admin.logs') ?>" class="btn btn-outline-secondary me-2"><i class="bi bi-journal-text"></i> View Logs</a>
             <form action="<?= url_to('admin.users.search') ?>" method="GET" class="d-flex">
-                <input type="text" name="q" class="form-control me-2" placeholder="Search users..." value="<?= esc($search_query ?? '') ?>">
+                <input type="text" id="userSearchInput" name="q" class="form-control me-2" placeholder="Search users..." value="<?= esc($search_query ?? '') ?>">
                 <button type="submit" class="btn btn-outline-primary">Search</button>
             </form>
         </div>
@@ -73,7 +74,7 @@
             </a>
         </div>
     </div>
-    
+
     <!-- User Management Table -->
     <h2 class="h3 fw-bold mb-3">User Management</h2>
     <div class="card blueprint-card">

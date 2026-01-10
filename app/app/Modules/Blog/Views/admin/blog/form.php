@@ -56,25 +56,25 @@
                             <?php if (!empty($contentBlocks)): ?>
                                 <?php foreach ($contentBlocks as $block): ?>
                                     <?php if ($block->type === 'text'): ?>
-                                        <div class="content-block p-3 pt-5">
-                                            <input type="hidden" name="content_type[]" value="text">
+                                        <div class="content-block p-3 pt-5" id="block-<?= $index ?>">
+                                            <input type="hidden" id="content_type_<?= $index ?>" name="content_type[]" value="text">
                                             <div class="block-controls"><button type="button" class="btn btn-sm btn-outline-danger remove-block"><i class="bi bi-trash"></i></button></div>
-                                            <textarea name="content_text[]" class="form-control" rows="8" placeholder="Enter your text content (Markdown supported)"><?= esc($block->content ?? '') ?></textarea>
-                                            <input type="hidden" name="content_language[]" value="">
+                                            <textarea id="content_text_<?= $index ?>" name="content_text[]" class="form-control" rows="8" placeholder="Enter your text content (Markdown supported)"><?= esc($block->content ?? '') ?></textarea>
+                                            <input type="hidden" id="content_language_<?= $index ?>" name="content_language[]" value="">
                                         </div>
                                     <?php elseif ($block->type === 'image'): ?>
-                                        <div class="content-block p-3 pt-5">
-                                            <input type="hidden" name="content_type[]" value="image">
+                                        <div class="content-block p-3 pt-5" id="block-<?= $index ?>">
+                                            <input type="hidden" id="content_type_<?= $index ?>" name="content_type[]" value="image">
                                             <div class="block-controls"><button type="button" class="btn btn-sm btn-outline-danger remove-block"><i class="bi bi-trash"></i></button></div>
-                                            <input type="text" name="content_text[]" class="form-control" placeholder="Enter Image URL" value="<?= esc($block->url ?? ($block->content ?? '')) ?>">
-                                            <input type="hidden" name="content_language[]" value="">
+                                            <input type="text" id="content_text_<?= $index ?>" name="content_text[]" class="form-control" placeholder="Enter Image URL" value="<?= esc($block->url ?? ($block->content ?? '')) ?>">
+                                            <input type="hidden" id="content_language_<?= $index ?>" name="content_language[]" value="">
                                         </div>
                                     <?php elseif ($block->type === 'code'): ?>
-                                        <div class="content-block p-3 pt-5">
-                                            <input type="hidden" name="content_type[]" value="code">
+                                        <div class="content-block p-3 pt-5" id="block-<?= $index ?>">
+                                            <input type="hidden" id="content_type_<?= $index ?>" name="content_type[]" value="code">
                                             <div class="block-controls"><button type="button" class="btn btn-sm btn-outline-danger remove-block"><i class="bi bi-trash"></i></button></div>
-                                            <textarea name="content_text[]" class="form-control" rows="8" placeholder="Enter code snippet"><?= esc($block->code ?? '') ?></textarea>
-                                            <input type="text" name="content_language[]" class="form-control mt-2" placeholder="Language (e.g., php, javascript)" value="<?= esc($block->language ?? '') ?>">
+                                            <textarea id="content_text_<?= $index ?>" name="content_text[]" class="form-control" rows="8" placeholder="Enter code snippet"><?= esc($block->code ?? '') ?></textarea>
+                                            <input type="text" id="content_language_<?= $index ?>" name="content_language[]" class="form-control mt-2" placeholder="Language (e.g., php, javascript)" value="<?= esc($block->language ?? '') ?>">
                                         </div>
                                     <?php endif; ?>
                                 <?php endforeach; ?>
@@ -122,7 +122,7 @@
                     </div>
                 </div>
                 <div class="d-grid mt-4">
-                    <button type="submit" class="btn btn-primary btn-lg">Save Post</button>
+                    <button type="submit" id="postSubmit" class="btn btn-primary btn-lg">Save Post</button>
                 </div>
             </form>
         </div>
@@ -135,16 +135,19 @@
     document.addEventListener('DOMContentLoaded', () => {
         const builderArea = document.getElementById('content-builder-area');
 
+        let blockCounter = <?= count($contentBlocks) ?>;
         const createBlock = (type) => {
+            const index = blockCounter++;
             const block = document.createElement('div');
             block.className = 'content-block p-3 pt-5';
-            let innerHTML = `<input type="hidden" name="content_type[]" value="${type}"><div class="block-controls"><button type="button" class="btn btn-sm btn-outline-danger remove-block"><i class="bi bi-trash"></i></button></div>`;
+            block.id = `block-${index}`;
+            let innerHTML = `<input type="hidden" id="content_type_${index}" name="content_type[]" value="${type}"><div class="block-controls"><button type="button" class="btn btn-sm btn-outline-danger remove-block"><i class="bi bi-trash"></i></button></div>`;
             if (type === 'text') {
-                innerHTML += `<textarea name="content_text[]" class="form-control" rows="8" placeholder="Enter your text content (Markdown supported)"></textarea><input type="hidden" name="content_language[]" value="">`;
+                innerHTML += `<textarea id="content_text_${index}" name="content_text[]" class="form-control" rows="8" placeholder="Enter your text content (Markdown supported)"></textarea><input type="hidden" id="content_language_${index}" name="content_language[]" value="">`;
             } else if (type === 'image') {
-                innerHTML += `<input type="text" name="content_text[]" class="form-control" placeholder="Enter Image URL"><input type="hidden" name="content_language[]" value="">`;
+                innerHTML += `<input type="text" id="content_text_${index}" name="content_text[]" class="form-control" placeholder="Enter Image URL"><input type="hidden" id="content_language_${index}" name="content_language[]" value="">`;
             } else if (type === 'code') {
-                innerHTML += `<textarea name="content_text[]" class="form-control" rows="8" placeholder="Enter code snippet"></textarea><input type="text" name="content_language[]" class="form-control mt-2" placeholder="Language (e.g., php, javascript)">`;
+                innerHTML += `<textarea id="content_text_${index}" name="content_text[]" class="form-control" rows="8" placeholder="Enter code snippet"></textarea><input type="text" id="content_language_${index}" name="content_language[]" class="form-control mt-2" placeholder="Language (e.g., php, javascript)">`;
             }
             block.innerHTML = innerHTML;
             builderArea.appendChild(block);

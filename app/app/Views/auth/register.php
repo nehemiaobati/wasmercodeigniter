@@ -70,19 +70,19 @@
                             <form action="<?= url_to('register.store') ?>" method="post">
                                 <?= csrf_field() ?>
                                 <div class="form-floating mb-3">
-                                    <input type="text" class="form-control" id="username" name="username" placeholder="johndoe" value="<?= esc(old('username')) ?>" required>
+                                    <input type="text" class="form-control" id="username" name="username" placeholder="johndoe" value="<?= esc(old('username')) ?>" autocomplete="username" required>
                                     <label for="username">Username</label>
                                 </div>
                                 <div class="form-floating mb-3">
-                                    <input type="email" class="form-control" id="email" name="email" placeholder="name@example.com" value="<?= esc(old('email')) ?>" required>
+                                    <input type="email" class="form-control" id="email" name="email" placeholder="name@example.com" value="<?= esc(old('email')) ?>" autocomplete="email" required>
                                     <label for="email">Email address</label>
                                 </div>
                                 <div class="form-floating mb-3">
-                                    <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+                                    <input type="password" class="form-control" id="password" name="password" placeholder="Password" autocomplete="new-password" required>
                                     <label for="password">Password</label>
                                 </div>
                                 <div class="form-floating mb-4">
-                                    <input type="password" class="form-control" id="confirmpassword" name="confirmpassword" placeholder="Confirm Password" required>
+                                    <input type="password" class="form-control" id="confirmpassword" name="confirmpassword" placeholder="Confirm Password" autocomplete="new-password" required>
                                     <label for="confirmpassword">Confirm Password</label>
                                 </div>
                                 <div class="mb-3 form-check">
@@ -93,7 +93,7 @@
                                     <div class="g-recaptcha" data-sitekey="<?= service('recaptchaService')->getSiteKey() ?>"></div>
                                 </div>
                                 <div class="d-grid">
-                                    <button type="submit" id="submitButton" class="btn btn-primary btn-lg">Register</button>
+                                    <button type="submit" id="registerSubmit" class="btn btn-primary btn-lg">Register</button>
                                 </div>
                                 <p class="mt-4 text-center text-muted">Already have an account? <a href="<?= url_to('login') ?>">Login here</a></p>
                             </form>
@@ -103,7 +103,7 @@
                         <div class="illustration-content text-center">
                             <i class="bi bi-gift-fill text-primary illustration-icon"></i>
                             <h4>Join Our Platform</h4>
-                            <p>Your free account comes with <strong>Ksh. 30</strong> in starter credits to try our AI and Crypto tools right away.</p>
+                            <p>Get <strong>Ksh. 30</strong> in starter credits when you make your first deposit to try our AI and Crypto tools right away.</p>
                         </div>
                     </div>
                 </div>

@@ -438,11 +438,11 @@
                         <h4 class="mb-4 fw-bold">Send a Message</h4>
                         <?= form_open(url_to('portfolio.sendEmail'), ['id' => 'contactForm', 'class' => 'needs-validation']) ?>
                         <div class="form-floating mb-3">
-                            <input type="text" class="form-control" id="name" name="name" placeholder="Name" required>
+                            <input type="text" class="form-control" id="name" name="name" placeholder="Name" autocomplete="name" required>
                             <label for="name">Name</label>
                         </div>
                         <div class="form-floating mb-3">
-                            <input type="email" class="form-control" id="email" name="email" placeholder="Email" required>
+                            <input type="email" class="form-control" id="email" name="email" placeholder="Email" autocomplete="email" required>
                             <label for="email">Email</label>
                         </div>
                         <div class="form-floating mb-3">

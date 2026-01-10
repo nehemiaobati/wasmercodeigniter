@@ -15,6 +15,6 @@ $routes->group('/', ['namespace' => 'App\Modules\Crypto\Controllers'], static fu
     // Authenticated User Routes for Crypto Module
     $routes->group('crypto', ['filter' => 'auth'], static function ($routes) {
         $routes->get('/', 'CryptoController::index', ['as' => 'crypto.index']);
-        $routes->post('query', 'CryptoController::query', ['as' => 'crypto.query', 'filter' => 'balance']);
+        $routes->post('query', 'CryptoController::query', ['as' => 'crypto.query', 'filter' => ['balance', 'throttle:10,60']]);
     });
 });

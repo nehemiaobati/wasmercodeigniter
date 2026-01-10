@@ -114,6 +114,22 @@ class PaymentsController extends BaseController
                 'paystack_response' => $jsonResponse,
             ]);
 
+            // Start First Deposit Bonus Logic
+            $hasPriorPayments = $this->paymentModel
+                ->where('user_id', $payment->user_id)
+                ->where('status', 'success')
+                ->where('id !=', $payment->id) // Exclude current payment
+                ->countAllResults() > 0;
+
+            $bonusAmount = '0.00';
+            if (! $hasPriorPayments) {
+                // Award 30.00 KSH bonus for first deposit
+                $bonusAmount = '30.00';
+                $this->userModel->addBalance((int) $payment->user_id, $bonusAmount);
+                log_message('info', "First deposit bonus (KSH {$bonusAmount}) awarded to User ID: {$payment->user_id}");
+            }
+            // End First Deposit Bonus Logic
+
             if ($payment->user_id) {
                 $this->userModel->addBalance((int) $payment->user_id, (string) $payment->amount);
             }

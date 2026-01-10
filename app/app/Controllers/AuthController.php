@@ -28,7 +28,7 @@ class AuthController extends BaseController
         }
         $data = [
             'pageTitle'       => 'Create Your Account | Afrikenkid',
-            'metaDescription' => 'Sign up for a free account and get KSH 30 in starter credits. Generate content, text-to-speech ouput, and view crypto market data instantly.',
+            'metaDescription' => 'Sign up for a free account. Make your first deposit to get KSH 30 in starter credits. Generate content, text-to-speech ouput, and view crypto market data instantly.',
             'canonicalUrl'    => url_to('register'),
             'robotsTag'       => 'noindex, follow',
         ];
@@ -79,7 +79,6 @@ class AuthController extends BaseController
         $user->username = $this->request->getVar('username');
         $user->email    = $this->request->getVar('email');
         $user->password = password_hash($this->request->getVar('password'), PASSWORD_DEFAULT);
-        $user->balance  = 30.00; // Set initial balance for new users.
         $user->verification_token = $token;
 
         // Prepare and send the email verification message.

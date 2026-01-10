@@ -137,4 +137,27 @@ class UserModel extends Model
 
         return true;
     }
+
+    /**
+     * Refunds an amount to a user's balance.
+     * Use this specifically for system refunds to distinguish from regular top-ups in logs if needed.
+     *
+     * @param int    $userId The ID of the user.
+     * @param string $amount The amount to refund.
+     *
+     * @return bool True on success.
+     */
+    public function refundBalance(int $userId, string $amount): bool
+    {
+        // Re-use addBalance logic but explicitly named for semantic clarity
+        $result = $this->addBalance($userId, $amount);
+
+        if ($result) {
+            log_message('info', "Refunded {$amount} to User ID: {$userId}");
+        } else {
+            log_message('critical', "Failed to refund {$amount} to User ID: {$userId}");
+        }
+
+        return $result;
+    }
 }

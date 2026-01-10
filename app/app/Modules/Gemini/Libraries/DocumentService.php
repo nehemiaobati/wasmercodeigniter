@@ -16,67 +16,7 @@ class DocumentService
         $this->pandocService = $pandocService ?? service('pandocService');
     }
 
-    /**
-     * Unified generation method. 
-     * Always returns 'fileData' (binary string) and handles intermediate file cleanup.
-     * 
-     * @param string $markdownContent The markdown content to convert
-     * @param string $format Output format: 'pdf' or 'docx'
-     * @param array $metadata Optional document metadata (title, author, subject, keywords, etc.)
-     * @return array ['status' => 'success'|'error', 'fileData' => string|null, 'message' => string|null]
-     */
-    public function generate(string $markdownContent, string $format, array $metadata = []): array
-    {
-        // 1. Prepare metadata with defaults
-        $defaults = [
-            'title' => 'AI Studio Document',
-            'author' => 'AI Content Studio',
-            'subject' => 'Generated Content',
-            'keywords' => 'AI, Content, Report',
-            'creator' => 'AI Content Studio - Powered by Gemini',
-        ];
-        $meta = array_merge($defaults, $metadata);
-
-        // 2. Prepare HTML
-        $parsedown = new Parsedown();
-        $parsedown->setSafeMode(true);
-        $parsedown->setBreaksEnabled(true);
-        $htmlContent = $parsedown->text($markdownContent);
-        $styledHtml = $this->_getStyledHtml($htmlContent, $metadata['title'] ?? 'Document');
-
-        // 3. Strategy A: Pandoc (Preferred)
-        // Checks availability inside the service to keep controller clean
-        if ($this->pandocService->isAvailable()) {
-            $pandocResult = $this->pandocService->generate($styledHtml, $format, 'temp_' . bin2hex(random_bytes(8)));
-
-            if ($pandocResult['status'] === 'success' && file_exists($pandocResult['filePath'])) {
-                // READ -> DELETE -> RETURN
-                // This ensures no files are left in the path, making it behave like Dompdf (memory only)
-                $fileData = file_get_contents($pandocResult['filePath']);
-                if (!unlink($pandocResult['filePath'])) {
-                    log_message('error', "[DocumentService] Failed to delete Pandoc temporary file: " . $pandocResult['filePath']);
-                }
-
-                return [
-                    'status' => 'success',
-                    'fileData' => $fileData
-                ];
-            }
-
-            // Log warning if Pandoc failed, but continue to fallback
-            log_message('warning', '[DocumentService] Pandoc failed: ' . ($pandocResult['message'] ?? 'Unknown') . '. Attempting fallback.');
-        }
-
-        // 4. Strategy B: Fallbacks (using match expression)
-        return match ($format) {
-            'pdf' => $this->_generateWithDompdf($htmlContent, $meta),
-            'docx' => $this->_generateWithPHPWord($markdownContent, $meta),
-            default => [
-                'status' => 'error',
-                'message' => 'Could not generate document. Unsupported format or all converters failed.'
-            ]
-        };
-    }
+    // --- Helper Methods ---
 
     /**
      * Generates a PDF using Dompdf.
@@ -133,7 +73,7 @@ class DocumentService
             // WORKAROUND 3: Fix "Table in ListItemRun" Crash
             // --------------------------------------------------------------------------
             // PHPWord crashes if a table is nested inside a list item.
-            // To prevent this, we pre-process the Markdown to "un-indent" all tables, 
+            // To prevent this, we pre-process the Markdown to "un-indent" all tables,
             // effectively moving them out of the list structure and making them top-level elements.
 
             // A. Remove indentation from all table rows (lines starting with whitespace + pipe)
@@ -186,7 +126,7 @@ class DocumentService
             // PHPWord's addHtml method has a quirk where it unescapes entities before writing XML.
             // If the content contains a raw '&' (e.g. "R&D"), it writes a raw '&' to the XML,
             // which is illegal and corrupts the .docx file.
-            // SOLUTION: We pre-escape '&' to '&amp;'. PHPWord unescapes it to '&amp;', 
+            // SOLUTION: We pre-escape '&' to '&amp;'. PHPWord unescapes it to '&amp;',
             // which is the correct XML entity for an ampersand.
             $fixedHtml = str_replace('&', '&amp;', $htmlContent);
 
@@ -195,12 +135,12 @@ class DocumentService
             // --------------------------------------------------------------------------
             // PHPWord treats HTML whitespace as insignificant, meaning it strips all newlines
             // and indentation from <pre><code> blocks, rendering them as a single line.
-            // SOLUTION: We manually convert whitespace inside code blocks into HTML tags 
+            // SOLUTION: We manually convert whitespace inside code blocks into HTML tags
             // that PHPWord respects (<br/> for newlines, &nbsp; for spaces).
             $fixedHtml = preg_replace_callback('/<pre><code(.*?)>(.*?)<\/code><\/pre>/s', function ($matches) {
                 $codeContent = $matches[2];
 
-                // 1. Normalize line endings to \n. 
+                // 1. Normalize line endings to \n.
                 // This prevents mixed line endings (like \r\n) from creating double-spaced lines
                 // when we convert them to <br/>.
                 $codeContent = str_replace(["\r\n", "\r"], "\n", $codeContent);
@@ -213,7 +153,7 @@ class DocumentService
                 $codeContent = str_replace(' ', '&nbsp;', $codeContent);
 
                 // 4. Apply Inline Styling
-                // We force 'Courier New' and a smaller font size to ensure the code looks 
+                // We force 'Courier New' and a smaller font size to ensure the code looks
                 // distinct from normal text.
                 return '<pre><code' . $matches[1] . ' style="font-family: \'Courier New\'; font-size: 9pt;">' . $codeContent . '</code></pre>';
             }, $fixedHtml);
@@ -240,7 +180,7 @@ class DocumentService
                 'fileData' => $fileData
             ];
         } catch (\Throwable $e) {
-            log_message('error', '[DocumentService] PHPWord error: ' . $e->getMessage());
+            log_message('error', "[DocumentService] PHPWord error: " . $e->getMessage());
             return ['status' => 'error', 'message' => 'DOCX generation failed: ' . $e->getMessage()];
         }
     }
@@ -404,5 +344,69 @@ class DocumentService
 <body>{$htmlContent}</body>
 </html>
 HTML;
+    }
+
+    // --- Public API ---
+
+    /**
+     * Unified generation method.
+     * Always returns 'fileData' (binary string) and handles intermediate file cleanup.
+     *
+     * @param string $markdownContent The markdown content to convert
+     * @param string $format Output format: 'pdf' or 'docx'
+     * @param array $metadata Optional document metadata (title, author, subject, keywords, etc.)
+     * @return array ['status' => 'success'|'error', 'fileData' => string|null, 'message' => string|null]
+     */
+    public function generate(string $markdownContent, string $format, array $metadata = []): array
+    {
+        // 1. Prepare metadata with defaults
+        $defaults = [
+            'title' => 'AI Studio Document',
+            'author' => 'AI Content Studio',
+            'subject' => 'Generated Content',
+            'keywords' => 'AI, Content, Report',
+            'creator' => 'AI Content Studio - Powered by Gemini',
+        ];
+        $meta = array_merge($defaults, $metadata);
+
+        // 2. Prepare HTML
+        $parsedown = new Parsedown();
+        $parsedown->setSafeMode(true);
+        $parsedown->setBreaksEnabled(true);
+        $htmlContent = $parsedown->text($markdownContent);
+        $styledHtml = $this->_getStyledHtml($htmlContent, $metadata['title'] ?? 'Document');
+
+        // 3. Strategy A: Pandoc (Preferred)
+        // Checks availability inside the service to keep controller clean
+        if ($this->pandocService->isAvailable()) {
+            $pandocResult = $this->pandocService->generate($styledHtml, $format, 'temp_' . bin2hex(random_bytes(8)));
+
+            if ($pandocResult['status'] === 'success' && file_exists($pandocResult['filePath'])) {
+                // READ -> DELETE -> RETURN
+                // This ensures no files are left in the path, making it behave like Dompdf (memory only)
+                $fileData = file_get_contents($pandocResult['filePath']);
+                if (!unlink($pandocResult['filePath'])) {
+                    log_message('error', "[DocumentService] Failed to delete Pandoc temporary file: " . $pandocResult['filePath']);
+                }
+
+                return [
+                    'status' => 'success',
+                    'fileData' => $fileData
+                ];
+            }
+
+            // Log warning if Pandoc failed, but continue to fallback
+            log_message('warning', '[DocumentService] Pandoc failed: ' . ($pandocResult['message'] ?? 'Unknown') . '. Attempting fallback.');
+        }
+
+        // 4. Strategy B: Fallbacks (using match expression)
+        return match ($format) {
+            'pdf' => $this->_generateWithDompdf($htmlContent, $meta),
+            'docx' => $this->_generateWithPHPWord($markdownContent, $meta),
+            default => [
+                'status' => 'error',
+                'message' => 'Could not generate document. Unsupported format or all converters failed.'
+            ]
+        };
     }
 }

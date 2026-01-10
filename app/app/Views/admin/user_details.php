@@ -29,7 +29,7 @@
         </div>
         <div class="col-lg-7">
             <div class="card blueprint-card">
-                 <div class="card-body p-4">
+                <div class="card-body p-4">
                     <h4 class="card-title fw-bold mb-3">Update Balance</h4>
                     <form action="<?= url_to('admin.users.update_balance', $user->id) ?>" method="post">
                         <?= csrf_field() ?>
@@ -51,7 +51,7 @@
                             </div>
                             <div class="col-12">
                                 <div class="d-grid">
-                                    <button type="submit" class="btn btn-primary btn-lg">Update Balance</button>
+                                    <button type="submit" id="updateBalanceSubmit" class="btn btn-primary btn-lg">Update Balance</button>
                                 </div>
                             </div>
                         </div>

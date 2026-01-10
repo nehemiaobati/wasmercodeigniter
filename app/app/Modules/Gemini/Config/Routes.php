@@ -16,8 +16,8 @@ $routes->group('', ['namespace' => 'App\Modules\Gemini\Controllers'], static fun
         $routes->get('/', 'GeminiController::index', ['as' => 'gemini.index']);
 
         // Core Generation
-        $routes->post('generate', 'GeminiController::generate', ['as' => 'gemini.generate', 'filter' => 'balance']);
-        $routes->post('stream', 'GeminiController::stream', ['as' => 'gemini.stream', 'filter' => 'balance']);
+        $routes->post('generate', 'GeminiController::generate', ['as' => 'gemini.generate', 'filter' => ['balance', 'throttle:10,60']]);
+        $routes->post('stream', 'GeminiController::stream', ['as' => 'gemini.stream', 'filter' => ['balance', 'throttle:10,60']]);
 
         // Prompt Management
         $routes->post('prompts/add', 'GeminiController::addPrompt', ['as' => 'gemini.prompts.add']);
@@ -38,8 +38,9 @@ $routes->group('', ['namespace' => 'App\Modules\Gemini\Controllers'], static fun
         $routes->post('download-document', 'GeminiController::downloadDocument', ['as' => 'gemini.download_document']);
 
         // Generative Media (Imagen/Veo)
-        $routes->post('media/generate', 'MediaController::generate', ['as' => 'gemini.media.generate']);
+        $routes->post('media/generate', 'MediaController::generate', ['as' => 'gemini.media.generate', 'filter' => 'throttle:5,60']);
         $routes->post('media/poll', 'MediaController::poll', ['as' => 'gemini.media.poll']);
+        $routes->post('media/active', 'MediaController::active', ['as' => 'gemini.media.active']);
         $routes->get('media/serve/(:segment)', 'MediaController::serve/$1', ['as' => 'gemini.media.serve']);
     });
 });

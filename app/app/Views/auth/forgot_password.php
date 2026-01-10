@@ -15,11 +15,11 @@
                     <form action="<?= url_to('auth.send_reset_link') ?>" method="post">
                         <?= csrf_field() ?>
                         <div class="form-floating mb-4">
-                            <input type="email" class="form-control" id="email" name="email" placeholder="name@example.com" value="<?= old('email') ?>" required>
+                            <input type="email" class="form-control" id="email" name="email" placeholder="name@example.com" value="<?= old('email') ?>" autocomplete="email" required>
                             <label for="email">Email Address</label>
                         </div>
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg fw-bold">Send Reset Link</button>
+                            <button type="submit" id="forgotPasswordSubmit" class="btn btn-primary btn-lg fw-bold">Send Reset Link</button>
                         </div>
                     </form>
                     <p class="mt-4 text-center text-muted">Remember your password? <a href="<?= url_to('login') ?>">Sign In</a></p>

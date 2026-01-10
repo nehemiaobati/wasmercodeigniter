@@ -6,62 +6,7 @@ namespace App\Modules\Gemini\Libraries;
 
 class FfmpegService
 {
-    /**
-     * Main Entry Point: Orchestrates the conversion.
-     * 
-     * @param string $base64Data Raw PCM data from Gemini
-     * @param string $outputDir The directory to save the file
-     * @param string $filenameBase The filename WITHOUT extension (e.g., 'speech_123')
-     * @return array{success: bool, fileName: string|null}
-     */
-    public function processAudio(string $base64Data, string $outputDir, string $filenameBase): array
-    {
-        // 1. Try FFmpeg (MP3) - Preferred for size
-        if ($this->isAvailable()) {
-            $fileName = $filenameBase . '.mp3';
-            $fullPath = $outputDir . $fileName;
-
-            // The user's instruction snippet had a logical inversion here.
-            // Reverting to original logic: if conversion succeeds, return success.
-            if ($this->_convertPcmToMp3($base64Data, $fullPath)) {
-                return ['success' => true, 'fileName' => $fileName];
-            }
-            // If FFmpeg fails mid-process, log it and fall through to WAV
-            log_message('error', '[FfmpegService] MP3 conversion failed. Falling back to WAV.');
-        }
-
-        // 2. Fallback (WAV) - Native PHP, larger file size but guaranteed to work
-        $fileName = $filenameBase . '.wav';
-        $fullPath = $outputDir . $fileName;
-
-        // The user's instruction snippet had a logical inversion here.
-        // Reverting to original logic: if conversion succeeds, return success.
-        if ($this->_createWavFile($base64Data, $fullPath)) {
-            return ['success' => true, 'fileName' => $fileName];
-        }
-
-        return ['success' => false, 'fileName' => null];
-    }
-
-    /**
-     * Safely checks if ffmpeg is available.
-     *
-     * @return bool True if ffmpeg is available, false otherwise.
-     */
-    public function isAvailable(): bool
-    {
-        if (!function_exists('shell_exec')) {
-            return false;
-        }
-
-        try {
-            $output = @shell_exec('command -v ffmpeg 2>/dev/null');
-            return !empty($output);
-        } catch (\Throwable $e) {
-            log_message('info', '[FfmpegService] Shell execution unavailable: ' . $e->getMessage());
-            return false;
-        }
-    }
+    // --- Helper Methods ---
 
     /**
      * Strategy A: FFmpeg Pipe (Memory Efficient).
@@ -121,5 +66,64 @@ class FfmpegService
         $header .= 'data' . pack('V', $len);
 
         return file_put_contents($outputFile, $header . $pcmData) !== false;
+    }
+
+    // --- Public API ---
+
+    /**
+     * Main Entry Point: Orchestrates the conversion.
+     *
+     * @param string $base64Data Raw PCM data from Gemini
+     * @param string $outputDir The directory to save the file
+     * @param string $filenameBase The filename WITHOUT extension (e.g., 'speech_123')
+     * @return array{success: bool, fileName: string|null}
+     */
+    public function processAudio(string $base64Data, string $outputDir, string $filenameBase): array
+    {
+        // 1. Try FFmpeg (MP3) - Preferred for size
+        if ($this->isAvailable()) {
+            $fileName = $filenameBase . '.mp3';
+            $fullPath = $outputDir . $fileName;
+
+            // The user's instruction snippet had a logical inversion here.
+            // Reverting to original logic: if conversion succeeds, return success.
+            if ($this->_convertPcmToMp3($base64Data, $fullPath)) {
+                return ['success' => true, 'fileName' => $fileName];
+            }
+            // If FFmpeg fails mid-process, log it and fall through to WAV
+            log_message('error', '[FfmpegService] MP3 conversion failed. Falling back to WAV.');
+        }
+
+        // 2. Fallback (WAV) - Native PHP, larger file size but guaranteed to work
+        $fileName = $filenameBase . '.wav';
+        $fullPath = $outputDir . $fileName;
+
+        // The user's instruction snippet had a logical inversion here.
+        // Reverting to original logic: if conversion succeeds, return success.
+        if ($this->_createWavFile($base64Data, $fullPath)) {
+            return ['success' => true, 'fileName' => $fileName];
+        }
+
+        return ['success' => false, 'fileName' => null];
+    }
+
+    /**
+     * Safely checks if ffmpeg is available.
+     *
+     * @return bool True if ffmpeg is available, false otherwise.
+     */
+    public function isAvailable(): bool
+    {
+        if (!function_exists('shell_exec')) {
+            return false;
+        }
+
+        try {
+            $output = @shell_exec('command -v ffmpeg 2>/dev/null');
+            return !empty($output);
+        } catch (\Throwable $e) {
+            log_message('info', '[FfmpegService] Shell execution unavailable: ' . $e->getMessage());
+            return false;
+        }
     }
 }

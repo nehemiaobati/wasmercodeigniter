@@ -54,6 +54,123 @@ class MemoryService
         $this->db = $db ?? \Config\Database::connect();
     }
 
+    // --- Helper Methods ---
+
+    /**
+     * Calculates the cosine similarity between two vectors.
+     * @return float A value between -1 and 1. Higher is more similar.
+     */
+    private function _cosineSimilarity(array $vecA, array $vecB): float
+    {
+        $dotProduct = 0.0;
+        $magA = 0.0;
+        $magB = 0.0;
+        $count = count($vecA);
+        if ($count !== count($vecB) || $count === 0) return 0;
+
+        for ($i = 0; $i < $count; $i++) {
+            $dotProduct += $vecA[$i] * $vecB[$i];
+            $magA += $vecA[$i] * $vecA[$i];
+            $magB += $vecB[$i] * $vecB[$i];
+        }
+
+        $magA = sqrt($magA);
+        $magB = sqrt($magB);
+
+        return ($magA == 0 || $magB == 0) ? 0 : $dotProduct / ($magA * $magB);
+    }
+
+    /**
+     * Extracts entities (keywords) from the text using the TokenService.
+     *
+     * @param string $text The text to analyze.
+     * @return array An array of extracted entities.
+     */
+    private function _extractEntities(string $text): array
+    {
+        return $this->tokenService->processText($text);
+    }
+
+    /**
+     * Updates entity records based on extracted keywords.
+     *
+     * @param array $keywords Extracted keywords from the interaction.
+     * @param string $interactionId The ID of the current interaction.
+     */
+    private function _updateEntitiesFromInteraction(array $keywords, string $interactionId): void
+    {
+        $isNovel = false;
+        foreach ($keywords as $keyword) {
+            $entityKey = strtolower($keyword);
+            /** @var AGIEntity|null $entity */
+            $entity = $this->entityModel->findByUserAndKey($this->userId, $entityKey);
+
+            if (!$entity) {
+                $isNovel = true;
+                $entity = new AGIEntity([
+                    'user_id' => $this->userId,
+                    'entity_key' => $entityKey,
+                    'name' => $keyword,
+                    'relationships' => [],
+                ]);
+            }
+
+            $entity->access_count = ($entity->access_count ?? 0) + 1;
+            $entity->relevance_score = ($entity->relevance_score ?? $this->config->initialScore) + $this->config->rewardScore;
+
+            $mentioned = $entity->mentioned_in ?? [];
+            if (!in_array($interactionId, $mentioned)) {
+                $mentioned[] = $interactionId;
+            }
+            $entity->mentioned_in = $mentioned;
+
+            $this->entityModel->save($entity);
+        }
+
+        if ($isNovel) {
+            $this->interactionModel
+                ->where('unique_id', $interactionId)
+                ->set('relevance_score', "relevance_score + {$this->config->noveltyBonus}", false)
+                ->update();
+        }
+
+        if (count($keywords) > 1) {
+            foreach ($keywords as $k1) {
+                foreach ($keywords as $k2) {
+                    if ($k1 === $k2) continue;
+
+                    $entity1 = $this->entityModel->findByUserAndKey($this->userId, strtolower($k1));
+                    if ($entity1) {
+                        $relationships = $entity1->relationships ?? [];
+                        $relationships[$k2] = ($relationships[$k2] ?? 0) + $this->config->relationshipStrengthIncrement;
+                        $entity1->relationships = $relationships;
+                        $this->entityModel->save($entity1);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Removes old or irrelevant memories to keep the database size manageable.
+     */
+    private function _pruneMemory(): void
+    {
+        $count = $this->interactionModel->where('user_id', $this->userId)->countAllResults();
+
+        if ($count > $this->config->pruningThreshold) {
+            $toDelete = $count - $this->config->pruningThreshold;
+            $this->interactionModel
+                ->where('user_id', $this->userId)
+                ->orderBy('relevance_score', 'ASC')
+                ->orderBy('last_accessed', 'ASC')
+                ->limit($toDelete)
+                ->delete();
+        }
+    }
+
+    // --- Public API ---
+
     /**
      * Builds Contextual Prompt with Memory Integration
      *
@@ -91,30 +208,6 @@ class MemoryService
             'memoryService' => $this,
             'usedInteractionIds' => $recalled['used_interaction_ids']
         ];
-    }
-
-    /**
-     * Calculates the cosine similarity between two vectors.
-     * @return float A value between -1 and 1. Higher is more similar.
-     */
-    private function _cosineSimilarity(array $vecA, array $vecB): float
-    {
-        $dotProduct = 0.0;
-        $magA = 0.0;
-        $magB = 0.0;
-        $count = count($vecA);
-        if ($count !== count($vecB) || $count === 0) return 0;
-
-        for ($i = 0; $i < $count; $i++) {
-            $dotProduct += $vecA[$i] * $vecB[$i];
-            $magA += $vecA[$i] * $vecA[$i];
-            $magB += $vecB[$i] * $vecB[$i];
-        }
-
-        $magA = sqrt($magA);
-        $magB = sqrt($magB);
-
-        return ($magA == 0 || $magB == 0) ? 0 : $dotProduct / ($magA * $magB);
     }
 
     /**
@@ -317,84 +410,6 @@ class MemoryService
     }
 
     /**
-     * Updates entity records based on extracted keywords.
-     *
-     * @param array $keywords Extracted keywords from the interaction.
-     * @param string $interactionId The ID of the current interaction.
-     */
-    private function _updateEntitiesFromInteraction(array $keywords, string $interactionId): void
-    {
-        $isNovel = false;
-        foreach ($keywords as $keyword) {
-            $entityKey = strtolower($keyword);
-            /** @var AGIEntity|null $entity */
-            $entity = $this->entityModel->findByUserAndKey($this->userId, $entityKey);
-
-            if (!$entity) {
-                $isNovel = true;
-                $entity = new AGIEntity([
-                    'user_id' => $this->userId,
-                    'entity_key' => $entityKey,
-                    'name' => $keyword,
-                    'relationships' => [],
-                ]);
-            }
-
-            $entity->access_count = ($entity->access_count ?? 0) + 1;
-            $entity->relevance_score = ($entity->relevance_score ?? $this->config->initialScore) + $this->config->rewardScore;
-
-            $mentioned = $entity->mentioned_in ?? [];
-            if (!in_array($interactionId, $mentioned)) {
-                $mentioned[] = $interactionId;
-            }
-            $entity->mentioned_in = $mentioned;
-
-            $this->entityModel->save($entity);
-        }
-
-        if ($isNovel) {
-            $this->interactionModel
-                ->where('unique_id', $interactionId)
-                ->set('relevance_score', "relevance_score + {$this->config->noveltyBonus}", false)
-                ->update();
-        }
-
-        if (count($keywords) > 1) {
-            foreach ($keywords as $k1) {
-                foreach ($keywords as $k2) {
-                    if ($k1 === $k2) continue;
-
-                    $entity1 = $this->entityModel->findByUserAndKey($this->userId, strtolower($k1));
-                    if ($entity1) {
-                        $relationships = $entity1->relationships ?? [];
-                        $relationships[$k2] = ($relationships[$k2] ?? 0) + $this->config->relationshipStrengthIncrement;
-                        $entity1->relationships = $relationships;
-                        $this->entityModel->save($entity1);
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Removes old or irrelevant memories to keep the database size manageable.
-     */
-    private function _pruneMemory(): void
-    {
-        $count = $this->interactionModel->where('user_id', $this->userId)->countAllResults();
-
-        if ($count > $this->config->pruningThreshold) {
-            $toDelete = $count - $this->config->pruningThreshold;
-            $this->interactionModel
-                ->where('user_id', $this->userId)
-                ->orderBy('relevance_score', 'ASC')
-                ->orderBy('last_accessed', 'ASC')
-                ->limit($toDelete)
-                ->delete();
-        }
-    }
-
-    /**
      * Clears all memory (interactions and entities) for the user.
      *
      * @return bool True on success, false on failure.
@@ -472,17 +487,6 @@ class MemoryService
     </query>
 </prompt>
 XML;
-    }
-
-    /**
-     * Extracts entities (keywords) from the text using the TokenService.
-     *
-     * @param string $text The text to analyze.
-     * @return array An array of extracted entities.
-     */
-    private function _extractEntities(string $text): array
-    {
-        return $this->tokenService->processText($text);
     }
 
     /**

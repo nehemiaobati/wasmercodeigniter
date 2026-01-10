@@ -111,7 +111,7 @@
                         </div>
 
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg fw-bold shadow-sm">
+                            <button type="submit" id="cryptoSearchSubmit" class="btn btn-primary btn-lg fw-bold shadow-sm">
                                 <i class="bi bi-search"></i> Search Blockchain
                             </button>
                         </div>

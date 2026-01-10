@@ -64,18 +64,18 @@
                             <form action="<?= url_to('login.authenticate') ?>" method="post">
                                 <?= csrf_field() ?>
                                 <div class="form-floating mb-3">
-                                    <input type="email" class="form-control" id="email" name="email" placeholder="name@example.com" value="<?= esc(old('email')) ?>" required>
+                                    <input type="email" class="form-control" id="email" name="email" placeholder="name@example.com" value="<?= esc(old('email')) ?>" autocomplete="email" required>
                                     <label for="email">Email address</label>
                                 </div>
                                 <div class="form-floating mb-4">
-                                    <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+                                    <input type="password" class="form-control" id="password" name="password" placeholder="Password" autocomplete="current-password" required>
                                     <label for="password">Password</label>
                                 </div>
                                 <div class="mb-3">
                                     <div class="g-recaptcha" data-sitekey="<?= service('recaptchaService')->getSiteKey() ?>"></div>
                                 </div>
                                 <div class="d-grid">
-                                    <button type="submit" class="btn btn-primary btn-lg">Login</button>
+                                    <button type="submit" id="loginSubmit" class="btn btn-primary btn-lg">Login</button>
                                 </div>
                                 <p class="mt-4 text-center text-muted">Don't have an account? <a href="<?= url_to('register') ?>">Register here</a></p>
                                 <p class="mt-4 text-center text-muted"><a href="<?= url_to('auth.forgot_password') ?>">Forgot Password?</a></p>
