@@ -102,7 +102,7 @@ class GeminiService
         for ($i = 0; $i <= $maxRetries; $i++) {
             try {
                 if ($i > 0) {
-                    log_message('info', "[GeminiService] Retry attempt {$i}/{$maxRetries} for model: {$model}");
+                    log_message('error', "[GeminiService] Retry attempt {$i}/{$maxRetries} for model: {$model} | URL: " . substr($url, 0, 100) . "...");
                 }
 
                 $client = \Config\Services::curlrequest([], null, null, false);
@@ -122,7 +122,7 @@ class GeminiService
                 if ($code === 429 || $code >= 500) {
                     $backoffSeconds = 1 * ($i + 1);
                     $responseBody = $response->getBody();
-                    log_message('warning', "[GeminiService] HTTP {$code} for model: {$model}, attempt {$i}/{$maxRetries}, time: " . number_format($totalTime, 2) . "s. Backing off {$backoffSeconds}s. Body: " . substr($responseBody, 0, 500));
+                    log_message('error', "[GeminiService] DEBUG-504: HTTP {$code} for model: {$model}, attempt {$i}/{$maxRetries}, time: " . number_format($totalTime, 2) . "s. Backing off {$backoffSeconds}s. URL: {$url} | Body: " . substr((string)$responseBody, 0, 500));
                     sleep($backoffSeconds);
                     continue;
                 }
