@@ -105,7 +105,7 @@ class GeminiService
                     log_message('info', "[GeminiService] Retry attempt {$i}/{$maxRetries} for model: {$model}");
                 }
 
-                $client = \Config\Services::curlrequest();
+                $client = \Config\Services::curlrequest([], null, null, false);
                 $response = $client->post($url, [
                     'body' => $body,
                     'headers' => ['Content-Type' => 'application/json'],
