@@ -96,10 +96,23 @@ class GeminiService
      * @param string $model The model name (for logging).
      * @return array The result or error array.
      */
+    /**
+     * Executes the HTTP request to the Gemini API with retries and exponential backoff.
+     *
+     * @param string $url The API endpoint.
+     * @param string $body The JSON body.
+     * @param string $model The model name (for logging).
+     * @return array The result or error array.
+     */
     private function _executeRequest(string $url, string $body, string $model = 'unknown'): array
     {
-        $maxRetries = 1;
+        $maxRetries = 2;
+        $retryableCodes = [429, 500, 502, 503, 504];
+
         for ($i = 0; $i <= $maxRetries; $i++) {
+            $lastStatusCode = 0;
+            $lastErrorMsg = '';
+
             try {
                 if ($i > 0) {
                     log_message('info', "[GeminiService] Retry attempt {$i}/{$maxRetries} for model: {$model}");
@@ -114,54 +127,67 @@ class GeminiService
                 ]);
 
                 $code = $response->getStatusCode();
+                $lastStatusCode = $code;
 
-                if ($code === 429) {
-                    $backoffSeconds = 1 * ($i + 1);
-                    log_message('warning', "[GeminiService] HTTP 429 (Rate Limit) for model: {$model}, attempt {$i}/{$maxRetries}, backing off {$backoffSeconds}s");
-                    sleep($backoffSeconds);
-                    continue;
-                }
-
-                if ($code !== 200) {
-                    $responseBody = $response->getBody();
-                    $err = json_decode($responseBody, true);
-                    $errorMsg = $err['error']['message'] ?? "API Error $code";
-                    log_message('error', "[GeminiService] HTTP {$code} error for model: {$model}. URL: {$url}. Response: {$responseBody}. Message: {$errorMsg}");
-                    return ['error' => $errorMsg];
-                }
-
-                $data = json_decode($response->getBody(), true);
-                if (json_last_error() !== JSON_ERROR_NONE) {
-                    log_message('error', "[GeminiService] JSON Decode Error for model {$model}: " . json_last_error_msg() . " | Body: " . $response->getBody());
-                    return ['error' => 'Failed to decode API response.'];
-                }
-
-                $text = '';
-                $thoughts = '';
-                foreach ($data['candidates'][0]['content']['parts'] ?? [] as $part) {
-                    if (isset($part['thought']) && $part['thought'] === true) {
-                        $thoughts .= $part['text'] ?? '';
-                    } else {
-                        $text .= $part['text'] ?? '';
+                // Success
+                if ($code === 200) {
+                    $data = json_decode($response->getBody(), true);
+                    if (json_last_error() !== JSON_ERROR_NONE) {
+                        $msg = "[GeminiService] JSON Decode Error for model {$model}: " . json_last_error_msg();
+                        log_message('error', $msg);
+                        return ['error' => 'Failed to decode API response.', 'http_code' => 500]; // Treat as internal error
                     }
+
+                    $text = '';
+                    $thoughts = '';
+                    foreach ($data['candidates'][0]['content']['parts'] ?? [] as $part) {
+                        if (isset($part['thought']) && $part['thought'] === true) {
+                            $thoughts .= $part['text'] ?? '';
+                        } else {
+                            $text .= $part['text'] ?? '';
+                        }
+                    }
+
+                    return [
+                        'result' => $text,
+                        'thoughts' => $thoughts,
+                        'usage' => $data['usageMetadata'] ?? null,
+                        'raw' => $data,
+                        'http_code' => 200
+                    ];
                 }
 
-                return [
-                    'result' => $text,
-                    'thoughts' => $thoughts,
-                    'usage' => $data['usageMetadata'] ?? null,
-                    'raw' => $data
-                ];
+                // Handle Errors based on Code
+                $responseBody = $response->getBody();
+                $err = json_decode($responseBody, true);
+                $lastErrorMsg = $err['error']['message'] ?? "API Error $code";
+
+                // Fail Fast (400-499 except 429)
+                if ($code >= 400 && $code < 500 && $code !== 429) {
+                    log_message('error', "[GeminiService] Fatal HTTP {$code} for model: {$model}. Msg: {$lastErrorMsg}");
+                    return ['error' => $lastErrorMsg, 'http_code' => $code];
+                }
+
+                // Retryable Codes
+                if (in_array($code, $retryableCodes)) {
+                    $backoffSeconds = 1 * ($i + 1);
+                    log_message('warning', "[GeminiService] Retryable HTTP {$code} for model: {$model}, attempt {$i}/{$maxRetries}, backing off {$backoffSeconds}s");
+                    sleep($backoffSeconds);
+                    continue; // Retry loop
+                }
+
+                // Other non-200 codes (treated as errors, no specific retry logic unless covered above)
+                log_message('error', "[GeminiService] HTTP {$code} error for model: {$model}. URL: {$url}. Response: {$responseBody}. Message: {$lastErrorMsg}");
+                return ['error' => $lastErrorMsg, 'http_code' => $code];
             } catch (\Exception $e) {
                 log_message('error', "[GeminiService] Exception for model: {$model}, attempt {$i}/{$maxRetries} - {$e->getMessage()}");
-                if ($i === $maxRetries) {
-                    log_message('error', "[GeminiService] All retries exhausted for model: {$model}");
-                    return ['error' => $e->getMessage()];
-                }
+                $lastErrorMsg = $e->getMessage();
+                // Network exceptions might be worth retrying, loop continues naturally if not last attempt
             }
         }
-        log_message('error', "[GeminiService] Request failed after all retries for model: {$model}");
-        return ['error' => 'Request failed after retries.'];
+
+        log_message('error', "[GeminiService] Request failed after all retries for model: {$model}. Last Code: {$lastStatusCode}");
+        return ['error' => "Request failed after retries. Last Error: {$lastErrorMsg}", 'http_code' => $lastStatusCode];
     }
 
     /**
@@ -348,16 +374,25 @@ class GeminiService
 
             $result = $this->_executeRequest($config['url'], $config['body'], $model);
 
-            if (isset($result['error']) && str_contains($result['error'], 'Quota exceeded')) {
-                log_message('warning', "[GeminiService] Quota exceeded for model: {$model}, trying next model");
-                continue;
-            }
-
+            // Check for Success
             if (isset($result['result'])) {
                 return $result;
             }
+
+            $httpCode = $result['http_code'] ?? 0;
+
+            // Decision: Fallback or Fail?
+            // Fallback on: 429 (Rate Limit) or >= 500 (Server Errors)
+            if ($httpCode === 429 || $httpCode >= 500) {
+                log_message('warning', "[GeminiService] HTTP {$httpCode} for model: {$model}, trying next model");
+                continue;
+            }
+
+            // Fail Fast for other errors (400, 401, 403, 404, etc)
+            return $result; // Return the error immediately
         }
-        log_message('error', '[GeminiService] All models failed or quota exceeded');
+
+        log_message('error', '[GeminiService] All models failed or exhausted.');
         return ['error' => 'All models failed or quota exceeded.'];
     }
 
@@ -465,13 +500,27 @@ class GeminiService
 
             curl_exec($ch);
             $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $err = curl_error($ch);
+            // curl_close($ch); // Deprecated in PHP 8.0+; CurlHandle closes on scope exit
 
             if ($code === 200) {
                 $completeCallback($fullText, $usage, $rawChunks);
                 return;
             }
+
+            // Handle Errors
+            log_message('warning', "[GeminiService] Stream Error HTTP {$code} for model: {$model}. Curl Error: {$err}");
+
+            // Retryable codes: 429 or 5xx -> Continue to next model
+            if ($code === 429 || $code >= 500 || $code === 0) { // 0 is usually network error
+                continue;
+            }
+
+            // Fatal codes: 400-499 (excl 429) -> Fail Fast
+            $chunkCallback(['error' => "Stream Error: HTTP $code. Please check your input or configuration."]);
+            return;
         }
-        $chunkCallback(['error' => "Error: Stream failed."]);
+        $chunkCallback(['error' => "Error: Stream failed after trying all models."]);
     }
 
     /**
