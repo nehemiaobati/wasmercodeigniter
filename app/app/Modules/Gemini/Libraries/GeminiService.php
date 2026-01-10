@@ -98,31 +98,26 @@ class GeminiService
      */
     private function _executeRequest(string $url, string $body, string $model = 'unknown'): array
     {
-        $maxRetries = 2;
+        $maxRetries = 1;
         for ($i = 0; $i <= $maxRetries; $i++) {
             try {
                 if ($i > 0) {
-                    log_message('error', "[GeminiService] Retry attempt {$i}/{$maxRetries} for model: {$model} | URL: " . substr($url, 0, 100) . "...");
+                    log_message('info', "[GeminiService] Retry attempt {$i}/{$maxRetries} for model: {$model}");
                 }
 
-                $client = \Config\Services::curlrequest([], null, null, false);
-                $startTime = microtime(true);
-
+                $client = \Config\Services::curlrequest();
                 $response = $client->post($url, [
                     'body' => $body,
                     'headers' => ['Content-Type' => 'application/json'],
                     'http_errors' => false,
-                    'timeout' => 90,
-                    'connect_timeout' => 15, // Explicitly set connect timeout
+                    'timeout' => 90
                 ]);
 
-                $totalTime = microtime(true) - $startTime;
                 $code = $response->getStatusCode();
 
-                if ($code === 429 || $code >= 500) {
+                if ($code === 429) {
                     $backoffSeconds = 1 * ($i + 1);
-                    $responseBody = $response->getBody();
-                    log_message('error', "[GeminiService] DEBUG-504: HTTP {$code} for model: {$model}, attempt {$i}/{$maxRetries}, time: " . number_format($totalTime, 2) . "s. Backing off {$backoffSeconds}s. URL: {$url} | Body: " . substr((string)$responseBody, 0, 500));
+                    log_message('warning', "[GeminiService] HTTP 429 (Rate Limit) for model: {$model}, attempt {$i}/{$maxRetries}, backing off {$backoffSeconds}s");
                     sleep($backoffSeconds);
                     continue;
                 }
@@ -163,7 +158,6 @@ class GeminiService
                     log_message('error', "[GeminiService] All retries exhausted for model: {$model}");
                     return ['error' => $e->getMessage()];
                 }
-                sleep(1 * ($i + 1)); // Backoff before retrying exception
             }
         }
         log_message('error', "[GeminiService] Request failed after all retries for model: {$model}");
@@ -344,11 +338,6 @@ class GeminiService
     public function generateContent(array $parts): array
     {
         if (!$this->apiKey) return ['error' => 'API Key missing.'];
-
-        // 1. EXTEND TIME LIMIT: Tell PHP to allow this specific script to run for 5 minutes
-        if (function_exists('set_time_limit')) {
-            set_time_limit(300);
-        }
 
         foreach (self::MODEL_PRIORITIES as $model) {
             $config = $this->payloadService->getPayloadConfig($model, $this->apiKey, $parts);
