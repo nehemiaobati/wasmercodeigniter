@@ -21,13 +21,20 @@
     <meta name="robots" content="<?= esc($robotsTag ?? 'index, follow') ?>">
     <link rel="icon" href="<?= base_url('favicon.ico') ?>" type="image/x-icon">
 
-    <!-- Social Media Meta -->
+    <!-- Social Media Meta (Open Graph for Facebook/LinkedIn) -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="<?= esc($canonicalUrl ?? current_url()) ?>">
     <meta property="og:title" content="<?= esc($pageTitle ?? 'AFRIKENKID | Generative AI & Crypto Data for Africa') ?>">
     <meta property="og:description" content="<?= esc($metaDescription ?? 'Access powerful Generative AI tools and real-time blockchain analytics. Pay easily via M-Pesa or Credit Card. Your all-in-one platform for AI and Crypto insights.') ?>">
     <meta property="og:image" content="<?= esc($metaImage ?? base_url('public/assets/images/afrikenkid_og_image.jpg')) ?>">
+
+    <!-- Twitter Card (LinkedIn also uses these) -->
     <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@afrikenkid">
+    <meta name="twitter:title" content="<?= esc($pageTitle ?? 'AFRIKENKID | Generative AI & Crypto Data for Africa') ?>">
+    <meta name="twitter:description" content="<?= esc($metaDescription ?? 'Access powerful Generative AI tools and real-time blockchain analytics. Pay easily via M-Pesa or Credit Card. Your all-in-one platform for AI and Crypto insights.') ?>">
+    <meta name="twitter:image" content="<?= esc($metaImage ?? base_url('public/assets/images/afrikenkid_og_image.jpg')) ?>">
+    <meta name="twitter:image:alt" content="AFRIKENKID Platform Preview">
 
     <!-- Structured Data -->
     <script type="application/ld+json">
