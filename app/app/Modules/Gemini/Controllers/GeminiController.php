@@ -433,45 +433,56 @@ class GeminiController extends BaseController
             },
             // Complete Callback
             function ($fullText, $usageMetadata, $rawChunks = []) use ($userId, $prep, $inputText, $options, $uploadedFileIds) {
-                // Delegate all business logic to Service
-                $result = $this->geminiService->finalizeStreamInteraction(
-                    $userId,
-                    $inputText,
-                    $fullText,
-                    $usageMetadata,
-                    $rawChunks,
-                    $prep['contextData'],
-                    $options['voice_mode']
-                );
+                try {
+                    // Delegate all business logic to Service
+                    $result = $this->geminiService->finalizeStreamInteraction(
+                        $userId,
+                        $inputText,
+                        $fullText,
+                        $usageMetadata,
+                        $rawChunks,
+                        $prep['contextData'],
+                        $options['voice_mode']
+                    );
 
-                // Process Audio URL
-                $audioUrl = null;
-                if (!empty($result['audioData'])) {
-                    $audioFilename = $this->geminiService->processAudioForServing($result['audioData'], $userId);
-                    if ($audioFilename) {
-                        $audioUrl = url_to('gemini.serve_audio', $audioFilename);
+                    // Process Audio URL
+                    $audioUrl = null;
+                    if (!empty($result['audioData'])) {
+                        $audioFilename = $this->geminiService->processAudioForServing($result['audioData'], $userId);
+                        if ($audioFilename) {
+                            $audioUrl = url_to('gemini.serve_audio', $audioFilename);
+                        }
                     }
+
+                    // Send Final Status Event
+                    $finalPayload = [
+                        'csrf_token' => csrf_hash(),
+                        'cost'       => $result['costKSH'],
+                        'used_interaction_ids' => $result['used_interaction_ids'] ?? [],
+                        'new_interaction_id' => $result['new_interaction_id'] ?? null,
+                        'timestamp' => $result['timestamp'] ?? null,
+                        'user_input' => $inputText,
+                        'audio_url'  => $audioUrl
+                    ];
+
+                    echo "event: close\n";
+                    echo "data: " . json_encode($finalPayload) . "\n\n";
+
+                    if (ob_get_level() > 0) ob_flush();
+                    flush();
+
+                    // Cleanup
+                    $this->geminiService->cleanupTempFiles($uploadedFileIds, $userId);
+                } catch (\Throwable $e) {
+                    // Log error but ensure close event still sends to prevent "Connection Lost"
+                    log_message('error', "[GeminiController] Stream completion error for User ID {$userId}: " . $e->getMessage());
+
+                    echo "event: close\n";
+                    echo "data: " . json_encode(['csrf_token' => csrf_hash(), 'error' => 'Stream processing failed.']) . "\n\n";
+
+                    if (ob_get_level() > 0) ob_flush();
+                    flush();
                 }
-
-                // Send Final Status Event
-                $finalPayload = [
-                    'csrf_token' => csrf_hash(),
-                    'cost'       => $result['costKSH'],
-                    'used_interaction_ids' => $result['used_interaction_ids'] ?? [],
-                    'new_interaction_id' => $result['new_interaction_id'] ?? null,
-                    'timestamp' => $result['timestamp'] ?? null,
-                    'user_input' => $inputText,
-                    'audio_url'  => $audioUrl // Just append if robust
-                ];
-
-                echo "event: close\n";
-                echo "data: " . json_encode($finalPayload) . "\n\n";
-
-                if (ob_get_level() > 0) ob_flush();
-                flush();
-
-                // Cleanup
-                $this->geminiService->cleanupTempFiles($uploadedFileIds, $userId);
             }
         );
 
