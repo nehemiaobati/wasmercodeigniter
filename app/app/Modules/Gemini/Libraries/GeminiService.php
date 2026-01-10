@@ -106,7 +106,7 @@ class GeminiService
      */
     private function _executeRequest(string $url, string $body, string $model = 'unknown'): array
     {
-        $maxRetries = 2;
+        $maxRetries = 1;
         $retryableCodes = [429, 500, 502, 503, 504];
 
         for ($i = 0; $i <= $maxRetries; $i++) {
