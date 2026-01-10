@@ -110,7 +110,7 @@ class GeminiService
                     'body' => $body,
                     'headers' => ['Content-Type' => 'application/json'],
                     'http_errors' => false,
-                    'timeout' => 90
+                    'timeout' => 30
                 ]);
 
                 $code = $response->getStatusCode();
