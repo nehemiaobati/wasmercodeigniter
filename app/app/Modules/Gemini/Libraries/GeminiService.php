@@ -30,7 +30,7 @@ class GeminiService
         "gemini-2.0-flash-lite",    // Legacy Fallback
     ];
 
-    public const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+    public const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     public const MAX_FILES = 5;
     public const SUPPORTED_MIME_TYPES = [
         'image/png',
@@ -115,9 +115,9 @@ class GeminiService
 
                 $code = $response->getStatusCode();
 
-                if ($code === 429) {
+                if ($code === 429 || $code >= 500) {
                     $backoffSeconds = 1 * ($i + 1);
-                    log_message('warning', "[GeminiService] HTTP 429 (Rate Limit) for model: {$model}, attempt {$i}/{$maxRetries}, backing off {$backoffSeconds}s");
+                    log_message('warning', "[GeminiService] HTTP {$code} for model: {$model}, attempt {$i}/{$maxRetries}, backing off {$backoffSeconds}s");
                     sleep($backoffSeconds);
                     continue;
                 }
@@ -158,6 +158,7 @@ class GeminiService
                     log_message('error', "[GeminiService] All retries exhausted for model: {$model}");
                     return ['error' => $e->getMessage()];
                 }
+                sleep(1 * ($i + 1)); // Backoff before retrying exception
             }
         }
         log_message('error', "[GeminiService] Request failed after all retries for model: {$model}");
