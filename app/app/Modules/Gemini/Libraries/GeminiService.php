@@ -345,6 +345,11 @@ class GeminiService
     {
         if (!$this->apiKey) return ['error' => 'API Key missing.'];
 
+        // 1. EXTEND TIME LIMIT: Tell PHP to allow this specific script to run for 5 minutes
+        if (function_exists('set_time_limit')) {
+            set_time_limit(300);
+        }
+
         foreach (self::MODEL_PRIORITIES as $model) {
             $config = $this->payloadService->getPayloadConfig($model, $this->apiKey, $parts);
             if (!$config) {
