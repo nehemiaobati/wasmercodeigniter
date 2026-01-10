@@ -21,16 +21,16 @@ use App\Modules\Gemini\Models\UserSettingsModel;
 class GeminiService
 {
     public const MODEL_PRIORITIES = [
+        "gemini-3-flash-preview",   // Preview: Latest Flash model with preview features
         "gemini-flash-latest",      // Primary: Latest Flash model for speed and efficiency
         "gemini-flash-lite-latest", // Secondary: Lite version for lower latency
-        "gemini-3-flash-preview",   // Preview: Latest Flash model with preview features
         "gemini-2.5-flash",         // Fallback: Stable Flash version
         "gemini-2.5-flash-lite",    // Fallback: Stable Lite version
         "gemini-2.0-flash",         // Legacy Fallback
         "gemini-2.0-flash-lite",    // Legacy Fallback
     ];
 
-    public const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    public const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
     public const MAX_FILES = 5;
     public const SUPPORTED_MIME_TYPES = [
         'image/png',
