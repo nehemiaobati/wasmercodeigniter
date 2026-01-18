@@ -22,6 +22,14 @@
                     <ul class="list-unstyled">
                         <li class="list-group-item d-flex justify-content-between py-2 border-bottom"><strong>Username:</strong> <span><?= esc($user->username) ?></span></li>
                         <li class="list-group-item d-flex justify-content-between py-2 border-bottom"><strong>Email:</strong> <span class="text-truncate"><?= esc($user->email) ?></span></li>
+                        <li class="list-group-item d-flex justify-content-between py-2 border-bottom">
+                            <strong>Status:</strong>
+                            <?php if ($user->is_verified): ?>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">Verified</span>
+                            <?php else: ?>
+                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Unverified</span>
+                            <?php endif; ?>
+                        </li>
                         <li class="list-group-item d-flex justify-content-between py-2"><strong>Current Balance:</strong> <span class="fw-bold h5 text-success mb-0">Ksh. <?= number_format($user->balance, 2) ?></span></li>
                     </ul>
                 </div>

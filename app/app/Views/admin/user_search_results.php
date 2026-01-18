@@ -28,6 +28,7 @@
                     <tr>
                         <th scope="col">Username</th>
                         <th scope="col">Email</th>
+                        <th scope="col">Verified</th>
                         <th scope="col">Balance</th>
                         <th scope="col">Actions</th>
                     </tr>
@@ -38,6 +39,13 @@
                             <tr>
                                 <td><strong><?= esc($user->username) ?></strong></td>
                                 <td><?= esc($user->email) ?></td>
+                                <td>
+                                    <?php if ($user->is_verified): ?>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">Verified</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Unverified</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td>Ksh. <?= number_format($user->balance, 2) ?></td>
                                 <td>
                                     <a href="<?= url_to('admin.users.show', $user->id) ?>" class="btn btn-sm btn-outline-primary">Details</a>
