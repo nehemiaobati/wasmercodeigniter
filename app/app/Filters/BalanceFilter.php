@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Filters;
 
@@ -19,37 +21,16 @@ class BalanceFilter implements FilterInterface
      */
     public function before(RequestInterface $request, $arguments = null)
     {
-        // Check if user is logged in
-        if (!session()->has('userId')) { // Changed from 'user_id' to 'userId'
-            // Redirect to login if not logged in
-            // Using url_to() to match user preference
-            return redirect()->to(url_to('login')); // Changed from direct path '/login'
+        if (!$this->_isAuthenticated()) {
+            return redirect()->to(url_to('login'));
         }
 
-        $userModel = new UserModel();
-        $userId = session()->get('userId'); // Changed from 'user_id' to 'userId'
-        $user = $userModel->find($userId);
+        $user = $this->_getUser();
 
-        // Check if user exists and has balance
-        if (!$user || !isset($user->balance)) {
-            // Handle case where user or balance is not found, maybe redirect to a profile page or error
-            // Redirect to the main payment page using url_to() and set an alert
-            session()->setFlashdata('alert', 'User data not found or balance missing. Please check your account or make a payment.');
-            return redirect()->to(url_to('payment.index')); // Changed from url_to('payment.initiate')
+        if ($this->_isBalanceLow($user)) {
+            return $this->_handleLowBalance($request);
         }
 
-        // Define the minimum required balance for crypto operations.
-        // This value can be made configurable if needed.
-        $requiredBalance = 1; 
-        
-        if ($user->balance < $requiredBalance) {
-            // Redirect to the main payment page if balance is insufficient using url_to() and set an alert
-            // Including the required balance in the alert message
-            session()->setFlashdata('alert', 'Your balance is too low. You need at least ' . $requiredBalance . ' to continue.');
-            return redirect()->to(url_to('payment.index')); // Changed from url_to('payment.initiate')
-        }
-
-        // If balance is sufficient, allow the request to proceed
         return null;
     }
 
@@ -65,5 +46,52 @@ class BalanceFilter implements FilterInterface
     public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
     {
         // This filter only needs logic in the 'before' method.
+    }
+
+    // --- Helper Methods ---
+
+    private function _isAuthenticated(): bool
+    {
+        return session()->has('userId');
+    }
+
+    private function _getUser()
+    {
+        $userModel = new UserModel();
+        return $userModel->find(session()->get('userId'));
+    }
+
+    private function _isBalanceLow($user): bool
+    {
+        // Check if user exists and has balance
+        if (!$user || !isset($user->balance)) {
+            return true;
+        }
+
+        // Define the minimum required balance for AI/Crypto operations.
+        $requiredBalance = 1;
+
+        return $user->balance < $requiredBalance;
+    }
+
+    private function _handleLowBalance(RequestInterface $request)
+    {
+        $requiredBalance = 1;
+        $message = 'Your balance is too low. You need at least ' . $requiredBalance . ' to continue.';
+
+        // Check for AJAX request
+        if ($request instanceof \CodeIgniter\HTTP\IncomingRequest && $request->isAJAX()) {
+            session()->setFlashdata('alert', $message);
+            return response()->setJSON([
+                'status' => 'error',
+                'message' => 'Insufficient balance. You need at least ' . $requiredBalance . ' to continue.',
+                'redirect' => url_to('payment.index'),
+                'csrf_token' => csrf_hash()
+            ])->setStatusCode(403);
+        }
+
+        // Standard Redirect
+        session()->setFlashdata('alert', $message);
+        return redirect()->to(url_to('payment.index'));
     }
 }

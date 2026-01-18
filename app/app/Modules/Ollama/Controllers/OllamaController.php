@@ -113,10 +113,10 @@ class OllamaController extends BaseController
     public function deleteMedia(): ResponseInterface
     {
         $userId = (int) session()->get('userId');
-        if ($userId <= 0) return $this->response->setStatusCode(403)->setJSON(['error' => 'Auth required', 'csrf_token' => csrf_hash()]);
+        if ($userId <= 0) return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Auth required', 'csrf_token' => csrf_hash()]);
 
         $fileId = $this->request->getPost('file_id');
-        if (!$fileId) return $this->response->setStatusCode(400)->setJSON(['error' => 'Invalid ID', 'csrf_token' => csrf_hash()]);
+        if (!$fileId) return $this->response->setStatusCode(400)->setJSON(['status' => 'error', 'message' => 'Invalid ID', 'csrf_token' => csrf_hash()]);
 
         $this->ollamaService->cleanupTempFiles([$fileId], $userId);
 

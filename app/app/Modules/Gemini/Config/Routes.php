@@ -38,7 +38,7 @@ $routes->group('', ['namespace' => 'App\Modules\Gemini\Controllers'], static fun
         $routes->post('download-document', 'GeminiController::downloadDocument', ['as' => 'gemini.download_document']);
 
         // Generative Media (Imagen/Veo)
-        $routes->post('media/generate', 'MediaController::generate', ['as' => 'gemini.media.generate', 'filter' => 'throttle:5,60']);
+        $routes->post('media/generate', 'MediaController::generate', ['as' => 'gemini.media.generate', 'filter' => ['balance', 'throttle:5,60']]);
         $routes->post('media/poll', 'MediaController::poll', ['as' => 'gemini.media.poll']);
         $routes->post('media/active', 'MediaController::active', ['as' => 'gemini.media.active']);
         $routes->get('media/serve/(:segment)', 'MediaController::serve/$1', ['as' => 'gemini.media.serve']);

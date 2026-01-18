@@ -51,7 +51,7 @@ class ThrottleFilter implements FilterInterface
                     ->setJSON([
                         'status' => 'error',
                         'message' => 'Too many requests. Please try again later.',
-                        'token' => csrf_hash()
+                        'csrf_token' => csrf_hash()
                     ]);
             }
 

@@ -83,9 +83,9 @@ class CryptoController extends BaseController
     /**
      * Processes a crypto query, including a balance check and deduction within a transaction.
      *
-     * @return RedirectResponse
+     * @return \CodeIgniter\HTTP\ResponseInterface|\CodeIgniter\HTTP\RedirectResponse
      */
-    public function query(): RedirectResponse
+    public function query()
     {
         $rules = [
             'asset' => 'required|in_list[btc,ltc]',
@@ -95,11 +95,25 @@ class CryptoController extends BaseController
         ];
 
         if (! $this->validate($rules)) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'message' => implode(' ', $this->validator->getErrors()),
+                    'csrf_token' => csrf_hash()
+                ]);
+            }
             return redirect()->back()->withInput()->with('error', $this->validator->getErrors());
         }
 
         $userId = (int) session()->get('userId');
         if ($userId <= 0) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'message' => 'User not logged in.',
+                    'csrf_token' => csrf_hash()
+                ]);
+            }
             return redirect()->back()->withInput()->with('error', 'User not logged in or invalid user ID.');
         }
 
@@ -114,6 +128,13 @@ class CryptoController extends BaseController
         // --- Balance Check ---
         $user = $this->userModel->find($userId);
         if (!$user) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'message' => 'User not found.',
+                    'csrf_token' => csrf_hash()
+                ]);
+            }
             return redirect()->back()->withInput()->with('error', 'User not found.');
         }
 
@@ -123,6 +144,15 @@ class CryptoController extends BaseController
         if (bccomp((string) $user->balance, (string) $deductionAmount, 2) < 0) {
             $error = "Insufficient balance. This query costs approx. KSH " . number_format($deductionAmount, 2) .
                 ", but you only have KSH " . $user->balance . ".";
+
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'message' => $error,
+                    'redirect' => url_to('payment.index'),
+                    'token' => csrf_hash()
+                ])->setStatusCode(403);
+            }
             return redirect()->back()->withInput()->with('error', $error);
         }
 
@@ -147,6 +177,13 @@ class CryptoController extends BaseController
         }
 
         if (!empty($errors)) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'message' => implode(' ', $errors),
+                    'csrf_token' => csrf_hash()
+                ]);
+            }
             return redirect()->back()->withInput()->with('error', $errors);
         }
 
@@ -160,13 +197,33 @@ class CryptoController extends BaseController
 
         if ($db->transStatus() === false || !$deductionSuccess) {
             log_message('critical', "Transaction failed while deducting crypto query cost for user ID: {$userId}");
-            // The user got the data but we failed to charge them. Log this critical error.
+            $msg = 'Query successful, but a billing error occurred. Please contact support.';
+
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'status' => 'success', // Return data anyway since query worked
+                    'message' => $msg,
+                    'result' => $result,
+                    'csrf_token' => csrf_hash()
+                ]);
+            }
+
             return redirect()->back()->withInput()
                 ->with('result', $result)
-                ->with('error', 'Query successful, but a billing error occurred. Please contact support.');
+                ->with('error', $msg);
         }
 
         $costMessage = "KSH " . number_format($deductionAmount, 2) . " deducted for your query.";
+
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON([
+                'status' => 'success',
+                'message' => $costMessage,
+                'result' => $result,
+                'csrf_token' => csrf_hash()
+            ]);
+        }
+
         return redirect()->back()->withInput()
             ->with('result', $result)
             ->with('success', $costMessage);

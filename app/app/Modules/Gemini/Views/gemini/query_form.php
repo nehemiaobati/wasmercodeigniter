@@ -1114,25 +1114,7 @@
                         }
                     });
 
-                    let json = null;
-                    try {
-                        json = await res.json();
-                    } catch (e) {
-                        /* Not JSON */
-                    }
-
-                    // Always attempt CSRF rotation if token is present
-                    if (json) {
-                        const token = json.token || json.csrf_token || res.headers.get('X-CSRF-TOKEN');
-                        if (token) this.refreshCsrf(token);
-                    }
-
-                    if (!res.ok) {
-                        const errorMsg = json?.message || json?.error || `HTTP Error: ${res.status}`;
-                        throw new Error(errorMsg);
-                    }
-
-                    return json;
+                    return await this._handleAjaxResponse(res);
                 } catch (e) {
                     console.error("AJAX Failure", e);
                     // Only show toast if it's not a handled validation/logic error from server
@@ -1142,6 +1124,49 @@
                     throw e;
                 }
             });
+        }
+
+        /**
+         * Unified Response Handler
+         * Decouples networking from business logic validation.
+         */
+        async _handleAjaxResponse(res) {
+            let json = null;
+            try {
+                json = await res.json();
+            } catch (e) {
+                /* Not JSON */
+            }
+
+            // Always attempt CSRF rotation if token is present
+            if (json) {
+                const token = json.csrf_token || json.token || res.headers.get('X-CSRF-TOKEN');
+                if (token) this.refreshCsrf(token);
+            }
+
+            // Check for HTTP errors first
+            if (!res.ok) {
+                if (json?.redirect) {
+                    window.location.href = json.redirect;
+                    throw new Error('Redirecting...');
+                }
+                const errorMsg = json?.message || json?.error || `HTTP Error: ${res.status}`;
+                throw new Error(errorMsg);
+            }
+
+            // Ensure we have a valid payload
+            if (!json) throw new Error('Empty response from server');
+
+            // Check for Logic errors (success 200 OK but logic failed)
+            if (typeof json.status !== 'undefined' && json.status === 'error') {
+                if (json.redirect) {
+                    window.location.href = json.redirect;
+                    throw new Error('Redirecting...');
+                }
+                throw new Error(json.message || 'Unknown error occurred');
+            }
+
+            return json;
         }
     }
 

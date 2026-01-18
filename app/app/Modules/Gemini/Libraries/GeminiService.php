@@ -31,7 +31,7 @@ class GeminiService
     ];
 
     public const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-    public const MAX_FILES = 5;
+    public const MAX_FILES = 10;
     public const SUPPORTED_MIME_TYPES = [
         'image/png',
         'image/jpeg',

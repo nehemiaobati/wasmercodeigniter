@@ -254,59 +254,389 @@
 
 <?= $this->section('scripts') ?>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const queryTypeSelect = document.getElementById('query_type');
-        const limitField = document.getElementById('limit-field');
-        const cryptoForm = document.getElementById('cryptoQueryForm');
+    const APP_CONFIG = {
+        csrfName: '<?= csrf_token() ?>',
+        csrfHash: '<?= csrf_hash() ?>'
+    };
 
-        // UX: Toggle limit field based on type
-        function toggleLimitField() {
-            if (queryTypeSelect && limitField) {
-                limitField.style.display = (queryTypeSelect.value === 'tx') ? 'block' : 'none';
-            }
+    /**
+     * RequestQueue
+     * Serializes async operations to prevent race conditions.
+     */
+    class RequestQueue {
+        constructor() {
+            this.queue = [];
+            this.processing = false;
         }
-        if (queryTypeSelect) queryTypeSelect.addEventListener('change', toggleLimitField);
 
-        // UX: Loading state
-        function handleFormSubmit(form) {
-            const submitButton = form.querySelector('button[type="submit"]');
-            if (submitButton) {
-                const originalButtonText = submitButton.innerHTML;
-                submitButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status"></span> Searching Chain...`;
-                submitButton.disabled = true;
-
-                // Re-enable on back button
-                window.addEventListener('pageshow', function() {
-                    submitButton.innerHTML = originalButtonText;
-                    submitButton.disabled = false;
+        enqueue(fn) {
+            return new Promise((resolve, reject) => {
+                this.queue.push({
+                    fn,
+                    resolve,
+                    reject
                 });
-            }
-        }
-        if (cryptoForm) {
-            cryptoForm.addEventListener('submit', () => handleFormSubmit(cryptoForm));
+                this.process();
+            });
         }
 
-        // Feature: Auto-scroll to results
-        // Uses the ID 'results-section' which has CSS scroll-margin-top for sticky headers
-        const resultsSection = document.getElementById('results-section');
-        if (resultsSection) {
+        async process() {
+            if (this.processing || this.queue.length === 0) return;
+            this.processing = true;
+            const {
+                fn,
+                resolve,
+                reject
+            } = this.queue.shift();
+            try {
+                resolve(await fn());
+            } catch (e) {
+                reject(e);
+            }
+            this.processing = false;
+            this.process(); // Loop
+        }
+    }
+
+    class CryptoApp {
+        constructor() {
+            this.csrfHash = APP_CONFIG.csrfHash;
+            this.requestQueue = new RequestQueue();
+            this.form = document.getElementById('cryptoQueryForm');
+            this.resultsContainer = document.getElementById('crypto-results-container');
+
+            // If the container doesn't exist (first load without results), create it
+            if (!this.resultsContainer) {
+                this.resultsContainer = document.createElement('div');
+                this.resultsContainer.id = 'crypto-results-container';
+                this.resultsContainer.className = 'container'; // Match layout
+                // Append after the form container (col-lg-8)
+                const formCol = document.querySelector('.col-lg-8');
+                if (formCol && formCol.parentElement) {
+                    // Create a wrapper row if needed or append to main row
+                    // The current layout has <div class="row g-4 justify-content-center"> <div class="col-lg-8">...</div> </div>
+                    // We want to append another col-lg-8 to the row
+                    this.resultsContainer.className = 'col-lg-8';
+                    formCol.parentElement.appendChild(this.resultsContainer);
+                }
+            }
+
+            this.init();
+        }
+
+        init() {
+            if (this.form) {
+                this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+            }
+
+            // UX: Toggle limit field
+            const queryType = document.getElementById('query_type');
+            const limitField = document.getElementById('limit-field');
+            if (queryType && limitField) {
+                const toggle = () => limitField.style.display = (queryType.value === 'tx') ? 'block' : 'none';
+                queryType.addEventListener('change', toggle);
+                toggle(); // Initial state
+            }
+        }
+
+        refreshCsrf(hash) {
+            if (!hash) return;
+            this.csrfHash = hash;
+            document.querySelectorAll(`input[name="${APP_CONFIG.csrfName}"]`)
+                .forEach(el => el.value = hash);
+        }
+
+        async _handleAjaxResponse(res) {
+            let json = null;
+            try {
+                json = await res.json();
+            } catch (e) {
+                /* Not JSON */
+            }
+
+            if (json) {
+                const token = json.csrf_token || json.token || res.headers.get('X-CSRF-TOKEN');
+                if (token) this.refreshCsrf(token);
+            }
+
+            if (!res.ok) {
+                if (json?.redirect) {
+                    window.location.href = json.redirect;
+                    throw new Error('Redirecting...');
+                }
+                const errorMsg = json?.message || json?.error || `HTTP Error: ${res.status}`;
+                throw new Error(errorMsg);
+            }
+
+            if (!json) throw new Error('Empty response from server');
+
+            if (json.status === 'error') {
+                if (json.redirect) {
+                    window.location.href = json.redirect;
+                    throw new Error('Redirecting...');
+                }
+                throw new Error(json.message || 'Unknown error occurred');
+            }
+
+            return json;
+        }
+
+        async sendAjax(url, data) {
+            return this.requestQueue.enqueue(async () => {
+                if (!data.has(APP_CONFIG.csrfName)) {
+                    data.append(APP_CONFIG.csrfName, this.csrfHash);
+                }
+
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        body: data,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    return await this._handleAjaxResponse(res);
+                } catch (e) {
+                    console.error("AJAX Error", e);
+                    throw e;
+                }
+            });
+        }
+
+        async handleSubmit(e) {
+            e.preventDefault();
+            const btn = this.form.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+
+            // Loading State
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status"></span> Searching Chain...`;
+
+            // Clear previous alerts
+            const existingAlerts = document.querySelectorAll('.alert.generated-alert');
+            existingAlerts.forEach(el => el.remove());
+
+            try {
+                const fd = new FormData(this.form);
+                const response = await this.sendAjax(this.form.action, fd);
+
+                if (response.status === 'success') {
+                    this.renderResults(response.result);
+                    // Show success cost message if present
+                    if (response.message) {
+                        this.showAlert(response.message, 'success');
+                    }
+                }
+            } catch (err) {
+                this.showAlert(err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        renderResults(data) {
+            if (!this.resultsContainer) return;
+
+            // Scroll to results
             setTimeout(() => {
-                resultsSection.scrollIntoView({
+                this.resultsContainer?.scrollIntoView({
                     behavior: 'smooth',
                     block: 'start'
                 });
-            }, 300); // Slight delay ensures DOM is painted
+            }, 100);
+
+            const assetBadge = data.asset === 'BTC' || data.asset === 'Bitcoin (BTC)' ? 'secondary' : 'secondary';
+            const assetName = (data.asset || 'Unknown').toUpperCase();
+
+            let contentHtml = '';
+
+            // 1. Balance View
+            if (data.balance !== undefined) {
+                contentHtml = `
+                    <div class="balance-display text-center">
+                        <p class="text-muted text-uppercase fw-bold mb-2">Confirmed Balance</p>
+                        <div class="balance-amount">${this.escapeHtml(data.balance)}</div>
+                    </div>
+                `;
+            }
+            // 2. Transactions View
+            else if (data.transactions) {
+                const count = data.transactions.length;
+                if (count > 0) {
+                    let txItems = '';
+                    data.transactions.forEach((tx, index) => {
+                        const fee = tx.fee ?? '0';
+                        const block = tx.block_height ?? tx.block_id ?? 'Pending';
+                        const hashShort = tx.hash;
+
+                        // Sending Addresses
+                        let senders = '';
+                        (tx.sending_addresses || []).forEach(addr => {
+                            senders += `<div class="crypto-address small text-truncate">${this.escapeHtml(addr)}</div>`;
+                        });
+
+                        // Receiving Addresses
+                        let receivers = '';
+                        (tx.receiving_addresses || []).forEach(r => {
+                            receivers += `
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="crypto-address small text-truncate" style="max-width: 70%;">${this.escapeHtml(r.address)}</span>
+                                    <span class="fw-bold small">${this.escapeHtml(r.amount)}</span>
+                                </div>
+                            `;
+                        });
+
+                        txItems += `
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="heading${index}">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${index}">
+                                        <div class="d-flex flex-column flex-sm-row w-100 pe-3 gap-2">
+                                            <span class="fw-bold">#${index + 1}</span>
+                                            <span class="text-muted crypto-hash text-truncate d-block" style="max-width: 200px;">${this.escapeHtml(tx.hash)}</span>
+                                            <span class="ms-sm-auto small text-muted">${this.escapeHtml(tx.time || '')}</span>
+                                        </div>
+                                    </button>
+                                </h2>
+                                <div id="collapse${index}" class="accordion-collapse collapse" data-bs-parent="#transactionsAccordion">
+                                    <div class="accordion-body bg-body-tertiary">
+                                        <div class="row mb-3">
+                                            <div class="col-12">
+                                                <label class="small fw-bold text-muted">Transaction Hash</label>
+                                                <div class="d-flex">
+                                                    <span class="crypto-hash text-break" id="tx-hash-${index}">${this.escapeHtml(tx.hash)}</span>
+                                                    <button class="copy-btn" onclick="copyToClipboard('#tx-hash-${index}')"><i class="bi bi-clipboard"></i></button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row g-2 mb-3">
+                                            <div class="col-6 col-md-4">
+                                                <div class="p-2 bg-body border rounded text-center">
+                                                    <div class="small text-muted">Block</div>
+                                                    <div class="fw-bold">${this.escapeHtml(block)}</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-md-4">
+                                                <div class="p-2 bg-body border rounded text-center">
+                                                    <div class="small text-muted">Fee</div>
+                                                    <div class="fw-bold">${this.escapeHtml(fee)}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <h6 class="small text-uppercase text-muted fw-bold mt-3">Flow</h6>
+                                        <div class="card">
+                                            <ul class="list-group list-group-flush">
+                                                <li class="list-group-item bg-danger-subtle text-danger-emphasis">
+                                                    <small class="fw-bold">FROM</small>
+                                                    ${senders}
+                                                </li>
+                                                <li class="list-group-item bg-success-subtle text-success-emphasis">
+                                                    <small class="fw-bold">TO</small>
+                                                    ${receivers}
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    contentHtml = `
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0">Transaction History</h5>
+                            <span class="badge bg-secondary">${count} Found</span>
+                        </div>
+                        <div class="accordion" id="transactionsAccordion">
+                            ${txItems}
+                        </div>
+                    `;
+                } else {
+                    contentHtml = `
+                        <div class="alert alert-light border text-center py-4">
+                            <i class="bi bi-search fs-1 text-muted mb-3 d-block"></i>
+                            <h5 class="fw-bold text-muted">No Transactions Found</h5>
+                            <p class="mb-0 text-muted">We couldn't find any transactions for this address within the specified limit.</p>
+                        </div>
+                    `;
+                }
+            }
+
+            this.resultsContainer.innerHTML = `
+                <div class="card blueprint-card mt-2 shadow-sm border-primary" id="results-section">
+                    <div class="card-header bg-body-tertiary border-bottom d-flex justify-content-between align-items-center">
+                        <h4 class="fw-bold mb-0"><i class="bi bi-list-check"></i> Results</h4>
+                        <span class="badge bg-${assetBadge} fs-6">${assetName}</span>
+                    </div>
+
+                    <div class="card-body p-4">
+                        <div class="mb-4">
+                            <label class="small text-muted text-uppercase fw-bold">Address Queried</label>
+                            <div class="d-flex align-items-center bg-body-secondary p-2 rounded border">
+                                <span class="text-truncate crypto-address flex-grow-1 me-2" id="res-address">${this.escapeHtml(data.address || 'N/A')}</span>
+                                <button class="copy-btn" onclick="copyToClipboard('#res-address')" title="Copy Address">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                        </div>
+                        ${contentHtml}
+                    </div>
+                </div>
+            `;
         }
 
-        toggleLimitField();
-    });
+        escapeHtml(text) {
+            if (text === null || text === undefined) return '';
+            return String(text)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
 
-    // UX: Copy to clipboard helper
-    function copyToClipboard(selector) {
+        showAlert(msg, type = 'error') {
+            // Find existing alerts and remove them
+            const existingAlerts = document.querySelectorAll('.alert.generated-alert');
+            existingAlerts.forEach(el => el.remove());
+
+            // Construct the alert
+            const alertHtml = `
+                <div class="alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show generated-alert shadow-sm mb-4" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="bi ${type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill'} me-2 fs-4"></i>
+                        <div>${this.escapeHtml(msg)}</div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+
+            // Inject before the card or results
+            // We'll place it at the top of the .col-lg-8 container
+            const container = document.querySelector('.col-lg-8');
+            if (container) {
+                const wrapper = document.createElement('div');
+                wrapper.innerHTML = alertHtml;
+                const alertEl = wrapper.firstElementChild;
+                if (alertEl) {
+                    container.prepend(alertEl);
+
+                    // Auto-scroll to alert
+                    alertEl.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+                }
+            }
+        }
+    }
+
+    // Global helper for copy (used in generated HTML)
+    window.copyToClipboard = function(selector) {
         const element = document.querySelector(selector);
         if (element) {
             navigator.clipboard.writeText(element.innerText).then(() => {
-                // Visual feedback could be added here (e.g. toast)
                 const btn = element.nextElementSibling;
                 if (btn && btn.classList.contains('copy-btn')) {
                     const original = btn.innerHTML;
@@ -315,6 +645,10 @@
                 }
             });
         }
-    }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+        new CryptoApp();
+    });
 </script>
 <?= $this->endSection() ?>
