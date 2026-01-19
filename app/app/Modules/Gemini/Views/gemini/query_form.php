@@ -256,6 +256,7 @@
         border-radius: 0.5rem;
         padding: 1.5rem;
         display: flex;
+        flex-direction: column;
         justify-content: center;
         align-items: center;
         min-height: 300px;
@@ -932,8 +933,8 @@
                     <source src="${url}" type="video/mp4">
                 </video>
             </div>
-            <div class="text-center mt-3">
-                <a href="${url}" download="generated-video.mp4" 
+            <div class="text-center mt-3 d-flex justify-content-center">
+                <a href="${url}?download=1" download="generated-video.mp4" 
                    class="btn btn-primary">
                     <i class="bi bi-download"></i> Download Video
                 </a>
@@ -1468,6 +1469,7 @@
          * Starts the polling process for a video.
          */
         startPolling(opId, startElapsed = 0) {
+            this._stop(); // Clear any existing timers first
             this.activeVideoOp = opId;
             let elapsed = startElapsed;
 
@@ -1495,12 +1497,19 @@
                     this._stop();
                     this.app.ui.renderMediaCard(ViewRenderer.renderVideoPlayer(d.url));
                     this.app.ui.setLoading(false);
-                } else if (d.status === 'failed') {
+
+                    // Show cost feedback
+                    if (d.cost_deducted && this.app.ui.els.flashContainer) {
+                        this.app.ui.els.flashContainer.innerHTML = ViewRenderer.renderFlashMessage("KSH " + parseFloat(d.cost_deducted).toFixed(2) + " deducted.", 'success');
+                    }
+                } else if (d.status === 'failed' || d.status === 'error') {
                     throw new Error(d.message);
                 }
             } catch (e) {
                 this._stop();
-                document.getElementById('flash-messages-container').innerHTML = ViewRenderer.renderFlashMessage(e.message || 'Video processing failed.', 'danger');
+                if (this.app.ui.els.flashContainer) {
+                    this.app.ui.els.flashContainer.innerHTML = ViewRenderer.renderFlashMessage(e.message || 'Video processing failed.', 'danger');
+                }
                 this.app.ui.setLoading(false);
             }
         }
@@ -1567,7 +1576,9 @@
                     document.getElementById('raw-response').value = d.raw_result;
                     this.app.ui.enableCodeFeatures();
                     this.app.ui.scrollToBottom();
-                    if (d.flash_html) this.app.ui.els.flashContainer.innerHTML = d.flash_html;
+                    if (d.flash_html && this.app.ui.els.flashContainer) {
+                        this.app.ui.els.flashContainer.innerHTML = d.flash_html;
+                    }
                     this.app.ui.renderAudio(d.audio_url);
 
                     if (d.new_interaction_id) this.app.history.addItem({
@@ -1603,7 +1614,11 @@
                 } else if (d.type === 'video') {
                     // Hand off to JobManager
                     this.app.jobs.startPolling(d.op_id);
-                    return;
+                }
+
+                // Show cost feedback
+                if (d.flash_html && this.app.ui.els.flashContainer) {
+                    this.app.ui.els.flashContainer.innerHTML = d.flash_html;
                 }
             } catch (e) {
                 // Unified Error Handling (Flash)

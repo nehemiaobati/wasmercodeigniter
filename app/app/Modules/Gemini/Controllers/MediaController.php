@@ -113,8 +113,14 @@ class MediaController extends BaseController
                 return $this->_respondError($result['message']);
             }
 
-            // Append CSRF token to response for frontend refresh
+            // Set Flash Message
+            if (($result['cost_deducted'] ?? 0) > 0) {
+                session()->setFlashdata('success', "KSH " . number_format($result['cost_deducted'], 2) . " deducted.");
+            }
+
+            // Append CSRF token and Flash HTML to response for frontend refresh
             $result['csrf_token'] = csrf_hash();
+            $result['flash_html'] = view('App\Views\partials\flash_messages');
 
             // Success Response - Handle Redirection for non-AJAX if needed, or consistent JSON
             if ($this->request->isAJAX()) {
@@ -185,7 +191,7 @@ class MediaController extends BaseController
      * Serves a generated media file securely with serverless compliance.
      *
      * @param string $filename The name of the file to serve.
-     * @return void Outputs the file content directly.
+     * @return \CodeIgniter\HTTP\ResponseInterface Outputs the file content directly.
      * @throws \CodeIgniter\Exceptions\PageNotFoundException If the file does not exist.
      */
     public function serve($filename)
@@ -193,20 +199,22 @@ class MediaController extends BaseController
         $userId = (int) session()->get('userId');
         $path = WRITEPATH . 'uploads/generated/' . $userId . '/' . basename($filename);
 
-        if (!file_exists($path)) throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        if (!file_exists($path)) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
 
-        header('Content-Type: ' . mime_content_type($path));
-        header('Content-Length: ' . filesize($path));
+        $response = $this->response
+            ->setHeader('Content-Type', mime_content_type($path))
+            ->setHeader('Content-Length', (string)filesize($path));
 
+        // Use download() if forced or via query param
         if ($this->request->getGet('download') === '1') {
-            header('Content-Disposition: attachment; filename="' . basename($filename) . '"');
+            return $this->response->download($path, null);
         }
 
-        if (readfile($path) !== false) {
-            if (!unlink($path)) {
-                log_message('error', "[MediaController] Failed to delete file after serve: {$path}");
-            }
-        }
-        exit;
+        // Otherwise stream for inline viewing
+        // We read it into memory because the response object needs body set if not using download()
+        // Or we can use the native approach but without exit;
+        return $this->response->setBody(file_get_contents($path));
     }
 }

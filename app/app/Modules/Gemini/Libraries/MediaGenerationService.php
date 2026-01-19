@@ -262,7 +262,7 @@ class MediaGenerationService
                 'created_at' => Time::now()->toDateTimeString(),
                 'updated_at' => Time::now()->toDateTimeString(),
             ]);
-            return ['status' => 'pending', 'type' => 'video', 'op_id' => $response['name']];
+            return ['status' => 'pending', 'type' => 'video', 'op_id' => $response['name'], 'cost_deducted' => $cost];
         });
     }
 
@@ -307,10 +307,22 @@ class MediaGenerationService
      */
     private function _downloadAndSaveVideo(string $opId, string $videoUri, string $apiKey): array
     {
-        $dlResp = $this->curl->get($videoUri . '&key=' . urlencode($apiKey), ['http_errors' => false]);
+        // Robust URI construction
+        $dlUrl = $videoUri;
+        if (strpos($dlUrl, 'key=') === false) {
+            $separator = (strpos($dlUrl, '?') === false) ? '?' : '&';
+            $dlUrl .= $separator . 'key=' . urlencode($apiKey);
+        }
+
+        $dlResp = $this->curl->get($dlUrl, [
+            'http_errors' => false,
+            'allow_redirects' => true
+        ]);
+
         if ($dlResp->getStatusCode() !== 200) {
+            log_message('error', "[MediaGenerationService] Video download failed for OpID {$opId}. Status: " . $dlResp->getStatusCode() . " | URL: {$dlUrl} | Response: " . substr($dlResp->getBody(), 0, 200));
             $this->_refundFailedJob($opId);
-            return ['status' => 'failed', 'message' => 'Download failed. Credits refunded.'];
+            return ['status' => 'failed', 'message' => "Download failed (HTTP " . $dlResp->getStatusCode() . "). Credits refunded."];
         }
 
         $record = $this->db->table('generated_media')->where('remote_op_id', $opId)->get()->getRow();
@@ -348,7 +360,7 @@ class MediaGenerationService
         $record = $this->db->table('generated_media')->where('remote_op_id', $opId)->get()->getRow();
         if ($record) {
             $this->db->table('generated_media')->where('id', $record->id)->update(['status' => 'failed']);
-            $this->userModel->refundBalance($record->user_id, (string)$record->cost);
+            $this->userModel->refundBalance((int)$record->user_id, (string)$record->cost);
         }
     }
 

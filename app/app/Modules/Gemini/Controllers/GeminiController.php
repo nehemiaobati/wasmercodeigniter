@@ -643,9 +643,11 @@ class GeminiController extends BaseController
 
         // Serve and delete in one go for serverless compliance (ephemeral storage)
         if (readfile($path) !== false) {
+            /*
             if (!unlink($path)) {
                 log_message('error', "[GeminiController] Failed to delete audio file after serve: {$path}");
             }
+            */
         }
         return $this->response;
     }
