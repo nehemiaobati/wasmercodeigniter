@@ -170,9 +170,17 @@ class MediaController extends BaseController
         }
 
         try {
+            // RELEASE SESSION LOCK
+            // Polling is a long-running read-only operation (logic-wise for the session).
+            // We release the lock so other requests (like downloads) aren't blocked.
+            session_write_close();
+
             $result = $this->mediaService->pollVideoStatus($opId);
 
-            // Append CSRF token
+            // Re-open session if we needed to write to it (optional, but good practice if logic followed)
+            // session_start(); 
+
+            // Append CSRF token (Note: This might be stale if session rotated, but usually okay for poll loops)
             $result['csrf_token'] = csrf_hash();
 
             return $this->respond($result);
@@ -200,21 +208,36 @@ class MediaController extends BaseController
         $path = WRITEPATH . 'uploads/generated/' . $userId . '/' . basename($filename);
 
         if (!file_exists($path)) {
+            // Access denied or file not found
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
 
-        $response = $this->response
-            ->setHeader('Content-Type', mime_content_type($path))
-            ->setHeader('Content-Length', (string)filesize($path));
+        $mime = mime_content_type($path);
+        $size = filesize($path);
 
-        // Use download() if forced or via query param
+        // STABILITY FIX: Stream file instead of loading into memory
+        // This prevents PHP fatal errors on large video files.
+        $this->response
+            ->setHeader('Content-Type', $mime)
+            ->setHeader('Content-Length', (string)$size)
+            ->setHeader('Cache-Control', 'private, max-age=3600');
+
         if ($this->request->getGet('download') === '1') {
-            return $this->response->download($path, null);
+            $this->response->setHeader('Content-Disposition', 'attachment; filename="' . basename($filename) . '"');
+        } else {
+            $this->response->setHeader('Content-Disposition', 'inline');
         }
 
-        // Otherwise stream for inline viewing
-        // We read it into memory because the response object needs body set if not using download()
-        // Or we can use the native approach but without exit;
-        return $this->response->setBody(file_get_contents($path));
+        // Send headers immediately
+        $this->response->send();
+
+        // Flush buffer
+        if (ob_get_level()) ob_end_clean();
+
+        // Stream file
+        readfile($path);
+
+        // Terminate script to prevent CI4 from trying to send output again
+        exit;
     }
 }

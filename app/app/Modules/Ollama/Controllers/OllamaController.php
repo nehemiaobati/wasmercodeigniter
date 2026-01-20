@@ -131,10 +131,8 @@ class OllamaController extends BaseController
         $userId = (int) session()->get('userId');
 
         // Validation Guard Clause
-        if (!$this->validate([
-            'prompt' => 'max_length[100000]',
-            'model'  => 'required'
-        ])) {
+        // Validation Guard Clause
+        if (!$this->_validateGenerationRequest()) {
             return $this->_respondError('Invalid input.');
         }
 
@@ -171,6 +169,12 @@ class OllamaController extends BaseController
 
         // SSE Headers
         $this->_setupSSEHeaders();
+
+        // Validation
+        if (!$this->_validateGenerationRequest()) {
+            $this->_sendSSEError('Invalid input or model.');
+            return $this->response;
+        }
 
         $inputText = (string) $this->request->getPost('prompt');
         $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
@@ -405,38 +409,69 @@ class OllamaController extends BaseController
         $this->response->setBody("data: " . json_encode(['error' => $msg, 'csrf_token' => csrf_hash()]) . "\n\n");
     }
 
+    private function _validateGenerationRequest(): bool
+    {
+        return $this->validate([
+            'prompt' => 'max_length[100000]',
+            'model'  => 'required'
+        ]);
+    }
+
     private function _buildGenerationResponse(array $result)
+    {
+        $finalResult = $result['result'];
+        $parsedHtml = $this->_parseMarkdown($finalResult);
+
+        // Prepare raw result with thoughts (for Plain text view consistency)
+        $rawResult = $this->_formatRawResult($result);
+
+        if (!empty($result['thoughts'])) {
+            $parsedHtml = $this->_buildThinkingBlockHtml($result['thoughts']) . "\n\n" . $parsedHtml;
+        }
+
+        if ($this->request->isAJAX()) {
+            return $this->_buildAJAXResponse($result, $parsedHtml, $rawResult);
+        }
+
+        return $this->_buildStandardResponse($parsedHtml, $rawResult);
+    }
+
+    private function _parseMarkdown(string $text): string
     {
         $parsedown = new Parsedown();
         $parsedown->setSafeMode(true);
         $parsedown->setBreaksEnabled(true);
+        return $parsedown->text($text);
+    }
 
-        $finalResult = $result['result'];
-        $parsedHtml = $parsedown->text($finalResult);
-
-        // Prepare raw result with thoughts (for Plain text view consistency)
-        $rawResult = $result['result'];
+    private function _formatRawResult(array $result): string
+    {
+        $raw = $result['result'];
         if (!empty($result['thoughts'])) {
-            $parsedHtml = $this->_buildThinkingBlockHtml($result['thoughts']) . "\n\n" . $parsedHtml;
-            $rawResult = "=== THINKING PROCESS ===\n\n" . $result['thoughts'] . "\n\n=== ANSWER ===\n\n" . $rawResult;
+            return "=== THINKING PROCESS ===\n\n" . $result['thoughts'] . "\n\n=== ANSWER ===\n\n" . $raw;
         }
+        return $raw;
+    }
 
-        if ($this->request->isAJAX()) {
-            $responsePayload = [
-                'status' => 'success',
-                'result' => $parsedHtml,
-                'raw_result' => $rawResult,
-                'flash_html' => view('App\Views\partials\flash_messages'),
-                'used_interaction_ids' => $result['used_interaction_ids'] ?? [],
-                'new_interaction_id' => $result['new_interaction_id'] ?? null,
-                'timestamp' => $result['timestamp'] ?? null,
-                'user_input' => ($this->request->getPost('prompt') ?? ''),
-                'csrf_token' => csrf_hash()
-            ];
+    private function _buildAJAXResponse(array $result, string $parsedHtml, string $rawResult): ResponseInterface
+    {
+        $responsePayload = [
+            'status' => 'success',
+            'result' => $parsedHtml,
+            'raw_result' => $rawResult,
+            'flash_html' => view('App\Views\partials\flash_messages'),
+            'used_interaction_ids' => $result['used_interaction_ids'] ?? [],
+            'new_interaction_id' => $result['new_interaction_id'] ?? null,
+            'timestamp' => $result['timestamp'] ?? null,
+            'user_input' => ($this->request->getPost('prompt') ?? ''),
+            'csrf_token' => csrf_hash()
+        ];
 
-            return $this->response->setJSON($responsePayload);
-        }
+        return $this->response->setJSON($responsePayload);
+    }
 
+    private function _buildStandardResponse(string $parsedHtml, string $rawResult): RedirectResponse
+    {
         return redirect()->back()->withInput()
             ->with('result', $parsedHtml)
             ->with('raw_result', $rawResult)
