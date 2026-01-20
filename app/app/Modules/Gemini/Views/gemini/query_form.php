@@ -887,7 +887,7 @@
                 <img src="${url}" class="generated-media-item img-fluid mb-3" 
                      style="cursor: pointer;" onclick="window.open('${url}','_blank')">
                 <div>
-                    <a href="${url}" download="generated-image.jpg" 
+                    <a href="${url}?download=1" download="generated-image.jpg" 
                        class="btn btn-primary">
                         <i class="bi bi-download"></i> Download Image
                     </a>
