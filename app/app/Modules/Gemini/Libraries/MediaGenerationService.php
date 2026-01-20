@@ -307,12 +307,23 @@ class MediaGenerationService
      */
     private function _downloadAndSaveVideo(string $opId, string $videoUri, string $apiKey): array
     {
-        // Robust URI construction
-        $dlUrl = $videoUri;
-        if (strpos($dlUrl, 'key=') === false) {
-            $separator = (strpos($dlUrl, '?') === false) ? '?' : '&';
-            $dlUrl .= $separator . 'key=' . urlencode($apiKey);
+        // Robust URI construction using CI4 URI class
+        $uri = new \CodeIgniter\HTTP\URI($videoUri);
+
+        // API Key is strictly required for download, ensure it exists
+        // We use addQuery which handles separators (?) and (&) automatically.
+        // We first check if 'key' is already present to avoid overwriting (e.g. signed URLs).
+        $currentQuery = $uri->getQuery();
+        $queryParams = [];
+        if (!empty($currentQuery)) {
+            parse_str($currentQuery, $queryParams);
         }
+
+        if (!isset($queryParams['key'])) {
+            $uri->addQuery('key', $apiKey);
+        }
+
+        $dlUrl = (string) $uri;
 
         $dlResp = $this->curl->get($dlUrl, [
             'http_errors' => false,

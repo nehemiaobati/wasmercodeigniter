@@ -98,72 +98,104 @@ class GeminiController extends BaseController
      * @param int $userId User ID for audio file path resolution.
      * @return RedirectResponse|ResponseInterface
      */
+    /**
+     * Builds the final response by orchestrating markdown parsing and response formatting.
+     * Use private helpers to maintain Single Responsibility Principle.
+     *
+     * @param array $result Result array from GeminiService.
+     * @param int $userId User ID for audio file path resolution.
+     * @return RedirectResponse|ResponseInterface
+     */
     private function _buildGenerationResponse(array $result, int $userId)
     {
-        // Process Audio if present
-        $audioUrl = null;
-        if (!empty($result['audioData'])) {
-            // REFACTOR: Use GeminiService to persist file and return filename
-            $audioFilename = $this->geminiService->processAudioForServing($result['audioData'], $userId);
-            if ($audioFilename) {
-                // Return URL for serveAudio
-                $audioUrl = url_to('gemini.serve_audio', $audioFilename);
-            }
-        }
+        // 1. Process Audio
+        $audioUrl = $this->_resolveAudioUrl($result, $userId);
 
-        // Set Flash Message
+        // 2. Set Flash Message for Cost
         if ($result['costKSH'] > 0) {
             session()->setFlashdata('success', "KSH " . number_format($result['costKSH'], 2) . " deducted.");
         }
 
-        // Parse markdown
-        $parsedown = new Parsedown();
-        $parsedown->setSafeMode(true);
-        $parsedown->setBreaksEnabled(true);
-
-        $finalResult = $result['result'];
-        $parsedHtml = $parsedown->text($finalResult);
-
-        // Prepare raw result with thoughts (for Plain text view consistency)
+        // 3. Parse Markdown & Prepare Content
+        $parsedHtml = $this->_parseMarkdown($result['result']);
         $rawResult = $result['result'];
+
+        // Inject Thinking Block if present
         if (!empty($result['thoughts'])) {
             $parsedHtml = $this->_buildThinkingBlockHtml($result['thoughts']) . "\n\n" . $parsedHtml;
             $rawResult = "=== THINKING PROCESS ===\n\n" . $result['thoughts'] . "\n\n=== ANSWER ===\n\n" . $rawResult;
         }
 
-        // Handle AJAX
-        if ($this->request->isAJAX()) {
-            // Render the flash messages partial to a string to ensure consistency
-            $flashHtml = view('App\Views\partials\flash_messages');
+        // 4. Return Appropriate Response Type
+        $responseData = [
+            'parsedHtml' => $parsedHtml,
+            'rawResult'  => $rawResult,
+            'audioUrl'   => $audioUrl,
+            'metadata'   => $result // Pass full result for generic metadata extraction
+        ];
 
-            $responsePayload = [
-                'status' => 'success',
-                'result' => $parsedHtml,
-                'raw_result' => $rawResult,
-                'flash_html' => $flashHtml,
-                'used_interaction_ids' => $result['used_interaction_ids'] ?? [],
-                'new_interaction_id' => $result['new_interaction_id'] ?? null,
-                'timestamp' => $result['timestamp'] ?? null,
-                'user_input' => ($this->request->getPost('prompt') ?? ''),
-                'csrf_token' => csrf_hash()
-            ];
+        return $this->request->isAJAX()
+            ? $this->_buildAJAXResponse($responseData)
+            : $this->_buildStandardResponse($responseData);
+    }
 
-            if ($audioUrl) {
-                // Pass the Serve URL to the frontend
-                $responsePayload['audio_url'] = $audioUrl;
-            }
+    /**
+     * Resolves the Audio URL if audio data is present.
+     */
+    private function _resolveAudioUrl(array $result, int $userId): ?string
+    {
+        if (empty($result['audioData'])) return null;
 
-            return $this->response->setJSON($responsePayload);
+        $audioFilename = $this->geminiService->processAudioForServing($result['audioData'], $userId);
+        return $audioFilename ? url_to('gemini.serve_audio', $audioFilename) : null;
+    }
+
+    /**
+     * Parses markdown text safe for display.
+     */
+    private function _parseMarkdown(string $text): string
+    {
+        $parsedown = new Parsedown();
+        $parsedown->setSafeMode(true);
+        $parsedown->setBreaksEnabled(true);
+        return $parsedown->text($text);
+    }
+
+    /**
+     * Builds JSON response for AJAX requests.
+     */
+    private function _buildAJAXResponse(array $data): ResponseInterface
+    {
+        $payload = [
+            'status' => 'success',
+            'result' => $data['parsedHtml'],
+            'raw_result' => $data['rawResult'],
+            'flash_html' => view('App\Views\partials\flash_messages'),
+            'used_interaction_ids' => $data['metadata']['used_interaction_ids'] ?? [],
+            'new_interaction_id' => $data['metadata']['new_interaction_id'] ?? null,
+            'timestamp' => $data['metadata']['timestamp'] ?? null,
+            'user_input' => ($this->request->getPost('prompt') ?? ''),
+            'csrf_token' => csrf_hash()
+        ];
+
+        if ($data['audioUrl']) {
+            $payload['audio_url'] = $data['audioUrl'];
         }
 
-        // Handle Fallback Standard Post
-        $redirect = redirect()->back()->withInput()
-            ->with('result', $parsedHtml)
-            ->with('raw_result', $rawResult);
+        return $this->response->setJSON($payload);
+    }
 
-        if ($audioUrl) {
-            // Pass the Serve URL to flashdata (Session Hygiene: Only string path, not base64)
-            $redirect->with('audio_url', $audioUrl);
+    /**
+     * Builds Redirect response for standard requests.
+     */
+    private function _buildStandardResponse(array $data): RedirectResponse
+    {
+        $redirect = redirect()->back()->withInput()
+            ->with('result', $data['parsedHtml'])
+            ->with('raw_result', $data['rawResult']);
+
+        if ($data['audioUrl']) {
+            $redirect->with('audio_url', $data['audioUrl']);
         }
 
         return $redirect;
@@ -253,6 +285,8 @@ class GeminiController extends BaseController
             'maxFiles'               => GeminiService::MAX_FILES,
             'supportedMimeTypes'     => json_encode(GeminiService::SUPPORTED_MIME_TYPES),
             'mediaConfigs'           => $mediaConfigs, // Pass to view
+            'currency_symbol'        => 'KSH',
+            'exchange_rate'          => 129,
         ];
         $data['robotsTag'] = 'noindex, follow';
 
@@ -330,41 +364,77 @@ class GeminiController extends BaseController
      *
      * @return RedirectResponse|ResponseInterface
      */
+    /**
+     * Validates and prepares generation request data.
+     * Centralizes validation logic for both standard and stream generation.
+     * 
+     * @return array|ResponseInterface Array of inputs if valid, ResponseInterface if invalid (AJAX/SSE error).
+     */
+    private function _validateGenerationRequest()
+    {
+        // 1. Validation
+        if (!$this->validate(['prompt' => 'max_length[200000]'])) {
+            $msg = 'Prompt is too long. Maximum 200,000 characters allowed.';
+            return $this->request->getPost('stream_mode')
+                ? $this->_sendSSEError($msg) // Not directly returnable as response, but handles SSE output
+                : $this->_respondError($msg);
+        }
+
+        $inputText = (string) $this->request->getPost('prompt');
+        $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
+
+        // 2. Empty Check
+        if (empty(trim($inputText)) && empty($uploadedFileIds)) {
+            $msg = 'Please provide a prompt.';
+            // If SSE, we need to handle it differently in the caller, or return a specific error structure
+            return ['error' => $msg];
+        }
+
+        return [
+            'inputText' => $inputText,
+            'uploadedFileIds' => $uploadedFileIds
+        ];
+    }
+
+    /**
+     * Generates content using the Gemini API based on user input and context.
+     * Supports AJAX for non-blocking UI updates.
+     *
+     * @return RedirectResponse|ResponseInterface
+     */
     public function generate()
     {
         $userId = (int) session()->get('userId');
 
-        // Validation Guard Clause
-        if (!$this->validate(['prompt' => 'max_length[200000]'])) {
-            return $this->_respondError('Prompt is too long. Maximum 200,000 characters allowed.');
+        // 1. Validate & Prepare
+        $inputs = $this->_validateGenerationRequest();
+        if (isset($inputs['error']) || $inputs instanceof ResponseInterface) {
+            return $inputs instanceof ResponseInterface ? $inputs : $this->_respondError($inputs['error']);
         }
 
-        // 1. Prepare Inputs
-        $inputText = (string) $this->request->getPost('prompt');
-        $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
-
         // 2. Delegate to Service
-        // Transfers detailed request processing to the Service layer to maintain a 'Skinny Controller'.
-        // Service handles file encoding, context retrieval (RAG), cost calculation, and API interaction.
         $userSetting = $this->geminiService->getUserSettings($userId);
         $options = [
             'assistant_mode' => $userSetting ? $userSetting->assistant_mode_enabled : true,
             'voice_mode'     => $userSetting ? $userSetting->voice_output_enabled : false,
         ];
 
-        // We moved the file prep and cost check INSIDE processInteraction to make the controller thinner
-        $result = $this->geminiService->processInteraction($userId, $inputText, $uploadedFileIds, $options);
+        $result = $this->geminiService->processInteraction(
+            $userId,
+            $inputs['inputText'],
+            $inputs['uploadedFileIds'],
+            $options
+        );
 
-        // Cleanup Check
-        // Ensures temporary files are removed regardless of success/failure to prevent disk clutter.
-        $this->geminiService->cleanupTempFiles($uploadedFileIds, $userId);
+        // Cleanup
+        $this->geminiService->cleanupTempFiles($inputs['uploadedFileIds'], $userId);
 
         if (isset($result['error'])) {
             log_message('error', "[GeminiController] Generation failed for User ID {$userId}: " . $result['error']);
             return $this->_respondError($result['error']);
         }
 
-        // 3. Build and Return Response
+        // 3. Build Response
         return $this->_buildGenerationResponse($result, $userId);
     }
 
@@ -380,7 +450,7 @@ class GeminiController extends BaseController
         // Setup SSE Headers
         $this->_setupSSEHeaders();
 
-        // Input Validation
+        // 1. Validate & Prepare (Manual check since _validateGenerationRequest returns ResponseInterface on error which breaks SSE)
         $inputText = (string) $this->request->getPost('prompt');
         $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
 
@@ -389,7 +459,7 @@ class GeminiController extends BaseController
             return $this->response;
         }
 
-        // 1. Prepare Context & Files via Service
+        // 2. Prepare Context & Files via Service
         $userSetting = $this->geminiService->getUserSettings($userId);
         $options = [
             'assistant_mode' => $userSetting ? $userSetting->assistant_mode_enabled : true,
