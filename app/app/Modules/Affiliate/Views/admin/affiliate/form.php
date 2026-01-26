@@ -15,18 +15,6 @@
         </nav>
     </div>
 
-    <?php if (session()->getFlashdata('errors')): ?>
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <strong>Validation Errors:</strong>
-            <ul class="mb-0 mt-2">
-                <?php foreach (session()->getFlashdata('errors') as $error): ?>
-                    <li><?= esc($error) ?></li>
-                <?php endforeach; ?>
-            </ul>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <?php endif; ?>
-
     <div class="card blueprint-card">
         <div class="card-body">
             <form action="<?= esc($formAction) ?>" method="post" id="affiliateForm">
