@@ -15,6 +15,7 @@ $routes->group('/', ['namespace' => 'App\Modules\Blog\Controllers'], static func
 
     // Authenticated Admin Blog Routes
     $routes->group('admin', ['filter' => 'auth'], static function ($routes) {
+        // Blog Post Management
         $routes->get('blog', 'BlogController::adminIndex', ['as' => 'admin.blog.index']);
         $routes->get('blog/new', 'BlogController::create', ['as' => 'admin.blog.create']);
         $routes->post('blog/store', 'BlogController::store', ['as' => 'admin.blog.store']);

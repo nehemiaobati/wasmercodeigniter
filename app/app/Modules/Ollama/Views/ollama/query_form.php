@@ -438,6 +438,9 @@
                     </div>
                 </div>
             </form>
+            <div class="text-center mt-2">
+                <small class="text-muted opacity-75" style="font-size: 0.65rem;">AI may make mistakes. Verify important information.</small>
+            </div>
         </div>
     </div>
 

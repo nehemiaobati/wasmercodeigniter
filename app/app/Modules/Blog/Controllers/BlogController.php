@@ -9,6 +9,11 @@ use App\Modules\Blog\Models\PostModel;
 use App\Modules\Blog\Libraries\BlogService;
 use CodeIgniter\Exceptions\PageNotFoundException;
 
+/**
+ * BlogController
+ * 
+ * Handles public blog viewing and admin management of blog posts.
+ */
 class BlogController extends BaseController
 {
     protected PostModel $postModel;
@@ -16,8 +21,8 @@ class BlogController extends BaseController
 
     public function __construct()
     {
-        $this->postModel   = new PostModel();
-        $this->blogService = new BlogService();
+        $this->postModel        = new PostModel();
+        $this->blogService      = new BlogService();
         helper('form');
     }
 

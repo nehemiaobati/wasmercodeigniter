@@ -19,6 +19,7 @@ class Autoload extends AutoloadConfig
         'App\Modules\Crypto' => APPPATH . 'Modules/Crypto', // Added for the Crypto module
         'App\Modules\Blog' => APPPATH . 'Modules/Blog',
         'App\Modules\Ollama' => APPPATH . 'Modules/Ollama',
+        'App\Modules\Affiliate' => APPPATH . 'Modules/Affiliate',
     ];
 
     /**
