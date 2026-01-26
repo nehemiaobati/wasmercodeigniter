@@ -73,11 +73,9 @@
                     </table>
                 </div>
 
-                <?php if ($pager->hasMore()): ?>
-                    <div class="mt-4">
-                        <?= $pager->links() ?>
-                    </div>
-                <?php endif; ?>
+                <div class="mt-4 d-flex justify-content-center">
+                    <?= $pager->links() ?>
+                </div>
             <?php endif; ?>
         </div>
     </div>
