@@ -31,6 +31,7 @@ class AffiliateLinkModel extends Model
      * @var array<string, string>
      */
     protected $validationRules = [
+        'id'        => 'permit_empty',
         'code'      => 'required|max_length[50]|is_unique[affiliate_links.code,id,{id}]',
         'short_url' => 'required|max_length[255]|valid_url',
         'full_url'  => 'required|valid_url',
