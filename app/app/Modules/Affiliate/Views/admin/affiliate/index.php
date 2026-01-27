@@ -21,7 +21,7 @@
                             <tr>
                                 <th>Title</th>
                                 <th>Code</th>
-                                <th>Short URL</th>
+                                <th>Clean URL</th>
                                 <th class="text-center">Clicks</th>
                                 <th class="text-center">Status</th>
                                 <th class="text-end">Actions</th>
@@ -37,10 +37,17 @@
                                         <code><?= esc($link->code) ?></code>
                                     </td>
                                     <td>
-                                        <a href="<?= esc($link->short_url) ?>" target="_blank" class="text-decoration-none">
-                                            <?= esc($link->short_url) ?>
-                                            <i class="bi bi-box-arrow-up-right ms-1 small"></i>
-                                        </a>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <code class="text-truncate" style="max-width: 200px;"><?= base_url('amazon/' . $link->code) ?></code>
+                                            <button class="btn btn-sm btn-link p-0 copy-btn"
+                                                data-url="<?= base_url('amazon/' . $link->code) ?>"
+                                                title="Copy link">
+                                                <i class="bi bi-clipboard"></i>
+                                            </button>
+                                        </div>
+                                        <small class="text-muted d-block mt-1">
+                                            Original: <a href="<?= esc($link->short_url) ?>" target="_blank" class="text-decoration-none opacity-75"><?= esc($link->short_url) ?></a>
+                                        </small>
                                     </td>
                                     <td class="text-center">
                                         <span class="badge bg-info"><?= esc($link->click_count) ?></span>
@@ -81,4 +88,28 @@
     </div>
 </div>
 
+<?= $this->endSection() ?>
+
+<?= $this->section('scripts') ?>
+<script>
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const url = this.getAttribute('data-url');
+            const icon = this.querySelector('i');
+
+            navigator.clipboard.writeText(url).then(() => {
+                // Success feedback
+                icon.classList.replace('bi-clipboard', 'bi-check-lg');
+                icon.classList.add('text-success');
+
+                setTimeout(() => {
+                    icon.classList.replace('bi-check-lg', 'bi-clipboard');
+                    icon.classList.remove('text-success');
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        });
+    });
+</script>
 <?= $this->endSection() ?>
