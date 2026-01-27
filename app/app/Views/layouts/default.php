@@ -36,6 +36,8 @@
     <meta name="twitter:image" content="<?= esc($metaImage ?? base_url('public/assets/images/afrikenkid_og_image.jpg')) ?>">
     <meta name="twitter:image:alt" content="AFRIKENKID Platform Preview">
 
+    <meta name="p:domain_verify" content="65188221f86863fa6e84a07414b98fb4" />
+
     <!-- Structured Data -->
     <script type="application/ld+json">
         {
