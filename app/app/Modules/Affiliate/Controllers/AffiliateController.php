@@ -23,7 +23,7 @@ class AffiliateController extends BaseController
     public function __construct()
     {
         $this->affiliateModel   = new AffiliateLinkModel();
-        $this->affiliateService = new AffiliateLinkService();
+        $this->affiliateService = new AffiliateLinkService($this->affiliateModel);
         helper('form');
     }
 
@@ -56,19 +56,17 @@ class AffiliateController extends BaseController
     /**
      * Lists all affiliate links (admin only).
      *
-     * @return string|RedirectResponse
+     * @return string
      */
-    public function index()
+    public function index(): string
     {
-        if (!session()->get('is_admin')) {
-            return redirect()->to(url_to('home'));
-        }
+        $paginatedData = $this->affiliateService->getPaginatedLinks(15);
 
         $data = [
             'pageTitle' => 'Manage Affiliate Links | Admin',
-            'links'     => $this->affiliateModel->orderBy('created_at', 'DESC')->paginate(15),
-            'pager'     => $this->affiliateModel->pager,
-            'robotsTag' => 'noindex, nofollow',
+            'links'     => $paginatedData['links'],
+            'pager'     => $paginatedData['pager'],
+            'robotsTag' => 'noindex, follow',
         ];
 
         return view('App\Modules\Affiliate\Views\admin\affiliate\index', $data);
@@ -77,20 +75,16 @@ class AffiliateController extends BaseController
     /**
      * Displays the form to create a new affiliate link (admin only).
      *
-     * @return string|RedirectResponse
+     * @return string
      */
-    public function create()
+    public function create(): string
     {
-        if (!session()->get('is_admin')) {
-            return redirect()->to(url_to('home'));
-        }
-
         $data = [
             'pageTitle'  => 'Add New Affiliate Link | Admin',
             'formTitle'  => 'Add New Affiliate Link',
             'formAction' => url_to('admin.affiliate.store'),
             'link'       => null,
-            'robotsTag'  => 'noindex, nofollow',
+            'robotsTag'  => 'noindex, follow',
         ];
 
         return view('App\Modules\Affiliate\Views\admin\affiliate\form', $data);
@@ -103,11 +97,7 @@ class AffiliateController extends BaseController
      */
     public function store(): RedirectResponse
     {
-        if (!session()->get('is_admin')) {
-            return redirect()->to(url_to('home'));
-        }
-
-        if ($this->affiliateService->createLink($this->request->getPost())) {
+        if ($this->affiliateService->saveLink($this->request->getPost())) {
             return redirect()->to(url_to('admin.affiliate.index'))->with('success', 'Affiliate link created successfully.');
         }
 
@@ -118,15 +108,11 @@ class AffiliateController extends BaseController
      * Displays the form to edit an existing affiliate link (admin only).
      *
      * @param int $id Link ID
-     * @return string|RedirectResponse
+     * @return string
      * @throws PageNotFoundException
      */
-    public function edit(int $id)
+    public function edit(int $id): string
     {
-        if (!session()->get('is_admin')) {
-            return redirect()->to(url_to('home'));
-        }
-
         $link = $this->affiliateModel->find($id);
         if (!$link) {
             throw PageNotFoundException::forPageNotFound('Affiliate link not found.');
@@ -137,7 +123,7 @@ class AffiliateController extends BaseController
             'formTitle'  => 'Edit Affiliate Link',
             'formAction' => url_to('admin.affiliate.update', $id),
             'link'       => $link,
-            'robotsTag'  => 'noindex, nofollow',
+            'robotsTag'  => 'noindex, follow',
         ];
 
         return view('App\Modules\Affiliate\Views\admin\affiliate\form', $data);
@@ -151,11 +137,7 @@ class AffiliateController extends BaseController
      */
     public function update(int $id): RedirectResponse
     {
-        if (!session()->get('is_admin')) {
-            return redirect()->to(url_to('home'));
-        }
-
-        if ($this->affiliateService->updateLink($id, $this->request->getPost())) {
+        if ($this->affiliateService->saveLink($this->request->getPost(), $id)) {
             return redirect()->to(url_to('admin.affiliate.index'))->with('success', 'Affiliate link updated successfully.');
         }
 
@@ -167,13 +149,10 @@ class AffiliateController extends BaseController
      *
      * @param int $id Link ID
      * @return RedirectResponse
+     * @throws PageNotFoundException
      */
     public function delete(int $id): RedirectResponse
     {
-        if (!session()->get('is_admin')) {
-            return redirect()->to(url_to('home'));
-        }
-
         $link = $this->affiliateModel->find($id);
         if (!$link) {
             throw PageNotFoundException::forPageNotFound('Cannot delete a link that does not exist.');

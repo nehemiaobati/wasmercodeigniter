@@ -70,33 +70,32 @@ class AffiliateLinkService
     // --- Public Methods ---
 
     /**
-     * Creates a new affiliate link.
+     * Retrieves paginated affiliate links.
      *
-     * @param array $data Raw POST data
-     * @return bool True if successful, false otherwise
+     * @param int $perPage Number of links per page
+     * @return array{links: mixed, pager: \CodeIgniter\Pager\Pager}
      */
-    public function createLink(array $data): bool
+    public function getPaginatedLinks(int $perPage = 15): array
     {
-        $payload = $this->_preparePayload($data);
-
-        $this->model->db->transStart();
-        $result = (bool) $this->model->save($payload);
-        $this->model->db->transComplete();
-
-        return $this->model->db->transStatus() !== false && $result;
+        return [
+            'links' => $this->model->orderBy('created_at', 'DESC')->paginate($perPage),
+            'pager' => $this->model->pager,
+        ];
     }
 
     /**
-     * Updates an existing affiliate link.
+     * Saves an affiliate link (created or updated).
      *
-     * @param int $id Link ID
      * @param array $data Raw POST data
+     * @param int|null $id Link ID for updates
      * @return bool True if successful, false otherwise
      */
-    public function updateLink(int $id, array $data): bool
+    public function saveLink(array $data, ?int $id = null): bool
     {
         $payload = $this->_preparePayload($data);
-        $payload['id'] = $id;
+        if ($id !== null) {
+            $payload['id'] = $id;
+        }
 
         $this->model->db->transStart();
         $result = (bool) $this->model->save($payload);
@@ -157,8 +156,7 @@ class AffiliateLinkService
     }
 
     /**
-     * Public method to extract code from URL.
-     * Useful for admin form JavaScript or validation.
+     * Extracts the code from an Amazon short URL.
      *
      * @param string $url Amazon short URL
      * @return string|null Extracted code or null

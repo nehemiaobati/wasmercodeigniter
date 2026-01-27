@@ -14,7 +14,7 @@ $routes->group('/', ['namespace' => 'App\Modules\Affiliate\Controllers'], static
     });
 
     // Authenticated Admin Affiliate Routes
-    $routes->group('admin', ['filter' => 'auth'], static function ($routes) {
+    $routes->group('admin', ['filter' => ['auth', 'admin']], static function ($routes) {
         // Affiliate Link Management
         $routes->get('affiliate-links', 'AffiliateController::index', ['as' => 'admin.affiliate.index']);
         $routes->get('affiliate-links/new', 'AffiliateController::create', ['as' => 'admin.affiliate.create']);

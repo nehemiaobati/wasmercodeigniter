@@ -9,16 +9,17 @@ use App\Modules\Affiliate\Entities\AffiliateLink;
 
 /**
  * AffiliateLinkModel
- * 
- * Handles database operations for Amazon affiliate links.
+ *
+ * Manages database interactions for Amazon affiliate links, providing
+ * validation and entity mapping for link tracking data.
  */
 class AffiliateLinkModel extends Model
 {
-    protected $table            = 'affiliate_links';
-    protected $primaryKey       = 'id';
-    protected $returnType       = AffiliateLink::class;
-    protected $useTimestamps    = true;
-    protected $allowedFields    = [
+    protected $table = 'affiliate_links';
+    protected $primaryKey = 'id';
+    protected $returnType = AffiliateLink::class;
+    protected $useTimestamps = true;
+    protected $allowedFields = [
         'code',
         'short_url',
         'full_url',
@@ -31,12 +32,12 @@ class AffiliateLinkModel extends Model
      * @var array<string, string>
      */
     protected $validationRules = [
-        'id'        => 'permit_empty',
-        'code'      => 'required|max_length[50]|is_unique[affiliate_links.code,id,{id}]',
+        'id' => 'permit_empty',
+        'code' => 'required|max_length[50]|is_unique[affiliate_links.code,id,{id}]',
         'short_url' => 'required|max_length[255]|valid_url',
-        'full_url'  => 'required|valid_url',
-        'title'     => 'permit_empty|max_length[255]',
-        'status'    => 'permit_empty|in_list[active,inactive]',
+        'full_url' => 'required|valid_url',
+        'title' => 'permit_empty|max_length[255]',
+        'status' => 'permit_empty|in_list[active,inactive]',
     ];
 
     /**
@@ -44,15 +45,15 @@ class AffiliateLinkModel extends Model
      */
     protected $validationMessages = [
         'code' => [
-            'required'  => 'The affiliate code is required.',
+            'required' => 'The affiliate code is required.',
             'is_unique' => 'This affiliate code already exists.',
         ],
         'short_url' => [
-            'required'   => 'The short URL is required.',
-            'valid_url'  => 'Please provide a valid short URL.',
+            'required' => 'The short URL is required.',
+            'valid_url' => 'Please provide a valid short URL.',
         ],
         'full_url' => [
-            'required'  => 'The full URL is required.',
+            'required' => 'The full URL is required.',
             'valid_url' => 'Please provide a valid full URL.',
         ],
     ];
