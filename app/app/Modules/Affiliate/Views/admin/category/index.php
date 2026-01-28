@@ -66,7 +66,7 @@
                                             class="d-inline"
                                             onsubmit="return confirm('Are you sure? Links in this category will be set to \'No Category\'.');">
                                             <?= csrf_field() ?>
-                                            <button type="submit" class="btn btn-sm btn-danger">
+                                            <button type="submit" id="delete-category-<?= $category->id ?>" class="btn btn-sm btn-danger">
                                                 <i class="bi bi-trash"></i> Delete
                                             </button>
                                         </form>

@@ -118,7 +118,7 @@
 
                 <!-- Action Buttons -->
                 <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" id="save-link" class="btn btn-primary">
                         <i class="bi bi-save me-2"></i>Save Affiliate Link
                     </button>
                     <a href="<?= url_to('admin.affiliate.index') ?>" class="btn btn-outline-secondary">

@@ -45,7 +45,7 @@
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary w-100">
+                        <button type="submit" id="filter-submit" class="btn btn-primary w-100">
                             <i class="bi bi-search"></i> Filter
                         </button>
                     </div>
@@ -84,13 +84,13 @@
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <div id="bulkActionsBar" style="display: none;">
                             <span class="me-2"><span id="selectedCount">0</span> selected</span>
-                            <button type="button" class="btn btn-sm btn-success" onclick="submitBulkAction('activate')">
+                            <button type="button" id="bulk-activate" class="btn btn-sm btn-success" onclick="submitBulkAction('activate')">
                                 <i class="bi bi-check-circle"></i> Activate
                             </button>
-                            <button type="button" class="btn btn-sm btn-warning" onclick="submitBulkAction('deactivate')">
+                            <button type="button" id="bulk-deactivate" class="btn btn-sm btn-warning" onclick="submitBulkAction('deactivate')">
                                 <i class="bi bi-x-circle"></i> Deactivate
                             </button>
-                            <button type="button" class="btn btn-sm btn-danger" onclick="submitBulkAction('delete')">
+                            <button type="button" id="bulk-delete" class="btn btn-sm btn-danger" onclick="submitBulkAction('delete')">
                                 <i class="bi bi-trash"></i> Delete
                             </button>
                         </div>
@@ -177,7 +177,7 @@
                                                 class="d-inline"
                                                 onsubmit="return confirm('Are you sure you want to delete this affiliate link?');">
                                                 <?= csrf_field() ?>
-                                                <button type="submit" class="btn btn-sm btn-danger">
+                                                <button type="submit" id="delete-link-<?= $link->id ?>" class="btn btn-sm btn-danger">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </form>

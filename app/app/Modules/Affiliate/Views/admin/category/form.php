@@ -70,7 +70,7 @@
 
                 <!-- Action Buttons -->
                 <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" id="save-category" class="btn btn-primary">
                         <i class="bi bi-check-circle me-2"></i>Save Category
                     </button>
                     <a href="<?= url_to('admin.affiliate.categories') ?>" class="btn btn-secondary">
