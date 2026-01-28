@@ -24,6 +24,7 @@ class AffiliateLinkModel extends Model
         'short_url',
         'full_url',
         'title',
+        'category_id',
         'click_count',
         'status'
     ];
@@ -37,6 +38,7 @@ class AffiliateLinkModel extends Model
         'short_url' => 'required|max_length[255]|valid_url',
         'full_url' => 'required|valid_url',
         'title' => 'permit_empty|max_length[255]',
+        'category_id' => 'permit_empty|is_natural_no_zero',
         'status' => 'permit_empty|in_list[active,inactive]',
     ];
 

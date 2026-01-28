@@ -70,6 +70,25 @@
                     <div class="form-text">The complete Amazon affiliate link with tracking parameters</div>
                 </div>
 
+                <!-- Category -->
+                <div class="mb-3">
+                    <label for="category_id" class="form-label">Category</label>
+                    <div class="d-flex gap-2 align-items-center">
+                        <select class="form-select" id="category_id" name="category_id">
+                            <option value="">No Category</option>
+                            <?php foreach ($categories as $cat): ?>
+                                <option value="<?= $cat->id ?>" <?= old('category_id', $link->category_id ?? '') == $cat->id ? 'selected' : '' ?>>
+                                    <?= esc($cat->name) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <a href="<?= url_to('admin.affiliate.category.create') ?>" class="btn btn-outline-secondary" target="_blank">
+                            <i class="bi bi-plus"></i>
+                        </a>
+                    </div>
+                    <div class="form-text">Optional: Organize your link with a category</div>
+                </div>
+
                 <!-- Status -->
                 <div class="mb-4">
                     <label class="form-label">Status</label>

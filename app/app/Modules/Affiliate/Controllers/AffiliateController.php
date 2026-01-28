@@ -6,6 +6,7 @@ namespace App\Modules\Affiliate\Controllers;
 
 use App\Controllers\BaseController;
 use App\Modules\Affiliate\Models\AffiliateLinkModel;
+use App\Modules\Affiliate\Models\AffiliateCategoryModel;
 use App\Modules\Affiliate\Libraries\AffiliateLinkService;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\RedirectResponse;
@@ -44,8 +45,12 @@ class AffiliateController extends BaseController
             throw PageNotFoundException::forPageNotFound('The requested affiliate link was not found.');
         }
 
-        // Track the click
-        $this->affiliateService->incrementClickCount($link->id);
+        // Service handles both detailed logging and simple click count increment
+        $this->affiliateService->logClick($link->id, [
+            'ip_address' => $this->request->getIPAddress(),
+            'user_agent' => $this->request->getUserAgent()->__toString(),
+            'referrer'   => $this->request->getHeaderLine('Referer') ?: null,
+        ]);
 
         // Redirect with 301 (permanent) for SEO benefits
         return redirect()->to($link->full_url, 301);
@@ -60,13 +65,21 @@ class AffiliateController extends BaseController
      */
     public function index(): string
     {
-        $paginatedData = $this->affiliateService->getPaginatedLinks(15);
+        $filters = [
+            'search'   => $this->request->getGet('search'),
+            'status'   => $this->request->getGet('status'),
+            'category' => $this->request->getGet('category') ? (int) $this->request->getGet('category') : null,
+        ];
+
+        $paginatedData = $this->affiliateService->getPaginatedLinks(15, $filters);
 
         $data = [
-            'pageTitle' => 'Manage Affiliate Links | Admin',
-            'links'     => $paginatedData['links'],
-            'pager'     => $paginatedData['pager'],
-            'robotsTag' => 'noindex, follow',
+            'pageTitle'  => 'Manage Affiliate Links | Admin',
+            'links'      => $paginatedData['links'],
+            'pager'      => $paginatedData['pager'],
+            'categories' => $this->affiliateService->getAllCategories(),
+            'filters'    => $filters,
+            'robotsTag'  => 'noindex, follow',
         ];
 
         return view('App\Modules\Affiliate\Views\admin\affiliate\index', $data);
@@ -84,6 +97,7 @@ class AffiliateController extends BaseController
             'formTitle'  => 'Add New Affiliate Link',
             'formAction' => url_to('admin.affiliate.store'),
             'link'       => null,
+            'categories' => $this->affiliateService->getAllCategories(),
             'robotsTag'  => 'noindex, follow',
         ];
 
@@ -123,6 +137,7 @@ class AffiliateController extends BaseController
             'formTitle'  => 'Edit Affiliate Link',
             'formAction' => url_to('admin.affiliate.update', $id),
             'link'       => $link,
+            'categories' => $this->affiliateService->getAllCategories(),
             'robotsTag'  => 'noindex, follow',
         ];
 
@@ -163,5 +178,178 @@ class AffiliateController extends BaseController
         }
 
         return redirect()->to(url_to('admin.affiliate.index'))->with('error', 'Failed to delete the affiliate link.');
+    }
+
+    /**
+     * Display analytics for a specific link.
+     *
+     * @param int $id Link ID
+     * @return string
+     * @throws PageNotFoundException
+     */
+    public function analytics(int $id): string
+    {
+        $link = $this->affiliateModel->find($id);
+        if (!$link) {
+            throw PageNotFoundException::forPageNotFound('Affiliate link not found.');
+        }
+
+        $period = $this->request->getGet('period') ?? '30days';
+        $analytics = $this->affiliateService->getAnalytics($id, $period);
+
+        $data = [
+            'pageTitle'  => 'Analytics: ' . ($link->title ?: $link->code) . ' | Admin',
+            'link'       => $link,
+            'analytics'  => $analytics,
+            'period'     => $period,
+            'robotsTag'  => 'noindex, follow',
+        ];
+
+        return view('App\Modules\Affiliate\Views\admin\affiliate\analytics', $data);
+    }
+
+    /**
+     * Handle bulk actions (delete or status change).
+     *
+     * @return RedirectResponse
+     */
+    public function bulkAction(): RedirectResponse
+    {
+        $action = $this->request->getPost('action');
+        $ids    = $this->request->getPost('ids');
+
+        if (empty($ids) || !is_array($ids)) {
+            return redirect()->to(url_to('admin.affiliate.index'))->with('error', 'No links selected.');
+        }
+
+        $success = match ($action) {
+            'delete'     => $this->affiliateService->bulkDelete($ids),
+            'activate'   => $this->affiliateService->bulkUpdateStatus($ids, 'active'),
+            'deactivate' => $this->affiliateService->bulkUpdateStatus($ids, 'inactive'),
+            default      => false,
+        };
+
+        if ($success) {
+            $message = match ($action) {
+                'delete'     => count($ids) . ' link(s) deleted successfully.',
+                'activate'   => count($ids) . ' link(s) activated successfully.',
+                'deactivate' => count($ids) . ' link(s) deactivated successfully.',
+                default      => 'Action completed.',
+            };
+            return redirect()->to(url_to('admin.affiliate.index'))->with('success', $message);
+        }
+
+        return redirect()->to(url_to('admin.affiliate.index'))->with('error', 'Failed to perform bulk action.');
+    }
+
+    // --- CATEGORY MANAGEMENT METHODS ---
+
+    /**
+     * List all categories.
+     *
+     * @return string
+     */
+    public function categories(): string
+    {
+        $data = [
+            'pageTitle'  => 'Manage Categories | Admin',
+            'categories' => $this->affiliateService->getCategoriesWithCounts(),
+            'robotsTag'  => 'noindex, follow',
+        ];
+
+        return view('App\Modules\Affiliate\Views\admin\category\index', $data);
+    }
+
+    /**
+     * Display form to create a new category.
+     *
+     * @return string
+     */
+    public function createCategory(): string
+    {
+        $data = [
+            'pageTitle'  => 'Add New Category | Admin',
+            'formTitle'  => 'Add New Category',
+            'formAction' => url_to('admin.affiliate.category.store'),
+            'category'   => null,
+            'robotsTag'  => 'noindex, follow',
+        ];
+
+        return view('App\Modules\Affiliate\Views\admin\category\form', $data);
+    }
+
+    /**
+     * Save a new category.
+     *
+     * @return RedirectResponse
+     */
+    public function storeCategory(): RedirectResponse
+    {
+        if ($this->affiliateService->saveCategory($this->request->getPost())) {
+            return redirect()->to(url_to('admin.affiliate.categories'))->with('success', 'Category created successfully.');
+        }
+
+        return redirect()->back()->withInput()->with('errors', $this->affiliateService->getCategoryErrors());
+    }
+
+    /**
+     * Display form to edit a category.
+     *
+     * @param int $id Category ID
+     * @return string
+     * @throws PageNotFoundException
+     */
+    public function editCategory(int $id): string
+    {
+        $category = $this->affiliateService->getCategory($id);
+        if (!$category) {
+            throw PageNotFoundException::forPageNotFound('Category not found.');
+        }
+
+        $data = [
+            'pageTitle'  => 'Edit Category | Admin',
+            'formTitle'  => 'Edit Category',
+            'formAction' => url_to('admin.affiliate.category.update', $id),
+            'category'   => $category,
+            'robotsTag'  => 'noindex, follow',
+        ];
+
+        return view('App\Modules\Affiliate\Views\admin\category\form', $data);
+    }
+
+    /**
+     * Update an existing category.
+     *
+     * @param int $id Category ID
+     * @return RedirectResponse
+     */
+    public function updateCategory(int $id): RedirectResponse
+    {
+        if ($this->affiliateService->saveCategory($this->request->getPost(), $id)) {
+            return redirect()->to(url_to('admin.affiliate.categories'))->with('success', 'Category updated successfully.');
+        }
+
+        return redirect()->back()->withInput()->with('errors', $this->affiliateService->getCategoryErrors());
+    }
+
+    /**
+     * Delete a category.
+     *
+     * @param int $id Category ID
+     * @return RedirectResponse
+     * @throws PageNotFoundException
+     */
+    public function deleteCategory(int $id): RedirectResponse
+    {
+        $category = $this->affiliateService->getCategory($id);
+        if (!$category) {
+            throw PageNotFoundException::forPageNotFound('Cannot delete a category that does not exist.');
+        }
+
+        if ($this->affiliateService->deleteCategory($id)) {
+            return redirect()->to(url_to('admin.affiliate.categories'))->with('success', 'Category deleted successfully.');
+        }
+
+        return redirect()->to(url_to('admin.affiliate.categories'))->with('error', 'Failed to delete the category. It may have links assigned.');
     }
 }

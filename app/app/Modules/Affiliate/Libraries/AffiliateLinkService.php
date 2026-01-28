@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Affiliate\Libraries;
 
 use App\Modules\Affiliate\Models\AffiliateLinkModel;
+use App\Modules\Affiliate\Models\AffiliateClickLogModel;
+use App\Modules\Affiliate\Models\AffiliateCategoryModel;
 use App\Modules\Affiliate\Entities\AffiliateLink;
 
 /**
@@ -16,15 +18,24 @@ use App\Modules\Affiliate\Entities\AffiliateLink;
 class AffiliateLinkService
 {
     protected AffiliateLinkModel $model;
+    protected AffiliateClickLogModel $clickLogModel;
+    protected AffiliateCategoryModel $categoryModel;
 
     /**
      * Constructor.
      *
      * @param AffiliateLinkModel|null $model
+     * @param AffiliateClickLogModel|null $clickLogModel
+     * @param AffiliateCategoryModel|null $categoryModel
      */
-    public function __construct(?AffiliateLinkModel $model = null)
-    {
-        $this->model = $model ?? new AffiliateLinkModel();
+    public function __construct(
+        ?AffiliateLinkModel $model = null,
+        ?AffiliateClickLogModel $clickLogModel = null,
+        ?AffiliateCategoryModel $categoryModel = null
+    ) {
+        $this->model         = $model         ?? new AffiliateLinkModel();
+        $this->clickLogModel = $clickLogModel ?? new AffiliateClickLogModel();
+        $this->categoryModel = $categoryModel ?? new AffiliateCategoryModel();
     }
 
     // --- Helper Methods ---
@@ -53,10 +64,11 @@ class AffiliateLinkService
     private function _preparePayload(array $data): array
     {
         $payload = [
-            'short_url' => $data['short_url'] ?? null,
-            'full_url'  => $data['full_url'] ?? null,
-            'title'     => $data['title'] ?? null,
-            'status'    => $data['status'] ?? 'active',
+            'short_url'   => $data['short_url'] ?? null,
+            'full_url'    => $data['full_url'] ?? null,
+            'title'       => $data['title'] ?? null,
+            'category_id' => $data['category_id'] ?? null,
+            'status'      => $data['status'] ?? 'active',
         ];
 
         // Auto-extract code from short_url if not provided
@@ -70,15 +82,36 @@ class AffiliateLinkService
     // --- Public Methods ---
 
     /**
-     * Retrieves paginated affiliate links.
+     * Retrieves paginated and filtered affiliate links.
      *
      * @param int $perPage Number of links per page
+     * @param array $filters Search/Filter parameters (search, status, category)
      * @return array{links: mixed, pager: \CodeIgniter\Pager\Pager}
      */
-    public function getPaginatedLinks(int $perPage = 15): array
+    public function getPaginatedLinks(int $perPage = 15, array $filters = []): array
     {
+        $builder = $this->model;
+
+        // Search by title or code
+        if (!empty($filters['search'])) {
+            $builder = $builder->groupStart()
+                ->like('title', $filters['search'])
+                ->orLike('code', $filters['search'])
+                ->groupEnd();
+        }
+
+        // Filter by status
+        if (!empty($filters['status']) && in_array($filters['status'], ['active', 'inactive'])) {
+            $builder = $builder->where('status', $filters['status']);
+        }
+
+        // Filter by category
+        if (!empty($filters['category'])) {
+            $builder = $builder->where('category_id', $filters['category']);
+        }
+
         return [
-            'links' => $this->model->orderBy('created_at', 'DESC')->paginate($perPage),
+            'links' => $builder->orderBy('created_at', 'DESC')->paginate($perPage),
             'pager' => $this->model->pager,
         ];
     }
@@ -138,7 +171,7 @@ class AffiliateLinkService
      * @param int $id Link ID
      * @return void
      */
-    public function incrementClickCount(int $id): void
+    private function _incrementClickCount(int $id): void
     {
         $this->model->set('click_count', 'click_count + 1', false)
             ->where('id', $id)
@@ -164,5 +197,174 @@ class AffiliateLinkService
     public function extractCodeFromUrl(string $url): ?string
     {
         return $this->_extractCodeFromUrl($url);
+    }
+
+
+    /**
+     * Log a click event and increment total click count.
+     *
+     * @param int $linkId The affiliate link ID
+     * @param array $clickData Click data (ip_address, user_agent, referrer)
+     * @return bool
+     */
+    public function logClick(int $linkId, array $clickData): bool
+    {
+        $logEntry = [
+            'affiliate_link_id' => $linkId,
+            'ip_address'        => $clickData['ip_address'] ?? null,
+            'user_agent'        => $clickData['user_agent'] ?? null,
+            'referrer'          => $clickData['referrer'] ?? null,
+            'clicked_at'        => date('Y-m-d H:i:s'),
+        ];
+
+        // Increment total count
+        $this->_incrementClickCount($linkId);
+
+        return (bool) $this->clickLogModel->insert($logEntry);
+    }
+
+    /**
+     * Get analytics data for a specific link.
+     *
+     * @param int $linkId The affiliate link ID
+     * @param string $period Period to analyze (7days, 30days, 90days, all)
+     * @return array Analytics data
+     */
+    public function getAnalytics(int $linkId, string $period = '30days'): array
+    {
+        // Calculate date range
+        $endDate = date('Y-m-d');
+        $startDate = match ($period) {
+            '7days'  => date('Y-m-d', strtotime('-7 days')),
+            '90days' => date('Y-m-d', strtotime('-90 days')),
+            'all'    => '2000-01-01',
+            default  => date('Y-m-d', strtotime('-30 days')),
+        };
+
+        return [
+            'clicks_by_date' => $this->clickLogModel->getClickCountByDateRange($linkId, $startDate, $endDate),
+            'top_referrers'  => $this->clickLogModel->getTopReferrers($linkId, 5),
+            'recent_clicks'  => $this->clickLogModel->getLogsByLinkId($linkId, null, null),
+            'period'         => $period,
+            'start_date'     => $startDate,
+            'end_date'       => $endDate,
+        ];
+    }
+
+    /**
+     * Bulk delete affiliate links.
+     *
+     * @param array $ids Array of link IDs to delete
+     * @return bool
+     */
+    public function bulkDelete(array $ids): bool
+    {
+        if (empty($ids)) {
+            return false;
+        }
+
+        $this->model->db->transStart();
+
+        foreach ($ids as $id) {
+            $this->model->delete($id);
+        }
+
+        $this->model->db->transComplete();
+
+        return $this->model->db->transStatus() !== false;
+    }
+
+    /**
+     * Bulk update status for multiple links.
+     *
+     * @param array $ids Array of link IDs
+     * @param string $status New status (active/inactive)
+     * @return bool
+     */
+    public function bulkUpdateStatus(array $ids, string $status): bool
+    {
+        if (empty($ids) || !in_array($status, ['active', 'inactive'])) {
+            return false;
+        }
+
+        $this->model->db->transStart();
+
+        $this->model->whereIn('id', $ids)
+            ->set('status', $status)
+            ->update();
+
+        $this->model->db->transComplete();
+
+        return $this->model->db->transStatus() !== false;
+    }
+
+    // --- Category Management ---
+
+    /**
+     * Returns all categories.
+     *
+     * @return array
+     */
+    public function getAllCategories(): array
+    {
+        return $this->categoryModel->orderBy('name', 'ASC')->findAll();
+    }
+
+    /**
+     * Returns categories with link counts.
+     *
+     * @return array
+     */
+    public function getCategoriesWithCounts(): array
+    {
+        return $this->categoryModel->getCategoriesWithCounts();
+    }
+
+    /**
+     * Finds a category by ID.
+     *
+     * @param int $id Category ID
+     * @return object|null
+     */
+    public function getCategory(int $id): ?object
+    {
+        return $this->categoryModel->find($id);
+    }
+
+    /**
+     * Saves a category (create or update).
+     *
+     * @param array $data Input data
+     * @param int|null $id Category ID for updates
+     * @return bool
+     */
+    public function saveCategory(array $data, ?int $id = null): bool
+    {
+        if ($id !== null) {
+            $data['id'] = $id;
+        }
+
+        return (bool) $this->categoryModel->save($data);
+    }
+
+    /**
+     * Deletes a category.
+     *
+     * @param int $id Category ID
+     * @return bool
+     */
+    public function deleteCategory(int $id): bool
+    {
+        return (bool) $this->categoryModel->delete($id);
+    }
+
+    /**
+     * Returns category validation errors.
+     *
+     * @return array
+     */
+    public function getCategoryErrors(): array
+    {
+        return $this->categoryModel->errors();
     }
 }
