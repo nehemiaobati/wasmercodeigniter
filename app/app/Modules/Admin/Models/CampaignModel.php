@@ -1,6 +1,8 @@
-<?php declare(strict_types=1);
+<?php
 
-namespace App\Models;
+declare(strict_types=1);
+
+namespace App\Modules\Admin\Models;
 
 use CodeIgniter\Model;
 use App\Entities\Campaign;

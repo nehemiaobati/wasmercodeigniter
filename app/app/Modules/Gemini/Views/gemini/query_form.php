@@ -574,12 +574,12 @@
                         </button>
                     </li>
                     <li class="nav-item">
-                        <button type="button" disabled class="nav-link py-2 px-3" data-bs-toggle="tab" data-type="image">
+                        <button type="button" class="nav-link py-2 px-3" data-bs-toggle="tab" data-type="image">
                             <i class="bi bi-image me-2"></i>Image
                         </button>
                     </li>
                     <li class="nav-item">
-                        <button type="button" disabled class="nav-link py-2 px-3" data-bs-toggle="tab" data-type="video">
+                        <button type="button" class="nav-link py-2 px-3" data-bs-toggle="tab" data-type="video">
                             <i class="bi bi-camera-video me-2"></i>Video
                         </button>
                     </li>

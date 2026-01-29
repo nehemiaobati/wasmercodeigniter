@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Controllers;
+namespace App\Modules\Portfolio\Controllers;
 
 use App\Controllers\BaseController;
 use CodeIgniter\HTTP\RedirectResponse;
@@ -23,7 +23,7 @@ class PortfolioController extends BaseController
             'canonicalUrl'    => url_to('portfolio.index'),
         ];
 
-        return view('portfolio/portfolio_view', $data);
+        return view('App\Modules\Portfolio\Views\portfolio_view', $data);
     }
 
     /**

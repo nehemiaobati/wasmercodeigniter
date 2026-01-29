@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Controllers;
+namespace App\Modules\Documentation\Controllers;
 
 use App\Controllers\BaseController;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -15,7 +15,7 @@ class DocumentationController extends BaseController
             'canonicalUrl'    => url_to('documentation'), // Ensure route name exists
             'robotsTag'       => 'index, follow', // CHANGED: Allow indexing
         ];
-        return view('documentation/index', $data);
+        return view('App\Modules\Documentation\Views\index', $data);
     }
 
     public function web(): string
@@ -26,7 +26,7 @@ class DocumentationController extends BaseController
             'canonicalUrl'    => url_to('web'),
             'robotsTag'       => 'index, follow', // CHANGED
         ];
-        return view('documentation/web_documentation', $data);
+        return view('App\Modules\Documentation\Views\web_documentation', $data);
     }
 
     public function agi(): string
@@ -37,6 +37,6 @@ class DocumentationController extends BaseController
             'canonicalUrl'    => url_to('agi'),
             'robotsTag'       => 'index, follow', // CHANGED
         ];
-        return view('documentation/agi_documentation', $data);
+        return view('App\Modules\Documentation\Views\agi_documentation', $data);
     }
 }

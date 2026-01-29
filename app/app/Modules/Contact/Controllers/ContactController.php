@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Controllers;
+namespace App\Modules\Contact\Controllers;
 
 use App\Controllers\BaseController;
 use CodeIgniter\HTTP\RedirectResponse;
@@ -19,7 +19,7 @@ class ContactController extends BaseController
             'canonicalUrl' => url_to('contact.form'),
             'robotsTag'    => 'index, follow',
         ];
-        return view('contact/contact_form', $data);
+        return view('App\Modules\Contact\Views\contact_form', $data);
     }
 
     public function send(): RedirectResponse

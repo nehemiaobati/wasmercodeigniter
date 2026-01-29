@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Controllers;
+namespace App\Modules\Admin\Controllers;
 
 use App\Controllers\BaseController;
 use App\Models\UserModel;
@@ -35,7 +35,7 @@ class AdminController extends BaseController
         // Add noindex directive for authenticated pages
         $data['robotsTag'] = 'noindex, follow';
 
-        return $this->response->setBody(view('admin/index_view', $data));
+        return $this->response->setBody(view('App\Modules\Admin\Views\index_view', $data));
     }
 
     /**
@@ -75,7 +75,7 @@ class AdminController extends BaseController
         $data['robotsTag'] = 'noindex, follow';
 
         // Render the user search results view.
-        return $this->response->setBody(view('admin/user_search_results', $data));
+        return $this->response->setBody(view('App\Modules\Admin\Views\user_search_results', $data));
     }
 
     /**
@@ -103,7 +103,7 @@ class AdminController extends BaseController
             return redirect()->back()->with('error', 'User not found.');
         }
 
-        return $this->response->setBody(view('admin/user_details', $data));
+        return $this->response->setBody(view('App\Modules\Admin\Views\user_details', $data));
     }
 
     /**
@@ -114,9 +114,6 @@ class AdminController extends BaseController
      *
      * @param int $id The unique identifier of the user whose balance is to be updated.
      * @return \CodeIgniter\HTTP\ResponseInterface Redirects back with status messages or errors.
-     */
-    /**
-     * Updates a user's balance via WalletService.
      */
     public function updateBalance($id)
     {
@@ -142,7 +139,6 @@ class AdminController extends BaseController
 
         return redirect()->to(url_to('admin.users.show', $id))->with('success', $result['message']);
     }
-
 
     /**
      * Deletes a specific user.
@@ -179,9 +175,6 @@ class AdminController extends BaseController
      *
      * @return \CodeIgniter\HTTP\ResponseInterface|string
      */
-    /**
-     * Displays the application log files.
-     */
     public function logs()
     {
         if (!session()->get('is_admin')) {
@@ -204,6 +197,6 @@ class AdminController extends BaseController
             'robotsTag'    => 'noindex, nofollow',
         ];
 
-        return view('admin/logs_view', $data);
+        return view('App\Modules\Admin\Views\logs_view', $data);
     }
 }

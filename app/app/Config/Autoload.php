@@ -13,13 +13,19 @@ class Autoload extends AutoloadConfig
      */
     public $psr4 = [
         APP_NAMESPACE => APPPATH,
-        //\'App\Modules' => APPPATH . 'Modules', // This is the required addition
+        //'App\Modules' => APPPATH . 'Modules', // This is the required addition
         'App\Modules\Payments' => APPPATH . 'Modules/Payments', // Added for the Payments module
         'App\Modules\Gemini' => APPPATH . 'Modules/Gemini', // Added for the Gemini module
         'App\Modules\Crypto' => APPPATH . 'Modules/Crypto', // Added for the Crypto module
         'App\Modules\Blog' => APPPATH . 'Modules/Blog',
         'App\Modules\Ollama' => APPPATH . 'Modules/Ollama',
         'App\Modules\Affiliate' => APPPATH . 'Modules/Affiliate',
+        'App\Modules\Auth' => APPPATH . 'Modules/Auth',
+        'App\Modules\Admin' => APPPATH . 'Modules/Admin',
+        'App\Modules\Account' => APPPATH . 'Modules/Account',
+        'App\Modules\Portfolio' => APPPATH . 'Modules/Portfolio',
+        'App\Modules\Documentation' => APPPATH . 'Modules/Documentation',
+        'App\Modules\Contact' => APPPATH . 'Modules/Contact',
     ];
 
     /**

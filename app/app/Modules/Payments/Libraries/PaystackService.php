@@ -162,6 +162,35 @@ class PaystackService
         ];
     }
 
+
+
+    // --- Helper Methods ---
+
+    /**
+     * Awards a bonus for the user's first successful deposit.
+     *
+     * @param int $userId           The user ID.
+     * @param int $currentPaymentId The current payment ID to exclude from previous checks.
+     * @return void
+     */
+    private function _awardFirstDepositBonus(int $userId, int $currentPaymentId): void
+    {
+        $paymentModel = new \App\Modules\Payments\Models\PaymentModel();
+        $userModel = new \App\Models\UserModel();
+
+        $hasPriorPayments = $paymentModel
+            ->where('user_id', $userId)
+            ->where('status', 'success')
+            ->where('id !=', $currentPaymentId)
+            ->countAllResults() > 0;
+
+        if (!$hasPriorPayments) {
+            $bonusAmount = '30.00'; // 30.00 KSH bonus for first deposit
+            $userModel->addBalance($userId, $bonusAmount);
+            log_message('info', "[PaystackService] First deposit bonus (KSH {$bonusAmount}) awarded to User ID: {$userId}");
+        }
+    }
+
     /**
      * Sends an HTTP request to the Paystack API.
      *
@@ -209,33 +238,6 @@ class PaystackService
                 'status'  => false,
                 'message' => 'Error communicating with Paystack: ' . $e->getMessage(),
             ];
-        }
-    }
-
-    // --- Helper Methods ---
-
-    /**
-     * Awards a bonus for the user's first successful deposit.
-     *
-     * @param int $userId           The user ID.
-     * @param int $currentPaymentId The current payment ID to exclude from previous checks.
-     * @return void
-     */
-    private function _awardFirstDepositBonus(int $userId, int $currentPaymentId): void
-    {
-        $paymentModel = new \App\Modules\Payments\Models\PaymentModel();
-        $userModel = new \App\Models\UserModel();
-
-        $hasPriorPayments = $paymentModel
-            ->where('user_id', $userId)
-            ->where('status', 'success')
-            ->where('id !=', $currentPaymentId)
-            ->countAllResults() > 0;
-
-        if (!$hasPriorPayments) {
-            $bonusAmount = '30.00'; // 30.00 KSH bonus for first deposit
-            $userModel->addBalance($userId, $bonusAmount);
-            log_message('info', "[PaystackService] First deposit bonus (KSH {$bonusAmount}) awarded to User ID: {$userId}");
         }
     }
 }

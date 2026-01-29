@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Controllers;
+namespace App\Modules\Admin\Controllers;
 
 use App\Controllers\BaseController;
 use App\Models\UserModel;
-use App\Models\CampaignModel; // Import the new model
+use App\Modules\Admin\Models\CampaignModel; // Import the new model
 use CodeIgniter\HTTP\RedirectResponse;
 
 /**
@@ -41,7 +41,7 @@ class CampaignController extends BaseController
             'campaigns'       => $campaignModel->orderBy('created_at', 'DESC')->findAll(),
         ];
 
-        return view('admin/campaign/create', $data);
+        return view('App\Modules\Admin\Views\campaign\create', $data);
     }
 
     /**
@@ -172,7 +172,7 @@ class CampaignController extends BaseController
             $emailService->setFrom($fromEmail, $fromName); // Ensure 'From' is set for each email
             $emailService->setTo($user->email);
             $emailService->setSubject($subject);
-            $emailService->setMessage(view('emails/campaign_email', $emailData));
+            $emailService->setMessage(view('App\Modules\Admin\Views\emails\campaign_email', $emailData));
 
             if ($emailService->send()) {
                 $successCount++;

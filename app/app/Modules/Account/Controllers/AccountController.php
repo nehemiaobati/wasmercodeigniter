@@ -1,6 +1,8 @@
-<?php declare(strict_types=1);
+<?php
 
-namespace App\Controllers;
+declare(strict_types=1);
+
+namespace App\Modules\Account\Controllers;
 
 use App\Controllers\BaseController;
 use App\Models\UserModel;
@@ -40,7 +42,7 @@ class AccountController extends BaseController
 
         // Pass user data to the view.
         $data['user'] = $user;
-        
+
         $data['pageTitle'] = 'My Account | Afrikenkid';
         $data['metaDescription'] = 'Manage your profile, view your account balance, and see your full transaction history.';
         $data['canonicalUrl'] = url_to('account.index');
@@ -96,6 +98,6 @@ class AccountController extends BaseController
         }
 
         // Render the account index view with the prepared data.
-        return $this->response->setBody(view('account/index', $data));
+        return $this->response->setBody(view('App\Modules\Account\Views\index', $data));
     }
 }
