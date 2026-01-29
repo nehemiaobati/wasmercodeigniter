@@ -585,6 +585,7 @@
                     </li>
                 </ul>
 
+
                 <!-- Model Selection (Dynamic) -->
                 <div id="model-selection-area" class="mb-2 d-none">
                     <!-- Image Models -->
