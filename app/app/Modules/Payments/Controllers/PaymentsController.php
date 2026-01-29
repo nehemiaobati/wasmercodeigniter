@@ -88,73 +88,12 @@ class PaymentsController extends BaseController
             return redirect()->to(url_to('payment.index'))->with('error', ['payment' => 'Payment reference not found.']);
         }
 
-        $payment = $this->paymentModel->where('reference', $appReference)->first();
+        $result = $this->paystackService->verifyAndProcessPayment((string) $appReference, (string) $paystackReference);
 
-        if ($payment === null) {
-            return redirect()->to(url_to('payment.index'))->with('errors', ['payment' => 'Invalid payment reference.']);
+        if ($result['status'] === true) {
+            return redirect()->to(url_to('payment.index'))->with('success', $result['message']);
         }
 
-        if ($payment->status === 'success') {
-            return redirect()->to(url_to('payment.index'))->with('success', 'Payment already verified.');
-        }
-
-        $response = $this->paystackService->verifyTransaction($paystackReference);
-
-        if ($response['status'] === true && isset($response['data']['status']) && $response['data']['status'] === 'success') {
-
-            $db = \Config\Database::connect();
-            $db->transStart();
-
-            $jsonResponse = json_encode($response['data']);
-            if ($jsonResponse === false) {
-                log_message('error', 'Failed to encode Paystack success response for reference: ' . $paystackReference);
-                $jsonResponse = json_encode(['error' => 'JSON encoding failed']);
-            }
-            $this->paymentModel->update($payment->id, [
-                'status'            => 'success',
-                'paystack_response' => $jsonResponse,
-            ]);
-
-            // Start First Deposit Bonus Logic
-            $hasPriorPayments = $this->paymentModel
-                ->where('user_id', $payment->user_id)
-                ->where('status', 'success')
-                ->where('id !=', $payment->id) // Exclude current payment
-                ->countAllResults() > 0;
-
-            $bonusAmount = '0.00';
-            if (! $hasPriorPayments) {
-                // Award 30.00 KSH bonus for first deposit
-                $bonusAmount = '30.00';
-                $this->userModel->addBalance((int) $payment->user_id, $bonusAmount);
-                log_message('info', "First deposit bonus (KSH {$bonusAmount}) awarded to User ID: {$payment->user_id}");
-            }
-            // End First Deposit Bonus Logic
-
-            if ($payment->user_id) {
-                $this->userModel->addBalance((int) $payment->user_id, (string) $payment->amount);
-            }
-
-            $db->transComplete();
-
-            if ($db->transStatus() === false) {
-                log_message('critical', 'Payment verification transaction failed for payment ID: ' . $payment->id);
-                return redirect()->to(url_to('payment.index'))->with('error', ['payment' => 'A critical error occurred. Please contact support.']);
-            }
-
-            return redirect()->to(url_to('payment.index'))->with('success', 'Payment successful!');
-        }
-
-        $jsonResponse = json_encode($response['data'] ?? $response);
-        if ($jsonResponse === false) {
-            log_message('error', 'Failed to encode Paystack failure response for reference: ' . $paystackReference);
-            $jsonResponse = json_encode(['error' => 'JSON encoding failed']);
-        }
-        $this->paymentModel->update($payment->id, [
-            'status'            => 'failed',
-            'paystack_response' => $jsonResponse,
-        ]);
-
-        return redirect()->to(url_to('payment.index'))->with('error', ['payment' => $response['message'] ?? 'Payment verification failed.']);
+        return redirect()->to(url_to('payment.index'))->with('error', ['payment' => $result['message']]);
     }
 }

@@ -99,6 +99,70 @@ class PaystackService
     }
 
     /**
+     * Verifies the status of a Paystack transaction and processes the outcome.
+     * Orchestrates database updates, user balance adjustments, and bonus awarding.
+     *
+     * @param string $appReference      The internal application reference.
+     * @param string $paystackReference The Paystack transaction reference.
+     * @return array ['status' => bool, 'message' => string]
+     */
+    public function verifyAndProcessPayment(string $appReference, string $paystackReference): array
+    {
+        if (!$this->isConfigured()) {
+            return ['status' => false, 'message' => 'Payment provider is not configured.'];
+        }
+
+        $paymentModel = new \App\Modules\Payments\Models\PaymentModel();
+        $payment = $paymentModel->where('reference', $appReference)->first();
+
+        if ($payment === null) {
+            return ['status' => false, 'message' => 'Invalid payment reference.'];
+        }
+
+        if ($payment->status === 'success') {
+            return ['status' => true, 'message' => 'Payment already verified.'];
+        }
+
+        $response = $this->verifyTransaction($paystackReference);
+        $isSuccess = ($response['status'] === true && isset($response['data']['status']) && $response['data']['status'] === 'success');
+
+        $db = \Config\Database::connect();
+        $db->transStart();
+
+        $status = $isSuccess ? 'success' : 'failed';
+        $jsonResponse = json_encode($response['data'] ?? $response) ?: json_encode(['error' => 'JSON encoding failed']);
+
+        $paymentModel->update($payment->id, [
+            'status'            => $status,
+            'paystack_response' => $jsonResponse,
+        ]);
+
+        if ($isSuccess) {
+            $userModel = new \App\Models\UserModel();
+
+            // Award first deposit bonus
+            $this->_awardFirstDepositBonus((int) $payment->user_id, (int) $payment->id);
+
+            // Update user balance
+            if ($payment->user_id) {
+                $userModel->addBalance((int) $payment->user_id, (string) $payment->amount);
+            }
+        }
+
+        $db->transComplete();
+
+        if ($db->transStatus() === false) {
+            log_message('critical', "[PaystackService] Payment processing transaction failed for reference: {$appReference}");
+            return ['status' => false, 'message' => 'A critical error occurred while processing your payment.'];
+        }
+
+        return [
+            'status'  => $isSuccess,
+            'message' => $isSuccess ? 'Payment successful!' : ($response['message'] ?? 'Payment verification failed.'),
+        ];
+    }
+
+    /**
      * Sends an HTTP request to the Paystack API.
      *
      * @param string $method The HTTP method (e.g., 'GET', 'POST').
@@ -137,7 +201,7 @@ class PaystackService
                 log_message('error', "[PaystackService] HTTP {$statusCode} error. URL: {$url}. Method: {$method}. Response: {$body}");
             }
 
-            return json_decode($body, true);
+            return json_decode($body, true) ?? ['status' => false, 'message' => 'Malformed response from API'];
         } catch (\Exception $e) {
             log_message('error', "[PaystackService] API Exception. URL: {$url}. Method: {$method}. Error: " . $e->getMessage());
 
@@ -145,6 +209,33 @@ class PaystackService
                 'status'  => false,
                 'message' => 'Error communicating with Paystack: ' . $e->getMessage(),
             ];
+        }
+    }
+
+    // --- Helper Methods ---
+
+    /**
+     * Awards a bonus for the user's first successful deposit.
+     *
+     * @param int $userId           The user ID.
+     * @param int $currentPaymentId The current payment ID to exclude from previous checks.
+     * @return void
+     */
+    private function _awardFirstDepositBonus(int $userId, int $currentPaymentId): void
+    {
+        $paymentModel = new \App\Modules\Payments\Models\PaymentModel();
+        $userModel = new \App\Models\UserModel();
+
+        $hasPriorPayments = $paymentModel
+            ->where('user_id', $userId)
+            ->where('status', 'success')
+            ->where('id !=', $currentPaymentId)
+            ->countAllResults() > 0;
+
+        if (!$hasPriorPayments) {
+            $bonusAmount = '30.00'; // 30.00 KSH bonus for first deposit
+            $userModel->addBalance($userId, $bonusAmount);
+            log_message('info', "[PaystackService] First deposit bonus (KSH {$bonusAmount}) awarded to User ID: {$userId}");
         }
     }
 }

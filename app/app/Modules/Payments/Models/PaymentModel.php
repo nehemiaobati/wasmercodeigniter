@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Payments\Models; // Updated namespace
 
@@ -31,7 +33,13 @@ class PaymentModel extends Model
     protected $deletedField  = 'deleted_at';
 
     // Validation
-    protected $validationRules      = [];
+    protected $validationRules = [
+        'user_id'   => 'required|is_natural_no_zero',
+        'email'     => 'required|valid_email|max_length[255]',
+        'amount'    => 'required|numeric|greater_than[0]',
+        'reference' => 'required|is_unique[payments.reference]|max_length[100]',
+        'status'    => 'required|in_list[pending,success,failed]',
+    ];
     protected $validationMessages   = [];
     protected $skipValidation       = false;
     protected $cleanValidationRules = true;
