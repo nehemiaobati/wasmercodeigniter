@@ -21,7 +21,7 @@
 <!-- Hero Section -->
 <section class="py-5 bg-body-tertiary">
     <div class="container py-5 text-center">
-        <h1 class="display-3 fw-bold mb-4">Supercharge your Workflow with <br><span class="text-primary">Generative AI</span></h1>
+        <h1 class="display-4 display-md-3 fw-bold mb-4">Supercharge your Workflow with <br><span class="text-primary">Generative AI</span></h1>
         <p class="lead mb-4 mx-auto" style="max-width: 700px;">
             Harness the power of Google's Gemini to write, code, and imagine.
             <span class="text-muted d-block mt-2 fs-6">Plus, track real-time Bitcoin & Litecoin data on the side.</span>
@@ -45,7 +45,7 @@
             <!-- AI Co-Pilot (Dominant) -->
             <div class="col-12 col-lg-6">
                 <div class="card h-100 border-0 shadow-sm bg-primary-subtle hover-effect">
-                    <div class="card-body p-5 text-center d-flex flex-column justify-content-center">
+                    <div class="card-body p-4 p-sm-5 text-center d-flex flex-column justify-content-center">
                         <div class="fs-1 text-primary mb-3"><i class="bi bi-stars"></i></div>
                         <h3 class="fs-2 fw-bold mb-3">AI Studio</h3>
                         <p class="lead text-body-secondary mb-0">Your all-in-one creative partner. Generate marketing copy, debug code, analyze PDFs, and create stunning images using the latest Gemini models.</p>
@@ -87,12 +87,10 @@
     </div>
 </section>
 
-</section>
-
 <!-- Bespoke Development Section -->
 <section id="enterprise" class="py-5 bg-body-tertiary">
     <div class="container">
-        <div class="row align-items-center g-5">
+        <div class="row align-items-center g-4 g-lg-5">
             <!-- Left: Value Prop -->
             <div class="col-lg-5">
                 <span class="badge bg-info-subtle text-info-emphasis mb-2 rounded-pill px-3">Enterprise</span>
@@ -149,12 +147,14 @@
 <!-- Final CTA Section -->
 <section id="cta" class="py-5 mb-5 text-center">
     <div class="container">
-        <div class="card bg-primary text-white rounded-4 overflow-hidden shadow-lg p-5 border-0 hover-effect" style="background: var(--hero-gradient) !important;">
-            <div class="row justify-content-center position-relative z-1">
-                <div class="col-lg-8">
-                    <h2 class="display-5 fw-bold mb-3">Ready to Start?</h2>
-                    <p class="lead mb-4 text-white-50">Join thousands of users building efficiently with AFRIKENKID.</p>
-                    <a href="<?= url_to('register') ?>" class="btn btn-light btn-lg px-5 fw-bold rounded-pill">Create Free Account</a>
+        <div class="card bg-primary text-white rounded-4 overflow-hidden shadow-lg border-0 hover-effect" style="background: var(--hero-gradient) !important;">
+            <div class="card-body p-4 p-md-5 position-relative z-1">
+                <div class="row justify-content-center">
+                    <div class="col-lg-8">
+                        <h2 class="display-5 fw-bold mb-3">Ready to Start?</h2>
+                        <p class="lead mb-4 text-white-50">Join thousands of users building efficiently with AFRIKENKID.</p>
+                        <a href="<?= url_to('register') ?>" class="btn btn-light btn-lg px-5 fw-bold rounded-pill">Create Free Account</a>
+                    </div>
                 </div>
             </div>
         </div>
