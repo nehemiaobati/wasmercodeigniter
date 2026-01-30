@@ -35,18 +35,35 @@
         background-color: var(--bs-body-bg);
     }
 
+    @media (max-width: 991.98px) {
+        body {
+            overflow: auto;
+            /* Allow scroll on mobile for keyboard */
+        }
+    }
+
     /* =========================================
        2. Main Layout Container
        ========================================= */
     .gemini-view-container {
         position: fixed;
         inset: 0;
+        height: 100vh;
+        /* Fallback */
         height: 100dvh;
         width: 100vw;
         display: flex;
         overflow: hidden;
         z-index: 1000;
         background-color: var(--bs-body-bg);
+    }
+
+    @media (max-width: 991.98px) {
+        .gemini-view-container {
+            position: absolute;
+            /* Change to absolute on mobile */
+            min-height: 100vh;
+        }
     }
 
     .gemini-main {
@@ -109,6 +126,8 @@
     .gemini-response-area {
         flex: 1;
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        /* Smooth iOS scrolling */
         padding: 2rem;
         scroll-behavior: smooth;
         min-height: 0;
@@ -1118,10 +1137,7 @@
             this.prompts = new PromptManager(this);
             this.history = new HistoryManager(this);
             this.streamer = new StreamHandler(this);
-            this.prompts = new PromptManager(this);
-            this.history = new HistoryManager(this);
-            this.streamer = new StreamHandler(this);
-            this.jobs = new JobManager(this); // New Module
+            this.jobs = new JobManager(this);
             this.interaction = new InteractionHandler(this);
         }
 
@@ -1137,9 +1153,7 @@
             this.uploader.init();
             this.prompts.init();
             this.history.init();
-            this.prompts.init();
-            this.history.init();
-            this.jobs.init(); // Init Jobs
+            this.jobs.init();
             this.interaction.init();
 
             // Expose for debugging
@@ -1681,7 +1695,6 @@
         }
         init() {
             document.getElementById('geminiForm')?.addEventListener('submit', e => this.handleSubmit(e));
-            this.app.jobs.init(); // Check for interrupted video on load
         }
 
         async handleSubmit(e) {
