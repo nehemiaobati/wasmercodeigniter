@@ -10,6 +10,7 @@ use App\Modules\Gemini\Libraries\GeminiService;
 use App\Modules\Gemini\Libraries\MemoryService;
 use App\Models\UserModel;
 use CodeIgniter\HTTP\RedirectResponse;
+use CodeIgniter\HTTP\IncomingRequest;
 use CodeIgniter\HTTP\ResponseInterface;
 use App\Modules\Gemini\Libraries\DocumentService;
 use App\Modules\Gemini\Libraries\MediaGenerationService;
@@ -17,17 +18,24 @@ use CodeIgniter\I18n\Time;
 use Parsedown;
 
 /**
- * Controller for managing Gemini AI interactions.
+ * Handles all Gemini AI interactions.
  *
- * This controller orchestrates the entire user flow for AI content generation, including:
- * - Handling user Input and file uploads.
- * - Managing context and memory (Assistant Mode).
- * - Estimating and deducting costs.
- * - Calling the GeminiService for text and speech generation.
- * - Processing and displaying results.
+ * Orchestrates user flows for content generation:
+ * - Validates inputs and manages file uploads.
+ * - Coordinates conversational memory and assistant context.
+ * - Manages financial transactions including cost estimation and balance deduction.
+ * - Interfaces with GeminiService for multimodal and text generation.
+ * 
+ * @property IncomingRequest $request
  */
 class GeminiController extends BaseController
 {
+    /**
+     * Initializes the controller with its dependencies.
+     *
+     * @param UserModel|null $userModel Data access layer for user accounts.
+     * @param GeminiService|null $geminiService Core AI orchestration service.
+     */
     public function __construct(
         protected ?UserModel $userModel = null,
         protected ?GeminiService $geminiService = null
@@ -36,14 +44,39 @@ class GeminiController extends BaseController
         $this->geminiService = $geminiService ?? service('geminiService');
     }
 
+
     // --- Helper Methods ---
 
     /**
+     * Validates and prepares generation request data.
+     */
+    private function _validateGenerationRequest()
+    {
+        // 1. Validation
+        if (!$this->validate(['prompt' => 'max_length[200000]'])) {
+            $msg = 'Prompt is too long. Maximum 200,000 characters allowed.';
+            return $this->request->getPost('stream_mode')
+                ? $this->_sendSSEError($msg)
+                : $this->_respondError($msg);
+        }
+
+        $inputText = (string) $this->request->getPost('prompt');
+        $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
+
+        // 2. Empty Check
+        if (empty(trim($inputText)) && empty($uploadedFileIds)) {
+            $msg = 'Please provide a prompt.';
+            return ['error' => $msg];
+        }
+
+        return [
+            'inputText' => $inputText,
+            'uploadedFileIds' => $uploadedFileIds
+        ];
+    }
+
+    /**
      * Returns success response (AJAX JSON or redirect).
-     *
-     * @param string $message Success message.
-     * @param array $data Additional data for JSON response.
-     * @return ResponseInterface|RedirectResponse
      */
     private function _respondSuccess(string $message, array $data = [])
     {
@@ -59,10 +92,6 @@ class GeminiController extends BaseController
 
     /**
      * Returns error response (AJAX JSON or redirect).
-     *
-     * @param string $message Error message.
-     * @param array $errors Validation errors for JSON response.
-     * @return ResponseInterface|RedirectResponse
      */
     private function _respondError(string $message, array $errors = [])
     {
@@ -79,32 +108,17 @@ class GeminiController extends BaseController
 
     /**
      * Configures response headers for Server-Sent Events (SSE).
-     *
-     * @return void
      */
     private function _setupSSEHeaders(): void
     {
         $this->response->setContentType('text/event-stream');
         $this->response->setHeader('Cache-Control', 'no-cache');
         $this->response->setHeader('Connection', 'keep-alive');
-        $this->response->setHeader('X-Accel-Buffering', 'no'); // Disable buffering for Nginx
+        $this->response->setHeader('X-Accel-Buffering', 'no');
     }
 
     /**
      * Builds the final response with parsed markdown and optional audio.
-     * Refactored to support AJAX with rendered partials.
-     *
-     * @param array $result Result array from GeminiService.
-     * @param int $userId User ID for audio file path resolution.
-     * @return RedirectResponse|ResponseInterface
-     */
-    /**
-     * Builds the final response by orchestrating markdown parsing and response formatting.
-     * Use private helpers to maintain Single Responsibility Principle.
-     *
-     * @param array $result Result array from GeminiService.
-     * @param int $userId User ID for audio file path resolution.
-     * @return RedirectResponse|ResponseInterface
      */
     private function _buildGenerationResponse(array $result, int $userId)
     {
@@ -131,7 +145,7 @@ class GeminiController extends BaseController
             'parsedHtml' => $parsedHtml,
             'rawResult'  => $rawResult,
             'audioUrl'   => $audioUrl,
-            'metadata'   => $result // Pass full result for generic metadata extraction
+            'metadata'   => $result
         ];
 
         return $this->request->isAJAX()
@@ -203,9 +217,6 @@ class GeminiController extends BaseController
 
     /**
      * Build HTML for thinking block display
-     *
-     * @param string $thoughts The thinking content to display
-     * @return string HTML string for thinking block
      */
     private function _buildThinkingBlockHtml(string $thoughts): string
     {
@@ -220,9 +231,6 @@ class GeminiController extends BaseController
 
     /**
      * Sends Server-Sent Events (SSE) Error.
-     *
-     * @param string $msg
-     * @return void
      */
     private function _sendSSEError(string $msg)
     {
@@ -235,9 +243,9 @@ class GeminiController extends BaseController
     // --- Public API ---
 
     /**
-     * Displays the public landing page.
+     * Renders the public landing page.
      *
-     * @return string The rendered view.
+     * @return string Validated HTML content.
      */
     public function publicPage(): string
     {
@@ -253,11 +261,11 @@ class GeminiController extends BaseController
     }
 
     /**
-     * Displays the main application dashboard.
+     * Renders the main application dashboard.
      *
-     * Loads user-specific data such as saved prompts and settings.
+     * Retrieves user-specific prompts, settings, and media configurations for tab initialization.
      *
-     * @return string The rendered view.
+     * @return string Main dashboard view.
      */
     public function index(): string
     {
@@ -294,12 +302,12 @@ class GeminiController extends BaseController
     }
 
     /**
-     * Handles asynchronous file uploads for the Gemini context.
+     * Manages asynchronous media uploads for multimodal context.
      *
-     * Files are stored temporarily and associated with the user's session
-     * until the final generation request is made.
+     * Stores files in temporary storage associated with the user session.
+     * Includes CSRF tokens in responses to maintain frontend synchronization.
      *
-     * @return ResponseInterface JSON response with upload status and file metadata.
+     * @return ResponseInterface JSON status and file metadata.
      */
     public function uploadMedia(): ResponseInterface
     {
@@ -339,9 +347,9 @@ class GeminiController extends BaseController
     }
 
     /**
-     * Deletes a temporary uploaded file.
+     * Purges a temporary uploaded file.
      *
-     * @return ResponseInterface JSON response with deletion status.
+     * @return ResponseInterface JSON deletion status.
      */
     public function deleteMedia(): ResponseInterface
     {
@@ -358,49 +366,15 @@ class GeminiController extends BaseController
         return $this->response->setStatusCode(404)->setJSON(['status' => 'error', 'message' => 'File not found', 'csrf_token' => csrf_hash()]);
     }
 
+
+
+
     /**
-     * Generates content using the Gemini API based on user input and context.
-     * Supports AJAX for non-blocking UI updates.
+     * Unified entry point for synchronous content generation.
      *
-     * @return RedirectResponse|ResponseInterface
-     */
-    /**
-     * Validates and prepares generation request data.
-     * Centralizes validation logic for both standard and stream generation.
-     * 
-     * @return array|ResponseInterface Array of inputs if valid, ResponseInterface if invalid (AJAX/SSE error).
-     */
-    private function _validateGenerationRequest()
-    {
-        // 1. Validation
-        if (!$this->validate(['prompt' => 'max_length[200000]'])) {
-            $msg = 'Prompt is too long. Maximum 200,000 characters allowed.';
-            return $this->request->getPost('stream_mode')
-                ? $this->_sendSSEError($msg) // Not directly returnable as response, but handles SSE output
-                : $this->_respondError($msg);
-        }
-
-        $inputText = (string) $this->request->getPost('prompt');
-        $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
-
-        // 2. Empty Check
-        if (empty(trim($inputText)) && empty($uploadedFileIds)) {
-            $msg = 'Please provide a prompt.';
-            // If SSE, we need to handle it differently in the caller, or return a specific error structure
-            return ['error' => $msg];
-        }
-
-        return [
-            'inputText' => $inputText,
-            'uploadedFileIds' => $uploadedFileIds
-        ];
-    }
-
-    /**
-     * Generates content using the Gemini API based on user input and context.
-     * Supports AJAX for non-blocking UI updates.
+     * Processes multimodal inputs, manages cost deduction, and returns parsed content.
      *
-     * @return RedirectResponse|ResponseInterface
+     * @return RedirectResponse|ResponseInterface Web or AJAX response.
      */
     public function generate()
     {
@@ -439,9 +413,11 @@ class GeminiController extends BaseController
     }
 
     /**
-     * Handles streaming text generation via Server-Sent Events (SSE).
+     * Handles real-time text generation via Server-Sent Events (SSE).
      *
-     * @return ResponseInterface
+     * Manages session locking prevention and structured event packets (text, thoughts, close).
+     *
+     * @return ResponseInterface SSE stream.
      */
     public function stream(): ResponseInterface
     {
@@ -560,9 +536,11 @@ class GeminiController extends BaseController
     }
 
     /**
-     * Updates user settings (Assistant Mode, Voice Output).
+     * Persists user settings changes.
      *
-     * @return ResponseInterface JSON response with update status.
+     * Supports conversational memory, voice output, and streaming toggles.
+     *
+     * @return ResponseInterface JSON update status.
      */
     public function updateSetting(): ResponseInterface
     {
@@ -584,9 +562,9 @@ class GeminiController extends BaseController
     }
 
     /**
-     * Adds a new saved prompt for the user.
+     * Saves a new prompt template for future use.
      *
-     * @return ResponseInterface|RedirectResponse JSON response for AJAX, Redirect for standard.
+     * @return ResponseInterface|RedirectResponse
      */
     public function addPrompt()
     {
@@ -616,10 +594,10 @@ class GeminiController extends BaseController
     }
 
     /**
-     * Deletes a saved prompt.
+     * Removes a saved prompt template.
      *
-     * @param int $id The ID of the prompt to delete.
-     * @return ResponseInterface|RedirectResponse JSON response for AJAX, Redirect for standard.
+     * @param int $id Database identifier.
+     * @return ResponseInterface|RedirectResponse
      */
     public function deletePrompt(int $id)
     {
@@ -632,9 +610,9 @@ class GeminiController extends BaseController
     }
 
     /**
-     * Clears the user's interaction memory and entities.
+     * Resets the conversational history and entity memory.
      *
-     * @return RedirectResponse Redirects back with success or error message.
+     * @return RedirectResponse
      */
     public function clearMemory(): RedirectResponse
     {
@@ -648,9 +626,9 @@ class GeminiController extends BaseController
     }
 
     /**
-     * Fetches user interaction history.
+     * Retrieves paginated interaction history.
      *
-     * @return ResponseInterface
+     * @return ResponseInterface JSON history items.
      */
     public function fetchHistory()
     {
@@ -668,9 +646,9 @@ class GeminiController extends BaseController
     }
 
     /**
-     * Deletes a specific interaction.
+     * Purges a specific interaction record.
      *
-     * @return ResponseInterface
+     * @return ResponseInterface JSON status.
      */
     public function deleteHistory()
     {
@@ -688,13 +666,13 @@ class GeminiController extends BaseController
     }
 
     /**
-     * Ensures strict unlink pattern for serverless environments.
+     * Transfers generated audio files.
      *
-     * This method serves audio files and immediately deletes them for serverless compliance.
+     * Implements an atomic read-and-delete pattern for ephemeral storage compliance.
      *
-     * @param string $fileName The name of the file to serve.
-     * @return ResponseInterface The file response.
-     * @throws \CodeIgniter\Exceptions\PageNotFoundException If the file does not exist.
+     * @param string $fileName Resource shard identifier.
+     * @return ResponseInterface Streamed binary data.
+     * @throws \CodeIgniter\Exceptions\PageNotFoundException
      */
     public function serveAudio(string $fileName)
     {
@@ -723,9 +701,11 @@ class GeminiController extends BaseController
     }
 
     /**
-     * Generates and downloads a document (PDF or DOCX) from the content.
+     * Converts AI output into downloadable document formats.
      *
-     * @return ResponseInterface|RedirectResponse The file download or redirect on error.
+     * Supports PDF and DOCX via DocumentService orchestration.
+     *
+     * @return ResponseInterface|RedirectResponse Binary transfer or dynamic redirect.
      */
     public function downloadDocument()
     {

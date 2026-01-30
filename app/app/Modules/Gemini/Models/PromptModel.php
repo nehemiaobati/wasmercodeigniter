@@ -7,7 +7,7 @@ namespace App\Modules\Gemini\Models;
 use CodeIgniter\Model;
 
 /**
- * Manages storage and retrieval of user-saved prompts.
+ * Manages user-saved prompt templates.
  */
 class PromptModel extends Model
 {

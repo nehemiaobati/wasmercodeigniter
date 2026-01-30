@@ -14,12 +14,13 @@ use App\Modules\Gemini\Libraries\EmbeddingService;
 use CodeIgniter\I18n\Time;
 
 /**
- * Gemini Memory Service
+ * Manages conversational state and long-term history recall.
  *
- * Manages AI memory including storage, retrieval, relevance scoring, and contextual prompt construction.
- * Implements hybrid search (vector + keyword) and temporal decay mechanisms.
- *
- * @package App\Modules\Gemini\Libraries
+ * Implements:
+ * - Hybrid search orchestration (Vector semantic + Keyword lexical).
+ * - Temporal decay and relevance scoring for prioritized context.
+ * - XML-based system prompt synthesis with dynamic time awareness.
+ * - Interaction pruning for managed resource lifecycle.
  */
 class MemoryService
 {
@@ -57,8 +58,11 @@ class MemoryService
     // --- Helper Methods ---
 
     /**
-     * Calculates the cosine similarity between two vectors.
-     * @return float A value between -1 and 1. Higher is more similar.
+     * Calculates semantic proximity between two numerical vectors.
+     *
+     * @param array $vecA First coordinate vector.
+     * @param array $vecB Second coordinate vector.
+     * @return float Normalised similarity metric (-1.0 to 1.0).
      */
     private function _cosineSimilarity(array $vecA, array $vecB): float
     {
@@ -96,6 +100,7 @@ class MemoryService
      *
      * @param array $keywords Extracted keywords from the interaction.
      * @param string $interactionId The ID of the current interaction.
+     * @return void
      */
     private function _updateEntitiesFromInteraction(array $keywords, string $interactionId): void
     {
@@ -152,7 +157,7 @@ class MemoryService
     }
 
     /**
-     * Removes old or irrelevant memories to keep the database size manageable.
+     * Purges stale interactions to optimize storage utilization.
      */
     private function _pruneMemory(): void
     {
@@ -172,14 +177,15 @@ class MemoryService
     // --- Public API ---
 
     /**
-     * Builds Contextual Prompt with Memory Integration
+     * Synthesizes a fully contextualized interaction prompt.
      *
-     * Centralizes duplicated prompt construction logic from Controller and Service.
-     * This method retrieves relevant context, loads the XML template, and performs
-     * placeholder replacements to create a fully contextualized prompt.
+     * Workflow:
+     * - Recalls relevant historical context.
+     * - Injects temporal metadata.
+     * - Merges user input into the hierarchical XML template.
      *
-     * @param string $inputText User's current query
-     * @return array ['finalPrompt' => string, 'memoryService' => $this, 'usedInteractionIds' => array]
+     * @param string $inputText Current user query.
+     * @return array Contextualized prompt and session metadata.
      */
     public function buildContextualPrompt(string $inputText): array
     {
@@ -211,10 +217,9 @@ class MemoryService
     }
 
     /**
-     * Retrieves relevant context from memory based on user input.
+     * Orchestrates hybrid context retrieval.
      *
-     * @param string $userInput The user's query.
-     * @return array An array containing the context string and used interaction IDs.
+     * Aggregates Semantic (Vector) and Lexical (Keyword) results with temporal weighting.
      */
     public function getRelevantContext(string $userInput): array
     {
@@ -319,13 +324,13 @@ class MemoryService
     }
 
     /**
-     * Updates the memory with the latest interaction.
+     * Synchronizes memory with the latest interaction lifecycle.
      *
-     * @param string $userInput The user's input.
-     * @param string $aiOutput The AI's response.
-     * @param array|string $aiOutputRaw The raw AI response body (complete response).
-     * @param array $usedInteractionIds IDs of interactions used as context.
-     * @return string The unique ID of the new interaction.
+     * @param string $userInput Current user query text.
+     * @param string $aiOutput Raw text response from the model.
+     * @param array|string $aiOutputRaw Unparsed model response packet.
+     * @param array $usedInteractionIds List of historically relevant IDs injected into context.
+     * @return string Unique identifier for the newly persisted interaction.
      */
     public function updateMemory(string $userInput, string $aiOutput, array|string $aiOutputRaw, array $usedInteractionIds): string
     {
@@ -427,9 +432,9 @@ class MemoryService
     }
 
     /**
-     * Generates the system prompt with dynamic time and context.
+     * Retrieves the structural XML system template.
      *
-     * @return string The formatted system prompt.
+     * @return string Formatted XML payload for system-level instructions.
      */
     public function getTimeAwareSystemPrompt(): string
     {

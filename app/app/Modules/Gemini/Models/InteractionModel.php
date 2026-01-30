@@ -8,7 +8,9 @@ use CodeIgniter\Model;
 use App\Modules\Gemini\Entities\Interaction;
 
 /**
- * Manages storage and retrieval of user-AI interactions (memory).
+ * Manages persistence and retrieval of conversational memory.
+ *
+ * Stores user-AI interactions, including raw payloads and metadata, to maintain context.
  */
 class InteractionModel extends Model
 {

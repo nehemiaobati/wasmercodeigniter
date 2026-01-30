@@ -7,22 +7,29 @@ namespace App\Modules\Gemini\Controllers;
 use App\Controllers\BaseController;
 use App\Modules\Gemini\Libraries\MediaGenerationService;
 use CodeIgniter\API\ResponseTrait;
+use CodeIgniter\HTTP\IncomingRequest;
+use CodeIgniter\HTTP\ResponseInterface;
 
 /**
- * Controller for managing media generation requests (Images and Videos).
+ * Manages media generation lifecycle (Images and Videos).
  *
- * This controller handles:
- * - Validation of media generation requests.
- * - Orchestration of calls to the MediaGenerationService.
- * - Polling for status updates on asynchronous tasks (e.g., video generation).
- * - Secure serving of generated media files.
- *
- * @property \CodeIgniter\HTTP\IncomingRequest $request
+ * Handles:
+ * - Multimodal input validation.
+ * - MediaGenerationService orchestration.
+ * - Asynchronous job polling for video synthesis.
+ * - Secure resource delivery with serverless compliance.
+ * 
+ * @property IncomingRequest $request
  */
 class MediaController extends BaseController
 {
     use ResponseTrait;
 
+    /**
+     * Initializes the controller with its dependencies.
+     *
+     * @param MediaGenerationService|null $mediaService Specialized service for multimodal synthesis.
+     */
     public function __construct(
         protected $mediaService = null
     ) {
@@ -35,7 +42,17 @@ class MediaController extends BaseController
      * Validates the input prompt and model ID, then delegates the generation
      * task to the MediaGenerationService.
      *
-     * @return \CodeIgniter\HTTP\ResponseInterface JSON response containing the result or error details.
+     * @return ResponseInterface JSON response containing the result or error details.
+     */
+    // --- Helper Methods ---
+
+    /**
+     * Reports processing errors via JSON or context-aware redirect.
+     *
+     * @param string $message Descriptive error detail.
+     * @param int $code HTTP status code.
+     * @param array $data Contextual metadata for frontend error handling.
+     * @return ResponseInterface structured error response.
      */
     private function _respondError(string $message, int $code = 400, array $data = [])
     {
@@ -50,6 +67,54 @@ class MediaController extends BaseController
         return redirect()->back()->withInput()->with('error', $message);
     }
 
+    /**
+     * Filters media URLs to prevent Cross-Site Scripting (XSS).
+     *
+     * Implementation details:
+     * - Whitelists protocols (http, https, data).
+     * - Reconstructs URL components to strip malicious payloads.
+     * - HTML-escapes attributes for safe injection into View templates.
+     *
+     * @param string $url Source URI from generation providers.
+     * @return string Validated and attribute-safe URI.
+     * @throws \RuntimeException If protocol violates security policy.
+     */
+    private function _sanitizeMediaUrl(string $url): string
+    {
+        // Parse URL
+        $parsed = parse_url($url);
+
+        // Whitelist protocols (data: for inline images, http/https for external)
+        $allowedProtocols = ['http', 'https', 'data'];
+        if (!isset($parsed['scheme']) || !in_array($parsed['scheme'], $allowedProtocols, true)) {
+            log_message('warning', '[MediaController] Blocked non-whitelisted URL protocol: ' . ($parsed['scheme'] ?? 'none'));
+            throw new \RuntimeException('Invalid media URL protocol');
+        }
+
+        // For data URIs, just escape and return (already embedded)
+        if ($parsed['scheme'] === 'data') {
+            return esc($url, 'attr');
+        }
+
+        // Rebuild URL to strip potentially malicious query params or fragments
+        $sanitized = $parsed['scheme'] . '://' . $parsed['host'];
+        if (isset($parsed['port'])) $sanitized .= ':' . $parsed['port'];
+        if (isset($parsed['path'])) $sanitized .= $parsed['path'];
+        if (isset($parsed['query'])) $sanitized .= '?' . $parsed['query'];
+
+        // HTML escape for attribute safety
+        return esc($sanitized, 'attr');
+    }
+
+
+    /**
+     * Orchestrates the media generation workflow.
+     *
+     * Performs multimodal part construction, validates provider configs,
+     * and processes financial deductions upon successful job initiation.
+     *
+     * @return ResponseInterface structured generation results.
+     */
     public function generate()
     {
         $rules = [
@@ -58,7 +123,6 @@ class MediaController extends BaseController
         ];
 
         if (!$this->validate($rules)) {
-            // Flatten errors for simple flash message, send full object for AJAX
             $errors = $this->validator->getErrors();
             $msg = implode('. ', $errors);
             return $this->_respondError($msg, 400, ['errors' => $errors]);
@@ -69,7 +133,6 @@ class MediaController extends BaseController
         $modelId = $this->request->getVar('model_id');
         $uploadedFileIds = (array) $this->request->getVar('uploaded_media');
 
-        // Check if we have uploaded files to process
         $input = $prompt;
         if (!empty($uploadedFileIds)) {
             $parts = [['text' => $prompt]];
@@ -83,8 +146,7 @@ class MediaController extends BaseController
                         'mimeType' => $mimeType,
                         'data' => base64_encode(file_get_contents($filePath))
                     ]];
-                    // Cleanup handled in service or separate job, but for now we leave it or clean up here?
-                    // GeminiController cleans up after generation. We should probably do the same.
+
                     if (!unlink($filePath)) {
                         log_message('error', "[MediaController] Failed to delete temporary uploaded file: {$filePath}");
                     }
@@ -120,7 +182,17 @@ class MediaController extends BaseController
 
             // Append CSRF token and Flash HTML to response for frontend refresh
             $result['csrf_token'] = csrf_hash();
-            $result['flash_html'] = view('App\Views\partials\flash_messages');
+            $result['flash_html'] = view('App\\Views\\partials\\flash_messages');
+
+            // Security: Sanitize output URL
+            if (isset($result['url'])) {
+                try {
+                    $result['url'] = $this->_sanitizeMediaUrl($result['url']);
+                } catch (\RuntimeException $e) {
+                    log_message('error', '[MediaController] URL sanitization failed: ' . $e->getMessage());
+                    return $this->_respondError('Generated media contains invalid URL', 500);
+                }
+            }
 
             // Success Response - Handle Redirection for non-AJAX if needed, or consistent JSON
             if ($this->request->isAJAX()) {
@@ -136,10 +208,11 @@ class MediaController extends BaseController
     }
 
     /**
-     * Retrieves the currently active video generation job for the user.
-     * Used for session persistence / auto-resume.
+     * Locates the currently active asynchronous job.
      *
-     * @return \CodeIgniter\HTTP\ResponseInterface
+     * Enables dashboard persistence and automatic session resumption.
+     *
+     * @return ResponseInterface JSON job object.
      */
     public function active()
     {
@@ -157,9 +230,9 @@ class MediaController extends BaseController
     }
 
     /**
-     * Polls the status of a long-running operation (e.g., video generation).
+     * Synchronizes status for long-running operations.
      *
-     * @return \CodeIgniter\HTTP\ResponseInterface JSON response with the current status.
+     * @return ResponseInterface JSON status packet.
      */
     public function poll()
     {
@@ -171,6 +244,20 @@ class MediaController extends BaseController
 
         try {
             $result = $this->mediaService->pollVideoStatus($opId);
+
+            // Security: Sanitize polling output
+            if (isset($result['url'])) {
+                try {
+                    $result['url'] = $this->_sanitizeMediaUrl($result['url']);
+                } catch (\RuntimeException $e) {
+                    log_message('error', '[MediaController] Poll URL sanitization failed: ' . $e->getMessage());
+                    return $this->respond([
+                        'status' => 'error',
+                        'message' => 'Video URL validation failed',
+                        'csrf_token' => csrf_hash()
+                    ], 500);
+                }
+            }
 
             // Append CSRF token
             $result['csrf_token'] = csrf_hash();
@@ -188,11 +275,11 @@ class MediaController extends BaseController
     }
 
     /**
-     * Serves a generated media file securely with serverless compliance.
+     * Delivers generated media resources.
      *
-     * @param string $filename The name of the file to serve.
-     * @return \CodeIgniter\HTTP\ResponseInterface Outputs the file content directly.
-     * @throws \CodeIgniter\Exceptions\PageNotFoundException If the file does not exist.
+     * @param string $filename Resource identifier shard.
+     * @return ResponseInterface Streamed binary data.
+     * @throws \CodeIgniter\Exceptions\PageNotFoundException
      */
     public function serve($filename)
     {

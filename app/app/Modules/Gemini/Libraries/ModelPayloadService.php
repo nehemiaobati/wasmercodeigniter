@@ -7,31 +7,20 @@ namespace App\Modules\Gemini\Libraries;
 use stdClass;
 
 /**
- * Model Payload Service
+ * Constructs provider-specific request payloads for the Gemini API.
  *
- * Generates model-specific configurations and payloads for the Gemini API.
- * Implements the "Standalone" pattern for infinite model scalability.
- *
- * STANDALONE PATTERN MANDATE:
- * To ensure granular maintenance and prevent unintended regressions, each model configuration
- * must remain separate and independent. ID grouping (mapping multiple model IDs to a single configuration block)
- * is strictly permitted ONLY if the payload structures and parameters are 100% identical.
- *
- * Uses PHP 8.0 match expression with structured configuration for clean,
- * self-contained model definitions.
- *
- * @package App\Modules\Gemini\Libraries
+ * Implements the "Standalone" pattern to ensure model scalability.
+ * Each model configuration remains independent to prevent regressions during maintenance.
  */
 class ModelPayloadService
 {
     // --- Helper Methods ---
 
     /**
-     * Extracts plain text from a parts array, ignoring images/files.
-     * Essential for models (Imagen/legacy Veo) that crash if sent multimodal input arrays.
+     * Filters input parts to extract concatenated text content.
      *
-     * @param array $parts
-     * @return string
+     * @param array $parts Multimodal input structure.
+     * @return string Concatenated prompt text.
      */
     private function _extractTextPrompt(array $parts): string
     {
@@ -45,12 +34,10 @@ class ModelPayloadService
     }
 
     /**
-     * Builds the 'instances' data for Veo models.
-     * Handles prioritization: Video (Extension) > Image (Animation).
-     * Note: referenceImages not supported via REST API predictLongRunning endpoint.
+     * Synthesizes 'instances' payload for video generation providers.
      *
-     * @param array $parts
-     * @return array
+     * @param array $parts Multimodal input structures.
+     * @return array Formatted Google Vertex/GenAI instance packet.
      */
     private function _buildVeoData(array $parts): array
     {
@@ -95,10 +82,10 @@ class ModelPayloadService
     /**
      * Standardizes the API endpoint construction.
      *
-     * @param string $modelId
-     * @param string $method
-     * @param string $apiKey
-     * @return string
+     * @param string $modelId Provider model identifier.
+     * @param string $method Target API RPC action.
+     * @param string $apiKey Authentication credential.
+     * @return string Fully qualified request URI.
      */
     private function _buildEndpoint(string $modelId, string $method, string $apiKey): string
     {
@@ -108,20 +95,17 @@ class ModelPayloadService
     // --- Public API ---
 
     /**
-     * Returns the specific API Endpoint URL and JSON Request Body for a given model.
+     * Generates the API endpoint and encoded body for a specific model request.
      *
-     * Uses PHP 8.0 match expression that returns structured configuration:
-     * - 'method': API method name (generateContent, predict, predictLongRunning, etc.)
-     * - 'payload': Model-specific request payload
+     * Uses a structural match expression to return:
+     * - 'method': Target API RPC method.
+     * - 'payload': Model-specific parameter hierarchy.
      *
-     * This approach eliminates post-match correction logic by having each model
-     * define its own complete configuration.
-     *
-     * @param string $modelId The specific model ID.
-     * @param string $apiKey The API Key.
-     * @param array $parts The content parts (user input/images).
-     * @param bool $isStream Whether to use the streaming endpoint.
-     * @return array|null ['url' => string, 'body' => string] or null if model not supported.
+     * @param string $modelId Unique provider identifier.
+     * @param string $apiKey Resource access key.
+     * @param array $parts Input multimodal parts.
+     * @param bool $isStream Toggle for SSE endpoint selection.
+     * @return array|null structured payload packet.
      */
     public function getPayloadConfig(string $modelId, string $apiKey, array $parts, bool $isStream = false): ?array
     {

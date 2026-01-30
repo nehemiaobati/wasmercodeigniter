@@ -681,7 +681,7 @@
                     <label class="form-check-label fw-medium" for="assistantMode">Conversational Memory</label>
                 </div>
                 <div class="form-check form-switch mb-3">
-                    <input class="form-check-input setting-toggle" type="checkbox" id="voiceOutput" data-key="voice_output_enabled" <?= $voice_output_enabled ? 'checked' : '' ?>>
+                    <input class="form-check-input setting-toggle" disabled type="checkbox" id="voiceOutput" data-key="voice_output_enabled" <?= $voice_output_enabled ? 'checked' : '' ?>>
                     <label class="form-check-label fw-medium" for="voiceOutput">Voice Output (TTS)</label>
                 </div>
                 <div class="form-check form-switch mb-4">
@@ -898,8 +898,10 @@
 
         image: (url) => `
             <div class="text-center p-3">
-                <img src="${url}" class="generated-media-item img-fluid mb-3" 
-                     style="cursor: pointer;" onclick="window.open('${url}','_blank')">
+                <img src="${url}" 
+                     class="generated-media-item img-fluid mb-3 clickable-media" 
+                     data-url="${url}"
+                     style="cursor: pointer;">
                 <div>
                     <a href="${url}?download=1" download="generated-image.jpg" 
                        class="btn btn-primary">
@@ -1277,7 +1279,12 @@
                 sidebar: document.getElementById('geminiSidebar'),
                 responseArea: document.getElementById('response-area-wrapper'),
                 toast: document.getElementById('liveToast'),
-                flashContainer: document.getElementById('flash-messages-container')
+                flashContainer: document.getElementById('flash-messages-container'),
+                // Cached Form Elements
+                prompt: document.getElementById('prompt'),
+                form: document.getElementById('geminiForm'),
+                genType: document.getElementById('generationType'),
+                streamCheck: document.getElementById('streamOutput')
             };
         }
 
@@ -1288,6 +1295,7 @@
             this.initTinyMCE();
             this.enableCodeFeatures();
             this.setupDownloads();
+            this.setupMediaClickHandler(); // Security: Event delegation for media
         }
 
         setupResponsiveSidebar() {
@@ -1354,7 +1362,14 @@
         }
 
         setError(msg) {
+            // 1. Show flash message
             if (this.els.flashContainer) this.els.flashContainer.innerHTML = ViewRenderer.renderFlashMessage(msg);
+
+            // 2. Clear loading skeleton from response area (Phase 3 Resilience)
+            document.getElementById('ai-response-body')?.querySelector('.loading-skeleton')?.remove();
+
+            // 3. Remove orphaned "pending" history items from sidebar
+            document.querySelectorAll('.memory-item[data-id^="pending-"]').forEach(el => el.remove());
         }
 
         setLoading(isLoading) {
@@ -1539,6 +1554,21 @@
             }), 100);
         }
 
+        setupMediaClickHandler() {
+            // Security: Event delegation - no inline onclick handlers
+            // Handles clicks on generated images/videos in a centralized, secure way
+            document.addEventListener('click', (e) => {
+                const media = e.target.closest('.clickable-media');
+                if (media) {
+                    e.preventDefault();
+                    const url = media.dataset.url;
+                    // Server already validated/sanitized URL in MediaController._sanitizeMediaUrl()
+                    // Safe to open with security flags
+                    window.open(url, '_blank', 'noopener,noreferrer');
+                }
+            });
+        }
+
         renderAudio(url) {
             if (!url) return;
             // Rule 5.1: Standardized feedback
@@ -1571,7 +1601,7 @@
         }
 
         /**
-         * Checks server for any interrupted jobs on page load.
+         * Scans for interrupted asynchronous jobs upon initialization.
          */
         async checkActiveJob() {
             try {
@@ -1585,7 +1615,7 @@
         }
 
         /**
-         * Starts the polling process for a video.
+         * Initiates asynchronous polling for video generation.
          */
         startPolling(opId, startElapsed = 0) {
             this._stop(); // Clear any existing timers first
@@ -1641,16 +1671,12 @@
     }
 
     /**
-     * InteractionHandler
+     * Orchestrates user interaction flows.
      * 
-     * Orchestrates the user intent flow (Submit -> Validate -> Route -> Execute).
-     * 
-     * Logic Flow:
-     * 1. Intercepts form submission.
-     * 2. Syncs TinyMCE content to textarea.
-     * 3. Determines generation type (Text vs Media).
-     * 4. Routes Text requests to either `generateText` (Standard) or `StreamHandler` (SSE).
-     * 5. Routes Media requests to `generateMedia`.
+     * Responsibilities:
+     * - Intercepts form submissions and synchronizes rich-text editors.
+     * - Routes requests between Text (Standard/SSE) and Media generation paths.
+     * - Manages UI visibility and input validation.
      */
     class InteractionHandler {
         constructor(app) {
@@ -1663,17 +1689,51 @@
 
         async handleSubmit(e) {
             e.preventDefault();
-            const type = document.getElementById('generationType').value;
+            const type = this.app.ui.els.genType.value;
             if (typeof tinymce !== 'undefined') tinymce.triggerSave();
-            const prompt = document.getElementById('prompt').value.trim();
+            const prompt = this.app.ui.els.prompt.value.trim();
             if (!prompt && type === 'text') return this.app.ui.showToast('Please enter a prompt.');
 
             this.app.ui.setLoading(true);
-            const fd = new FormData(document.getElementById('geminiForm'));
+            const fd = new FormData(this.app.ui.els.form);
+
+            // --- OPTIMISTIC UI ---
+            if (type === 'text') {
+                this.app.ui.ensureResultCard();
+
+                // 1. Show Skeleton / Thinking State
+                const bodyEl = document.getElementById('ai-response-body');
+                if (bodyEl) {
+                    bodyEl.innerHTML = `
+                        <div class="p-3 animate__animated animate__fadeIn loading-skeleton">
+                            <div class="d-flex align-items-center text-muted mb-3">
+                                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                <span class="fst-italic">Gemini is thinking...</span>
+                            </div>
+                            <div class="placeholder-glow op-50">
+                                <span class="placeholder col-7 rounded"></span>
+                                <span class="placeholder col-4 rounded"></span>
+                                <span class="placeholder col-4 rounded"></span>
+                                <span class="placeholder col-6 rounded"></span>
+                                <span class="placeholder col-8 rounded"></span>
+                            </div>
+                        </div>`;
+                }
+
+                // 2. Optimistic History Append
+                // Immediately show the interaction in the sidebar as "Pending"
+                this.app.history.addItem({
+                    id: 'pending-' + Date.now(),
+                    timestamp: new Date().toISOString(),
+                    user_input: prompt
+                }, ''); // Empty AI output intentionally
+
+                this.app.ui.scrollToBottom();
+            }
 
             try {
                 if (type === 'text') {
-                    if (document.getElementById('streamOutput')?.checked) await this.app.streamer.start(fd);
+                    if (this.app.ui.els.streamCheck?.checked) await this.app.streamer.start(fd);
                     else await this.generateText(fd);
                 } else {
                     await this.generateMedia(fd);
@@ -1740,18 +1800,16 @@
                     this.app.ui.els.flashContainer.innerHTML = d.flash_html;
                 }
             } catch (e) {
-                // Unified Error Handling (Flash)
-                // If 409 Conflict (Concurrency) or strict error
                 let msg = e.message || 'Media Generation Failed';
 
-                // Check if it's the 409 response text
+                // Standardized Error Handling
+                this.app.ui.setError(msg);
+
+                // Special toast/alert if needed
                 if (e.message && e.message.includes('pending video')) {
-                    document.getElementById('flash-messages-container').innerHTML = ViewRenderer.renderFlashMessage(e.message, 'warning');
-                } else {
-                    document.getElementById('flash-messages-container').innerHTML = ViewRenderer.renderFlashMessage(msg, 'danger');
+                    this.app.ui.showToast(msg, 'warning');
                 }
 
-                // Clear the main card if it was stuck
                 this.app.ui.setLoading(false);
             }
             this.app.uploader.clear();
@@ -1783,9 +1841,11 @@
                 audio: document.getElementById('audio-player-container')
             };
 
-            els.body.innerHTML = '';
+
             els.raw.value = '';
             els.audio.innerHTML = '';
+
+            // Flag to purge skeleton container on initial packet arrival
 
             try {
                 if (!formData.has(APP_CONFIG.csrfName)) formData.append(APP_CONFIG.csrfName, this.app.csrfHash);
@@ -1838,6 +1898,13 @@
                 if (line.startsWith('data: ')) {
                     try {
                         const d = JSON.parse(line.substring(6));
+
+                        // Remove skeleton if present
+                        if (this.firstChunk && (d.thought || d.text)) {
+                            els.body.querySelector('.loading-skeleton')?.remove();
+                            this.firstChunk = false;
+                        }
+
                         if (d.thought) {
                             this._ensureThinkingBlock(els.body);
                             this._appendToThinkingBlock(els.body, d.thought);
@@ -1893,14 +1960,12 @@
         }
     }
     /**
-     * MediaUploader
+     * Manages multimodal resource uploads.
      * 
-     * Manages the file upload workflow with a focus on UX availability options (Drag & Drop + Click).
-     * 
-     * Features:
-     * - Queue System: Uploads files sequentially (one-by-one) to prevent server overload.
-     * - UI Sync: Creates visual chips immediately, updates status (spinning -> success/error) asynchronously.
-     * - Form Linking: Appends hidden inputs for `file_id`s so the main form knows what to attach to the prompt.
+     * Implementation details:
+     * - Sequential queueing to prevent server resource exhaustion.
+     * - Real-time UI updates for upload progress and validation status.
+     * - Automatic hidden field injection for main form synchronization.
      */
     class MediaUploader {
         constructor(app) {
@@ -2029,12 +2094,7 @@
      * Handles loading and saving prompts.
      */
     /**
-     * PromptManager
-     * 
-     * functionality for the "Saved Prompts" CRUD system.
-     * 
-     * - Operations: Load (into TinyMCE), Save (via Modal), Delete.
-     * - UI Sync: Dynamic DOM updates (adding/removing <option> tags) without page reload.
+     * Manages saved prompt template CRUD operations.
      */
     class PromptManager {
         constructor(app) {
@@ -2105,14 +2165,12 @@
      * 7. History Manager (Memory Stream)
      */
     /**
-     * HistoryManager
+     * Handles conversational history and temporal grouping.
      * 
-     * Manages the "Memory Stream" sidebar functionality.
-     * 
-     * Logic:
-     * - Pagination: Tracks `offset`/`limit` to implementing "Load More" without duplicate fetching.
-     * - Date Grouping: Checks timestamps to insert "Today", "Yesterday", etc., headers dynamically.
-     * - Context: Highlights specific history items if the AI refers to them in a response (`used_interaction_ids`).
+     * Functional scope:
+     * - Paginated retrieval to optimize sidebar performance.
+     * - Temporal categorization (e.g., Today, Yesterday).
+     * - Visual context highlighting for referred interactions.
      */
     class HistoryManager {
         static HISTORY_PAGE_SIZE = 5;
@@ -2254,6 +2312,11 @@
         }
 
         addItem(item, aiRaw) {
+            // Purge pending items upon successful persistence
+            if (item.id && !item.id.toString().startsWith('pending-')) {
+                document.querySelectorAll('.memory-item[data-id^="pending-"]').forEach(el => el.remove());
+            }
+
             if (this.listEl.querySelector('.text-center.text-muted')) this.listEl.innerHTML = '';
             const dateStr = this.formatDate(item.timestamp);
             let header = this.listEl.querySelector('.memory-date-header');

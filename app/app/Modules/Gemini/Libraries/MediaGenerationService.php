@@ -8,8 +8,12 @@ use App\Models\UserModel;
 use CodeIgniter\I18n\Time;
 
 /**
- * Service for generating media (images and videos).
- * Focus: Decoupled Parsing and Unified Artifact Persistence.
+ * Orchestrates multimodal media synthesis (Images and Videos).
+ *
+ * Implements:
+ * - Decoupled parsing for Imagen and Gemini providers.
+ * - Unified artifact persistence with serverless compliance.
+ * - Atomic financial transactions (Charge-Action-Commit).
  */
 class MediaGenerationService
 {
@@ -26,13 +30,11 @@ class MediaGenerationService
     protected $curl;
 
     /**
-     * Pricing Configuration.
+     * Managed providers and pricing configurations.
      * 
-     * Pricing Models:
-     * - 'flat': Fixed cost per generation.
-     * - 'token': Dynamic cost based on Input/Output token usage.
-     * 
-     * Exchange Rate: 1 USD = 129 KSH (Hardcoded).
+     * Schemes:
+     * - 'flat': Deterministic cost per unit.
+     * - 'token': Usage-based billing (Input/Output).
      */
     public const MEDIA_CONFIGS = [
         // --- Imagen (Flat Rate) ---
@@ -123,11 +125,11 @@ class MediaGenerationService
     // --- Helper Methods ---
 
     /**
-     * Calculates the cost in KSH based on token usage.
+     * Translates token metrics into transaction amounts (KSH).
      * 
-     * @param array $usageMetadata The usage metadata from the API response.
-     * @param array $config The model configuration.
-     * @return float Cost in KSH.
+     * @param array $usageMetadata Source metrics from API response.
+     * @param array $config Provider-specific pricing weights.
+     * @return float Total calculated cost.
      */
     private function _calculateTokenCost(array $usageMetadata, array $config): float
     {
@@ -143,13 +145,14 @@ class MediaGenerationService
     }
 
     /**
-     * Executes a callback within a financial transaction.
-     * Handles Deduction -> Action -> Commit -> Rollback loop.
+     * Executes logic within an isolated financial transaction.
      *
-     * @param int $userId The user ID to charge.
-     * @param float $cost The cost to deduct.
-     * @param callable $action The action to perform (e.g., DB insert).
-     * @return array The result of the action or error details.
+     * Workflow: Balance Check -> Deduction -> Closure Execution -> Atomic Commit.
+     *
+     * @param int $userId System user identifier.
+     * @param float $cost Transaction value.
+     * @param callable $action Enclosed logic shard.
+     * @return array Operation status and metadata.
      */
     private function _executeAtomicTransaction(int $userId, float $cost, callable $action): array
     {
@@ -185,15 +188,15 @@ class MediaGenerationService
     }
 
     /**
-     * Handles file writing and persistence for Image Generation.
+     * Manages binary persistence and database registration for generated artifacts.
      *
-     * @param int $userId
-     * @param string $type
-     * @param string $binaryData
-     * @param string $ext
-     * @param float $cost
-     * @param string $modelId
-     * @return array
+     * @param int $userId System user identifier.
+     * @param string $type Resource type ('image' or 'video').
+     * @param string $binaryData Raw data body.
+     * @param string $ext Target file extension.
+     * @param float $cost Transaction value.
+     * @param string $modelId Provider model identifier.
+     * @return array Finalization status and URL metadata.
      */
     private function _finalizeArtifact(int $userId, string $type, string $binaryData, string $ext, float $cost, string $modelId): array
     {
@@ -239,13 +242,13 @@ class MediaGenerationService
     }
 
     /**
-     * Handles initial persistence for Video Generation (Upfront Charge).
+     * Manages initial job registration for asynchronous video generation.
      *
-     * @param int $userId
-     * @param string $modelId
-     * @param array $response
-     * @param float $cost
-     * @return array
+     * @param int $userId System user identifier.
+     * @param string $modelId Provider model identifier.
+     * @param array $response Initial API response structure.
+     * @param float $cost Transaction value.
+     * @return array Registration status and job metadata.
      */
     private function _handleVideoRequest(int $userId, string $modelId, array $response, float $cost): array
     {
@@ -298,12 +301,12 @@ class MediaGenerationService
     }
 
     /**
-     * Helper to download video and update DB record.
+     * Transfers asynchronous video artifacts from provider to local storage.
      *
-     * @param string $opId
-     * @param string $videoUri
-     * @param string $apiKey
-     * @return array
+     * @param string $opId System operation identifier.
+     * @param string $videoUri Remote asset location.
+     * @param string $apiKey Authentication credential for binary fetch.
+     * @return array Download and synchronization status.
      */
     private function _downloadAndSaveVideo(string $opId, string $videoUri, string $apiKey): array
     {
@@ -361,9 +364,9 @@ class MediaGenerationService
     }
 
     /**
-     * Helper to mark job as failed and refund user.
+     * Reverts financial transactions for failed asynchronous jobs.
      *
-     * @param string $opId
+     * @param string $opId System operation identifier.
      * @return void
      */
     private function _refundFailedJob(string $opId): void
@@ -420,12 +423,7 @@ class MediaGenerationService
     }
 
     /**
-     * Generates media based on input and model ID.
-     *
-     * @param int $userId
-     * @param mixed $input
-     * @param string $modelId
-     * @return array
+     * Primary entry point for media generation.
      */
     public function generateMedia(int $userId, mixed $input, string $modelId): array
     {
@@ -515,10 +513,7 @@ class MediaGenerationService
     }
 
     /**
-     * Polls the status of a video generation operation.
-     *
-     * @param string $opId
-     * @return array
+     * Synchronizes status for long-running generation operations.
      */
     public function pollVideoStatus(string $opId): array
     {

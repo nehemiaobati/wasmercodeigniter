@@ -9,14 +9,14 @@ use App\Modules\Gemini\Models\PromptModel;
 use App\Modules\Gemini\Models\UserSettingsModel;
 
 /**
- * Gemini Service
+ * Provides high-level orchestration for Google's Gemini API.
  *
- * Core service for interacting with Google's Gemini API. Handles text generation,
- * streaming responses, token counting, cost estimation, and TTS synthesis.
- *
- * Implements automatic fallback through model priorities with quota handling.
- *
- * @package App\Modules\Gemini\Libraries
+ * Implements:
+ * - Content generation (Text, Multimodal).
+ * - Real-time streaming with SSE buffer management.
+ * - Dynamic model fallback and quota handling.
+ * - Transactional billing and conversational memory persistence.
+ * - Automated TTS synthesis.
  */
 class GeminiService
 {
@@ -89,20 +89,58 @@ class GeminiService
     // --- Helper Methods ---
 
     /**
-     * Executes the HTTP request to the Gemini API with retries and exponential backoff.
+     * Deducts the cost of the interaction from the user's balance.
      *
-     * @param string $url The API endpoint.
-     * @param string $body The JSON body.
-     * @param string $model The model name (for logging).
-     * @return array The result or error array.
+     * @param int $userId System user identifier.
+     * @param array $textUsage Metadata for text tokens used.
+     * @param array|null $audioUsage Metadata for audio tokens used.
+     * @return array Cost calculation result.
      */
+    private function _deductCost(int $userId, array $textUsage, ?array $audioUsage): array
+    {
+        $costData = $this->calculateCost($textUsage, $audioUsage);
+        $deduction = number_format($costData['costKSH'], 4, '.', '');
+        $this->userModel->deductBalance($userId, $deduction, true);
+        return $costData;
+    }
+
     /**
-     * Executes the HTTP request to the Gemini API with retries and exponential backoff.
+     * Persists the interaction to memory if applicable.
      *
-     * @param string $url The API endpoint.
-     * @param string $body The JSON body.
-     * @param string $model The model name (for logging).
-     * @return array The result or error array.
+     * @param int $userId System user identifier.
+     * @param string $prompt Original user input.
+     * @param string $result Generated AI output.
+     * @param mixed $raw Raw API response packet.
+     * @param array $contextData Operational metadata (memory service, used IDs).
+     * @param bool $assistantMode Toggle for conversational memory persistence.
+     * @return array Interaction metadata including new ID and timestamp.
+     */
+    private function _persistInteraction(int $userId, string $prompt, string $result, $raw, array $contextData, bool $assistantMode): array
+    {
+        if ($assistantMode && isset($contextData['memoryService'])) {
+            $newId = $contextData['memoryService']->updateMemory(
+                $prompt,
+                $result,
+                $raw,
+                $contextData['usedInteractionIds'] ?? []
+            );
+            return ['id' => $newId, 'timestamp' => date('Y-m-d H:i:s')];
+        }
+        return [];
+    }
+
+    /**
+     * Executes HTTP requests to Gemini endpoints with exponential backoff.
+     *
+     * Implementation details:
+     * - Retries once on 429 (Rate Limit) or 5xx (Server Error).
+     * - Implements backoff delay between retry attempts.
+     * - Parses candidate content to extract separate text and thought responses.
+     *
+     * @param string $url API endpoint.
+     * @param string $body Encoded JSON request.
+     * @param string $model Active model name for diagnostic logging.
+     * @return array Decoded response structure.
      */
     private function _executeRequest(string $url, string $body, string $model = 'unknown'): array
     {
@@ -191,10 +229,13 @@ class GeminiService
     }
 
     /**
-     * Parses the streaming buffer to extract complete JSON objects.
+     * Extracts structured JSON objects from the raw SSE buffer.
      *
-     * @param string $buffer Passed by reference, modified to remove processed data.
-     * @return array Parsed chunks, thoughts, and usage metadata.
+     * Leverages a rolling buffer to handle partial JSON fragments across chunks.
+     * Cleans framing characters and extracts text, thoughts, and usage metadata.
+     *
+     * @param string $buffer Rolling stream buffer (modified in-place).
+     * @return array Processed chunks and metadata.
      */
     private function _processStreamBuffer(string &$buffer): array
     {
@@ -264,13 +305,20 @@ class GeminiService
     // --- Public API ---
 
     /**
-     * Processes a standard interaction (Text/Multimodal -> Response).
+     * Processes a synchronous multimodal interaction.
      *
-     * @param int $userId
-     * @param string $prompt
-     * @param array $uploadedFileIds
-     * @param array $options
-     * @return array
+     * Workflow:
+     * 1. Prepares multimodal parts from temporary files.
+     * 2. Orchestrates conversational context injection.
+     * 3. Performs balance checks based on token estimates.
+     * 4. Executes API request and handles optional TTS synthesis.
+     * 5. Atomically persists conversation history and deducts costs.
+     *
+     * @param int $userId System user identifier.
+     * @param string $prompt User-provided text input.
+     * @param array $uploadedFileIds Array of temporary file resource IDs.
+     * @param array $options Configuration flags (assistant, voice).
+     * @return array structured result or error.
      */
     public function processInteraction(int $userId, string $prompt, array $uploadedFileIds, array $options): array
     {
@@ -323,23 +371,17 @@ class GeminiService
 
         // 6. Transactional Persistence
         // Atomic block: Deducts actual cost and saves conversation memory.
-        // Failure here rolls back the balance deduction.
         $this->db->transStart();
 
-        $costData = $this->calculateCost($apiResponse['usage'] ?? [], $audioResult['usage'] ?? null);
-        $this->userModel->deductBalance($userId, number_format($costData['costKSH'], 4, '.', ''), true);
-
-        // Memory Persistence
-        $memoryResult = [];
-        if (!empty($options['assistant_mode'] ?? true) && isset($contextData['memoryService'])) {
-            $newId = $contextData['memoryService']->updateMemory(
-                $prompt,
-                $apiResponse['result'],
-                $apiResponse['raw'] ?? '',
-                $contextData['usedInteractionIds'] ?? []
-            );
-            $memoryResult = ['id' => $newId, 'timestamp' => date('Y-m-d H:i:s')];
-        }
+        $costData = $this->_deductCost($userId, $apiResponse['usage'] ?? [], $audioResult['usage'] ?? null);
+        $memoryResult = $this->_persistInteraction(
+            $userId,
+            $prompt,
+            $apiResponse['result'],
+            $apiResponse['raw'] ?? '',
+            $contextData,
+            $options['assistant_mode'] ?? true
+        );
 
         $this->db->transComplete();
 
@@ -356,10 +398,10 @@ class GeminiService
     }
 
     /**
-     * Generates content using the configured priority fallback mechanism.
+     * Routes content generation requests through the priority fallback mechanism.
      *
-     * @param array $parts Input parts.
-     * @return array Result or error.
+     * @param array $parts Multimodal input parts.
+     * @return array API response or terminal error.
      */
     public function generateContent(array $parts): array
     {
@@ -397,14 +439,15 @@ class GeminiService
     }
 
     /**
-     * Prepares all context, files, and checks balance for a streaming interaction.
-     * Segregates all "pre-flight" checks to keep the controller clean.
+     * Pre-calculates conversational context and evaluates financial eligibility for streaming.
      *
-     * @param int $userId
-     * @param string $prompt
-     * @param array $uploadedFileIds
-     * @param array $options
-     * @return array Result containing 'parts', 'contextData', or 'error'
+     * Consolidates pre-flight logic to ensure the SSE lifecycle is valid before initiation.
+     *
+     * @param int $userId System user identifier.
+     * @param string $prompt Raw user input.
+     * @param array $uploadedFileIds Multimodal resource identifiers.
+     * @param array $options Active session flags.
+     * @return array Pre-calculated parts and context metadata.
      */
     public function prepareStreamContext(int $userId, string $prompt, array $uploadedFileIds, array $options): array
     {
@@ -450,11 +493,13 @@ class GeminiService
     }
 
     /**
-     * Executed the streaming request to Gemini API.
+     * Initiates a persistent SSE stream to the Gemini API.
      *
-     * @param array $parts Input parts.
-     * @param callable $chunkCallback Callback for each chunk (text or thought).
-     * @param callable $completeCallback Callback for completion.
+     * Implements model fallback and chunked buffer processing.
+     *
+     * @param array $parts Multimodal input parts.
+     * @param callable $chunkCallback Invoked for each decoded text or thought segment.
+     * @param callable $completeCallback Invoked upon stream termination with aggregated results.
      */
     public function generateStream(array $parts, callable $chunkCallback, callable $completeCallback): void
     {
@@ -524,11 +569,14 @@ class GeminiService
     }
 
     /**
-     * Calculates the estimated or actual cost of a request.
+     * Translates token counts into transaction amounts (KSH).
      *
-     * @param array $textUsage Text token usage.
-     * @param array|null $audioUsage Audio token usage.
-     * @return array
+     * Applies tiered pricing based on total token volume and modality (text vs audio).
+     * Fixed exchange rate: 129 KSH/USD.
+     *
+     * @param array $textUsage Text modality metadata.
+     * @param array|null $audioUsage Audio modality metadata.
+     * @return array Calculated cost packet.
      */
     public function calculateCost(array $textUsage, ?array $audioUsage = null): array
     {
@@ -553,10 +601,10 @@ class GeminiService
     }
 
     /**
-     * Counts tokens for input parts using Gemini API.
+     * Interrogates the Gemini API to retrieve precise token counts for input parts.
      *
-     * @param array $parts
-     * @return array
+     * @param array $parts Multimodal input structure.
+     * @return array Status and total token metric.
      */
     public function countTokens(array $parts): array
     {
@@ -604,10 +652,10 @@ class GeminiService
     }
 
     /**
-     * Estimates cost before generation.
+     * Predicts transaction cost before job submission.
      *
-     * @param array $parts
-     * @return array
+     * @param array $parts Multimodal input structure.
+     * @return array Status, estimated cost, and token count.
      */
     public function estimateCost(array $parts): array
     {
@@ -633,10 +681,10 @@ class GeminiService
     }
 
     /**
-     * Generates speech using Google TTS.
+     * Synthesizes audio content using Gemini's TTS capabilities.
      *
-     * @param string $text
-     * @return array
+     * @param string $text Source text for synthesis.
+     * @return array Binary audio data and usage metadata.
      */
     public function generateSpeech(string $text): array
     {
@@ -726,17 +774,18 @@ class GeminiService
     }
 
     /**
-     * Finalizes the streaming interaction by handling billing, memory updates, and audio generation.
-     * Use this to keep the Controller 'skinny'.
+     * Standardizes post-session logic for streaming interactions.
      *
-     * @param int $userId
-     * @param string $inputText
-     * @param string $fullText
-     * @param array|null $usageMetadata
-     * @param array $rawChunks
-     * @param array $contextData
-     * @param bool $isVoiceEnabled
-     * @return array
+     * Orchestrates billing, memory persistence, and final media synchronization.
+     *
+     * @param int $userId System user identifier.
+     * @param string $inputText Original user prompt.
+     * @param string $fullText Aggregated AI response.
+     * @param array|null $usageMetadata Consumed resources.
+     * @param array $rawChunks Sequence of raw API packets.
+     * @param array $contextData Session state metadata.
+     * @param bool $isVoiceEnabled TTS activation flag.
+     * @return array Final interaction status and metadata.
      */
     public function finalizeStreamInteraction(
         int $userId,
@@ -765,23 +814,20 @@ class GeminiService
         $this->db->transStart();
 
         // Calculate & Deduct Cost
+        $costData = ['costKSH' => 0];
         if ($usageMetadata) {
-            $costData = $this->calculateCost($usageMetadata, $audioUsage);
-            $deduction = number_format($costData['costKSH'], 4, '.', '');
-            $this->userModel->deductBalance($userId, $deduction, true);
+            $costData = $this->_deductCost($userId, $usageMetadata, $audioUsage);
         }
 
         // Update Memory
-        $memoryResult = [];
-        if (isset($contextData['memoryService'])) {
-            $newId = $contextData['memoryService']->updateMemory(
-                $inputText,
-                $fullText,
-                $rawChunks,
-                $contextData['usedInteractionIds'] ?? []
-            );
-            $memoryResult = ['id' => $newId, 'timestamp' => date('Y-m-d H:i:s')];
-        }
+        $memoryResult = $this->_persistInteraction(
+            $userId,
+            $inputText,
+            $fullText,
+            $rawChunks,
+            $contextData,
+            true // Stream always assumes persistence if assistant mode was on during prep
+        );
 
         $this->db->transComplete();
 
@@ -798,6 +844,7 @@ class GeminiService
             'timestamp' => $memoryResult['timestamp'] ?? null,
         ];
     }
+
 
     /**
      * Stores a temporary file for Gemini multimodal context.
@@ -1050,17 +1097,14 @@ class GeminiService
     }
 
     /**
-     * Generates a document from markdown content.
-     * Facade method for DocumentService to maintain parallel architecture.
+     * Converts markdown content into portable document formats.
      *
-     * This method prevents "ping-pong" dependencies by providing a single
-     * point of entry through GeminiService, rather than having the controller
-     * directly access DocumentService.
+     * Orchestrates DocumentService to prevent direct controller coupling.
      *
-     * @param string $markdownContent The markdown content to convert
-     * @param string $format Output format: 'pdf' or 'docx'
-     * @param array $metadata Optional document metadata (title, author, subject, keywords, etc.)
-     * @return array ['status' => 'success'|'error', 'fileData' => string|null, 'message' => string|null]
+     * @param string $markdownContent Source payload.
+     * @param string $format Target extension ('pdf', 'docx').
+     * @param array $metadata Document header information.
+     * @return array status and binary file data.
      */
     public function generateDocument(string $markdownContent, string $format, array $metadata = []): array
     {
