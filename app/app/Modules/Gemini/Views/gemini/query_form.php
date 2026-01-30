@@ -58,13 +58,7 @@
         background-color: var(--bs-body-bg);
     }
 
-    @media (max-width: 991.98px) {
-        .gemini-view-container {
-            position: absolute;
-            /* Change to absolute on mobile */
-            min-height: 100vh;
-        }
-    }
+
 
     .gemini-main {
         flex: 1;
