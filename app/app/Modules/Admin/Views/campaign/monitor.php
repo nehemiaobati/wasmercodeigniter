@@ -149,18 +149,24 @@
 
     function onQuotaHit(quotaHitAt) {
         isProcessing = false;
-        statusHeader.innerText = 'QUOTA REACHED';
-        statusHeader.className = 'fw-bold text-uppercase display-6 text-warning';
-        statusMessage.innerText = 'Daily limit reached. Pausing for SMTP health. You can manually override below if needed.';
 
+        // Always show the timer banner if quota hit (for health awareness)
         document.getElementById('countdownContainer').classList.remove('d-none');
         startCooldownTimer(quotaHitAt);
 
-        progressBar.classList.remove('progress-bar-animated');
+        // UI state: only show "QUOTA REACHED" and "RESUME" if we aren't done
+        const total = parseInt(document.getElementById('totalCount').innerText) || 0;
+        const processed = parseInt(sentCountEl.innerText) + parseInt(errorCountEl.innerText);
 
-        // Show Resume button for manual override
-        pauseBtn.classList.add('d-none');
-        resumeActivityBtn.classList.remove('d-none');
+        if (processed < total) {
+            statusHeader.innerText = 'QUOTA REACHED';
+            statusHeader.className = 'fw-bold text-uppercase display-6 text-warning';
+            statusMessage.innerText = 'Daily limit reached. Pausing for SMTP health. You can manually override below if needed.';
+            pauseBtn.classList.add('d-none');
+            resumeActivityBtn.classList.remove('d-none');
+        }
+
+        progressBar.classList.remove('progress-bar-animated');
     }
 
     function startCooldownTimer(quotaHitAt) {
@@ -188,7 +194,7 @@
     function onComplete(hasQuotaHit) {
         isProcessing = false;
         statusHeader.innerText = 'COMPLETED';
-        statusHeader.classList.add('text-success');
+        statusHeader.className = 'fw-bold text-uppercase display-6 text-success';
 
         const errors = parseInt(errorCountEl.innerText);
         if (errors > 0) {
@@ -199,12 +205,15 @@
 
         progressBar.classList.remove('progress-bar-animated');
 
+        // If quota was hit on the VERY LAST email, still show the timer for situational awareness
+        // but DON'T let it overwrite the "COMPLETED" status or show a Resume button.
         if (hasQuotaHit) {
-            onQuotaHit(hasQuotaHit);
+            document.getElementById('countdownContainer').classList.remove('d-none');
+            startCooldownTimer(hasQuotaHit);
         }
 
-        // Keep it visible if it was already shown or just shown above
         pauseBtn.classList.add('d-none');
+        resumeActivityBtn.classList.add('d-none'); // Force hide resume on completion
         doneBtn.classList.remove('d-none');
 
         // Remove unload warning

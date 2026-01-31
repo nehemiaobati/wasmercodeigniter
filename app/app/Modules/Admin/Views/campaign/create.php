@@ -25,15 +25,15 @@
                     <form action="<?= url_to('admin.campaign.send') ?>" method="post" id="campaignForm">
                         <?= csrf_field() ?>
 
-                        <?php if (!empty($campaigns)): ?>
+                        <?php if (!empty($drafts)): ?>
                             <div class="mb-3">
                                 <label for="campaignTemplate" class="form-label fw-bold">Load a Template</label>
                                 <div class="input-group">
                                     <select class="form-select" id="campaignTemplate">
-                                        <option selected disabled>Select a saved campaign...</option>
-                                        <?php foreach ($campaigns as $campaign): ?>
-                                            <option value="<?= esc($campaign->id) ?>" data-subject="<?= esc($campaign->subject) ?>" data-body="<?= esc($campaign->body) ?>">
-                                                <?= esc($campaign->subject) ?>
+                                        <option selected disabled>Select a saved template...</option>
+                                        <?php foreach ($drafts as $draft): ?>
+                                            <option value="<?= esc($draft->id) ?>" data-subject="<?= esc($draft->subject) ?>" data-body="<?= esc($draft->body) ?>">
+                                                <?= esc($draft->subject) ?>
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
