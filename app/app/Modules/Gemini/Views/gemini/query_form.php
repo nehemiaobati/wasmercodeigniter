@@ -58,8 +58,6 @@
         background-color: var(--bs-body-bg);
     }
 
-
-
     .gemini-main {
         flex: 1;
         display: flex;
