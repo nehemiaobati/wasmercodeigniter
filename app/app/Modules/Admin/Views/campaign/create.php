@@ -235,7 +235,7 @@
                     cooldownEl.className = "fw-bold text-success";
                 } else {
                     const hours = Math.floor(diff / (1000 * 60 * 60));
-                    const mins = Math.floor((diff % (100 * 60 * 60)) / (1000 * 60));
+                    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
                     cooldownEl.innerText = `${hours}h ${mins}m`;
                 }
             }
