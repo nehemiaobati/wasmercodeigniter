@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Ollama\Database\Migrations;
 
@@ -22,8 +24,8 @@ class CreateOllamaTables extends Migration
                 'unsigned'   => true
             ],
             'prompt_hash' => [
-                'type'       => 'VARCHAR', 
-                'constraint' => 64, 
+                'type'       => 'VARCHAR',
+                'constraint' => 64,
                 'comment'    => 'Hash for quick lookups'
             ],
             'user_input' => ['type' => 'TEXT'],
@@ -33,7 +35,7 @@ class CreateOllamaTables extends Migration
                 'constraint' => 100
             ],
             'embedding' => [
-                'type' => 'JSON', 
+                'type' => 'JSON',
                 'null' => true,
                 'comment' => 'Vector representation of the interaction'
             ],
@@ -43,6 +45,8 @@ class CreateOllamaTables extends Migration
 
         $this->forge->addKey('id', true);
         $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'CASCADE');
+        $this->forge->addKey('prompt_hash');
+        $this->forge->addKey('created_at');
         $this->forge->createTable('ollama_interactions');
     }
 

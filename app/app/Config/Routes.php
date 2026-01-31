@@ -89,5 +89,10 @@ $routes->group('', ['filter' => 'auth'], static function ($routes) {
         $routes->post('campaign/send', '\App\Modules\Admin\Controllers\CampaignController::send', ['as' => 'admin.campaign.send']);
         $routes->post('campaign/save', '\App\Modules\Admin\Controllers\CampaignController::save', ['as' => 'admin.campaign.save']);
         $routes->post('campaign/delete/(:num)', '\App\Modules\Admin\Controllers\CampaignController::delete/$1', ['as' => 'admin.campaign.delete']);
+        $routes->get('campaign/monitor/(:num)', '\App\Modules\Admin\Controllers\CampaignController::monitor/$1', ['as' => 'admin.campaign.monitor']);
+        $routes->get('campaign/process-batch/(:num)', '\App\Modules\Admin\Controllers\CampaignController::process_batch/$1', ['as' => 'admin.campaign.process_batch']);
+        $routes->get('campaign/retry/(:num)', '\App\Modules\Admin\Controllers\CampaignController::start_retry/$1', ['as' => 'admin.campaign.start_retry']);
+        $routes->get('campaign/pause/(:num)', '\App\Modules\Admin\Controllers\CampaignController::pause/$1', ['as' => 'admin.campaign.pause']);
+        $routes->get('campaign/resume/(:num)', '\App\Modules\Admin\Controllers\CampaignController::resume/$1', ['as' => 'admin.campaign.resume']);
     });
 });

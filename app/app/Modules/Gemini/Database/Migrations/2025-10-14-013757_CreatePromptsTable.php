@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Gemini\Database\Migrations;
 
@@ -39,6 +41,8 @@ class CreatePromptsTable extends Migration
             ],
         ]);
         $this->forge->addKey('id', true);
+        $this->forge->addKey('user_id');
+        $this->forge->addKey('created_at');
         $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'CASCADE');
         $this->forge->createTable('prompts');
     }

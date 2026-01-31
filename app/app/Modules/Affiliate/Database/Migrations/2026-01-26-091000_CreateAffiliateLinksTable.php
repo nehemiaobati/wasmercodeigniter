@@ -45,6 +45,12 @@ class CreateAffiliateLinksTable extends Migration
                 'constraint' => '255',
                 'null'       => true,
             ],
+            'category_id' => [
+                'type'       => 'INT',
+                'constraint' => 11,
+                'unsigned'   => true,
+                'null'       => true,
+            ],
             'click_count' => [
                 'type'       => 'INT',
                 'constraint' => 11,
@@ -67,6 +73,9 @@ class CreateAffiliateLinksTable extends Migration
         ]);
 
         $this->forge->addKey('id', true);
+        $this->forge->addKey('category_id');
+        $this->forge->addKey('status');
+        $this->forge->addKey('created_at');
         $this->forge->createTable('affiliate_links');
     }
 

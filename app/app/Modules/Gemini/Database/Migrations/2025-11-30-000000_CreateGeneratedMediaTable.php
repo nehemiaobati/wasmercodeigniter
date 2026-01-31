@@ -61,6 +61,9 @@ class CreateGeneratedMediaTable extends Migration
 
         $this->forge->addKey('id', true);
         $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'CASCADE');
+        $this->forge->addKey('status');
+        $this->forge->addKey('type');
+        $this->forge->addKey('created_at');
         $this->forge->createTable('generated_media');
     }
 

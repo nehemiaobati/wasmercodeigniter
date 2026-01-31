@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Gemini\Database\Migrations;
 
@@ -37,6 +39,16 @@ class CreateUserSettingsTable extends Migration
             'assistant_mode_enabled' => [
                 'type'    => 'BOOLEAN',
                 'default' => true,
+                'null'    => false,
+            ],
+            'voice_output_enabled' => [
+                'type'    => 'BOOLEAN',
+                'default' => false,
+                'null'    => false,
+            ],
+            'stream_output_enabled' => [
+                'type'    => 'BOOLEAN',
+                'default' => false,
                 'null'    => false,
             ],
             'created_at' => [

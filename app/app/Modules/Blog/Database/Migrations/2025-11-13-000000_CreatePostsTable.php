@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Blog\Database\Migrations;
 
@@ -72,6 +74,9 @@ class CreatePostsTable extends Migration
             ],
         ]);
         $this->forge->addKey('id', true);
+        $this->forge->addKey('status');
+        $this->forge->addKey('published_at');
+        $this->forge->addKey('created_at');
         $this->forge->createTable('posts');
     }
 

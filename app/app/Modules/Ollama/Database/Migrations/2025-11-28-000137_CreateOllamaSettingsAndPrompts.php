@@ -19,6 +19,7 @@ class CreateOllamaSettingsAndPrompts extends Migration
         ]);
         $this->forge->addKey('id', true);
         $this->forge->addKey('user_id');
+        $this->forge->addKey('created_at');
         $this->forge->createTable('ollama_prompts');
 
         // Table: ollama_user_settings
@@ -26,11 +27,13 @@ class CreateOllamaSettingsAndPrompts extends Migration
             'id'                     => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true, 'auto_increment' => true],
             'user_id'                => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true],
             'assistant_mode_enabled' => ['type' => 'BOOLEAN', 'default' => true],
+            'stream_output_enabled'  => ['type' => 'BOOLEAN', 'default' => false],
             'created_at'             => ['type' => 'DATETIME', 'null' => true],
             'updated_at'             => ['type' => 'DATETIME', 'null' => true],
         ]);
         $this->forge->addKey('id', true);
         $this->forge->addKey('user_id');
+        $this->forge->addKey('created_at');
         $this->forge->createTable('ollama_user_settings');
     }
 

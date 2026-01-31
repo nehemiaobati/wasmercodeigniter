@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Payments\Database\Migrations;
 
@@ -54,6 +56,8 @@ class CreatePaymentsTable extends Migration
         ]);
         $this->forge->addKey('id', true);
         $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'SET NULL');
+        $this->forge->addKey('status');
+        $this->forge->addKey('created_at');
         $this->forge->createTable('payments');
     }
 

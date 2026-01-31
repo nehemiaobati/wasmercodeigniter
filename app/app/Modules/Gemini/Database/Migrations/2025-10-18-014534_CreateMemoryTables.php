@@ -17,6 +17,7 @@ class CreateMemoryTables extends Migration
             'timestamp' => ['type' => 'DATETIME'],
             'user_input_raw' => ['type' => 'TEXT'],
             'ai_output' => ['type' => 'TEXT'],
+            'ai_output_raw' => ['type' => 'TEXT', 'null' => true],
             'relevance_score' => ['type' => 'DECIMAL', 'constraint' => '10,4', 'default' => 1.0],
             'last_accessed' => ['type' => 'DATETIME'],
             'context_used_ids' => ['type' => 'JSON', 'null' => true],
@@ -28,6 +29,8 @@ class CreateMemoryTables extends Migration
         $this->forge->addKey('id', true);
         $this->forge->addUniqueKey('unique_id');
         $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'CASCADE');
+        $this->forge->addKey('timestamp');
+        $this->forge->addKey('created_at');
         $this->forge->createTable('interactions');
 
         // --- Entities Table ---
@@ -48,6 +51,8 @@ class CreateMemoryTables extends Migration
         $this->forge->addKey('id', true);
         $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'CASCADE');
         $this->forge->addUniqueKey(['user_id', 'entity_key']);
+        $this->forge->addKey('type'); // Added for performance on type-based queries
+        $this->forge->addKey('created_at'); // Added for performance on date-based queries
         $this->forge->createTable('entities');
     }
 

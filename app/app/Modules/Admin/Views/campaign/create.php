@@ -5,6 +5,17 @@
         <a href="<?= url_to('admin.index') ?>" class="btn btn-outline-secondary me-3"><i class="bi bi-arrow-left"></i> Back</a>
         <h1 class="fw-bold mb-0">Create Email Campaign</h1>
     </div>
+
+    <?php if ($lastQuotaHit): ?>
+        <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center mb-4 bg-body-tertiary">
+            <i class="bi bi-clock-history fs-3 me-3 text-warning"></i>
+            <div>
+                <h6 class="fw-bold mb-0 text-body">SMTP Health: Cooldown Active</h6>
+                <small class="text-secondary">Your last campaign hit a limit on <strong><?= date('M j, Y H:i', strtotime($lastQuotaHit)) ?></strong>.
+                    Next healthy send recommended in <span class="fw-bold" id="globalCooldown">Calculating...</span></small>
+            </div>
+        </div>
+    <?php endif; ?>
     <div class="row justify-content-center">
         <div class="col-lg-9">
             <div class="card blueprint-card">
@@ -38,6 +49,19 @@
                             <label for="subject">Email Subject</label>
                         </div>
 
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="number" class="form-control" id="stop_at_count" name="stop_at_count" placeholder="<?= $totalUserCount ?>" value="<?= $totalUserCount ?>">
+                                    <label for="stop_at_count">Stop After (Quota Limit)</label>
+                                </div>
+                                <small class="text-muted d-block mt-1">
+                                    <i class="bi bi-info-circle"></i> <strong>Recipients:</strong> <?= $totalUserCount ?> total.
+                                    Set this lower if you have a tight daily SMTP limit (e.g., 500 for Gmail).
+                                </small>
+                            </div>
+                        </div>
+
                         <div class="form-floating mb-4">
                             <textarea class="form-control" id="message" name="message" placeholder="Your message here... You can use HTML tags like <strong>, <a>, etc." style="height: 300px" required><?= old('message') ?></textarea>
                             <label for="message">Message Body (HTML supported)</label>
@@ -54,6 +78,95 @@
                     </form>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Campaign History Section -->
+    <div class="row justify-content-center mt-5">
+        <div class="col-lg-9">
+            <h4 class="fw-bold mb-3">Recent Campaigns</h4>
+            <?php if (!empty($campaigns)): ?>
+                <div class="card shadow-sm border-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-body-tertiary">
+                                <tr>
+                                    <th class="ps-4">Subject</th>
+                                    <th>Status</th>
+                                    <th>Progress</th>
+                                    <th class="text-end pe-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($campaigns as $c): ?>
+                                    <tr>
+                                        <td class="ps-4 fw-bold"><?= esc($c->subject) ?></td>
+                                        <td>
+                                            <?php
+                                            $statusClass = match ($c->status ?? 'draft') {
+                                                'completed' => 'success',
+                                                'sending' => 'primary',
+                                                'pending' => 'warning',
+                                                'paused' => 'secondary',
+                                                default => 'secondary'
+                                            };
+                                            ?>
+                                            <span class="badge bg-<?= $statusClass ?>"><?= ucfirst($c->status ?? 'draft') ?></span>
+                                        </td>
+                                        <td>
+                                            <?php
+                                            $total = ($c->total_recipients ?? 0) > 0 ? $c->total_recipients : 1;
+                                            $sent = ($c->sent_count ?? 0) + ($c->error_count ?? 0);
+                                            $percent = round(($sent / $total) * 100);
+                                            ?>
+                                            <?php if (($c->status ?? '') === 'completed'): ?>
+                                                <span class="text-success small"><i class="bi bi-check-circle-fill"></i> Done</span>
+                                            <?php else: ?>
+                                                <div class="progress" style="height: 6px; width: 100px;">
+                                                    <div class="progress-bar bg-<?= $statusClass ?>" role="progressbar" style="width: <?= $percent ?>%"></div>
+                                                </div>
+                                                <small class="text-muted"><?= $percent ?>%</small>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="text-end pe-4">
+                                            <div class="btn-group">
+                                                <?php if (in_array($c->status ?? '', ['pending', 'sending', 'paused'])): ?>
+                                                    <a href="<?= url_to('admin.campaign.monitor', $c->id) ?>" class="btn btn-sm btn-outline-primary">
+                                                        <i class="bi bi-play-fill"></i> Resume
+                                                    </a>
+                                                <?php elseif (($c->status ?? '') === 'draft'): ?>
+                                                    <a href="#" class="btn btn-sm btn-outline-secondary disabled">Draft</a>
+                                                <?php else: ?>
+                                                    <span class="text-muted small me-2 mt-1">Completed</span>
+                                                <?php endif; ?>
+
+                                                <?php if (($c->error_count ?? 0) > 0): ?>
+                                                    <!-- Simplified check for start_retry existence, assuming route exists -->
+                                                    <a href="<?= url_to('admin.campaign.start_retry', $c->id) ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Retry failed recipients?')">
+                                                        <i class="bi bi-arrow-repeat"></i> Retry Failures
+                                                    </a>
+                                                <?php endif; ?>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <?php if (isset($pager)): ?>
+                        <div class="card-footer bg-body-tertiary border-0 py-3 d-flex justify-content-center">
+                            <?= $pager->links() ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            <?php else: ?>
+                <div class="card shadow-sm border-0 bg-body-tertiary text-center py-5">
+                    <div class="card-body">
+                        <i class="bi bi-inbox fs-1 d-block mb-3 text-secondary op-25"></i>
+                        <p class="mb-0 text-secondary">No campaigns found. Start one above!</p>
+                    </div>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -107,6 +220,27 @@
                     tempForm.submit();
                 }
             });
+        }
+        const lastQuotaHit = "<?= $lastQuotaHit ?? '' ?>";
+        if (lastQuotaHit) {
+            const cooldownEl = document.getElementById('globalCooldown');
+            const hitTime = new Date(lastQuotaHit).getTime();
+
+            function updateGlobalTimer() {
+                const now = new Date().getTime();
+                const diff = (hitTime + (24 * 60 * 60 * 1000)) - now;
+
+                if (diff <= 0) {
+                    cooldownEl.innerText = "Healthy Now";
+                    cooldownEl.className = "fw-bold text-success";
+                } else {
+                    const hours = Math.floor(diff / (1000 * 60 * 60));
+                    const mins = Math.floor((diff % (100 * 60 * 60)) / (1000 * 60));
+                    cooldownEl.innerText = `${hours}h ${mins}m`;
+                }
+            }
+            setInterval(updateGlobalTimer, 60000);
+            updateGlobalTimer();
         }
     });
 </script>
