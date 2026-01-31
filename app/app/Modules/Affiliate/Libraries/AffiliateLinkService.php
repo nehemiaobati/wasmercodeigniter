@@ -117,6 +117,36 @@ class AffiliateLinkService
     }
 
     /**
+     * Checks if the given URL belongs to an allowed affiliate domain.
+     *
+     * @param string $url The URL to check
+     * @return bool
+     */
+    private function _isValidAffiliateDomain(string $url): bool
+    {
+        $allowedDomains = [
+            'amazon.com',
+            'amazon.co.uk',
+            'amzn.to',
+            'www.amazon.com',
+            'www.amazon.co.uk',
+        ];
+
+        $host = parse_url($url, PHP_URL_HOST);
+        if (!$host) {
+            return false;
+        }
+
+        foreach ($allowedDomains as $domain) {
+            if ($host === $domain || str_ends_with($host, '.' . $domain)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Saves an affiliate link (created or updated).
      *
      * @param array $data Raw POST data
@@ -126,6 +156,13 @@ class AffiliateLinkService
     public function saveLink(array $data, ?int $id = null): bool
     {
         $payload = $this->_preparePayload($data);
+
+        // Security: Validate full_url domain
+        if (!empty($payload['full_url']) && !$this->_isValidAffiliateDomain($payload['full_url'])) {
+            $this->model->setErrors(['full_url' => 'The provided URL must be a valid Amazon affiliate link.']);
+            return false;
+        }
+
         if ($id !== null) {
             $payload['id'] = $id;
         }

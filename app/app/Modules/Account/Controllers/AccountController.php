@@ -27,17 +27,10 @@ class AccountController extends BaseController
         $userModel = new UserModel();
         $paymentModel = new PaymentModel();
 
-        // Retrieve the user ID from the session.
-        $userId = session()->get('userId');
-
-        // If the user is not logged in, redirect to the login page.
-        if (!$userId) {
-            return redirect()->to(url_to('login'));
-        }
-
         // Load the form helper to make form_open() available in views.
         helper('form');
 
+        $userId = session()->get('userId'); // Assuming this is now handled by a filter or authentication system
         $user = $userModel->find($userId);
 
         // Pass user data to the view.
@@ -63,37 +56,10 @@ class AccountController extends BaseController
         // Initialize an array to store display references for transactions.
         $data['display_references'] = [];
 
-        // Fetch total transaction count for debugging pagination.
-        $totalTransactions = $paymentModel->where('user_id', $userId)->countAllResults();
-        log_message('debug', 'Total transactions for user ID ' . $userId . ': ' . $totalTransactions);
-
-        // Process each transaction to determine the reference to display.
+        // Process each transaction to determine the reference to display via the Entity.
         if (!empty($data['transactions'])) {
             foreach ($data['transactions'] as $transaction) {
-                $paystack_ref = null;
-                $db_ref = $transaction->reference ?? null; // Reference from the payments table.
-                $display_ref = 'N/A'; // Default value if no reference is found.
-
-                // Attempt to extract the reference from the Paystack response if available.
-                if (!empty($transaction->paystack_response)) {
-                    $paystackResponse = json_decode($transaction->paystack_response, true); // Decode JSON response.
-
-                    if (is_array($paystackResponse)) {
-                        // Try to get reference from Paystack response, regardless of transaction status.
-                        $paystack_ref = $paystackResponse['reference'] ?? null;
-                    }
-                }
-
-                // Prioritize the Paystack reference if available, otherwise use the database reference.
-                if (!empty($paystack_ref)) {
-                    $display_ref = $paystack_ref;
-                } elseif (!empty($db_ref)) {
-                    $display_ref = $db_ref;
-                }
-                // If both are empty, $display_ref remains 'N/A'.
-
-                // Add the determined reference to the display_references array.
-                $data['display_references'][] = $display_ref;
+                $data['display_references'][] = $transaction->getDisplayReference();
             }
         }
 

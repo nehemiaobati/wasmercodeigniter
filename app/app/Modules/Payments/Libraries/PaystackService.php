@@ -28,6 +28,16 @@ class PaystackService
     protected string $currency = 'KES';
 
     /**
+     * Generates a unique payment reference.
+     * 
+     * @return string
+     */
+    public function generateReference(): string
+    {
+        return 'PAY-' . time() . '-' . bin2hex(random_bytes(5));
+    }
+
+    /**
      * Constructor.
      * Initializes the service and retrieves the Paystack secret key from environment variables.
      *

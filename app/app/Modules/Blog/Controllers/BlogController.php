@@ -88,9 +88,6 @@ class BlogController extends BaseController
 
     public function adminIndex()
     {
-        if (!session()->get('is_admin')) {
-            return redirect()->to(url_to('home'));
-        }
         $data = [
             'pageTitle' => 'Manage Blog Posts | Admin',
             'posts'     => $this->postModel->orderBy('created_at', 'DESC')->paginate(10),
@@ -102,9 +99,6 @@ class BlogController extends BaseController
 
     public function create()
     {
-        if (!session()->get('is_admin')) {
-            return redirect()->to(url_to('home'));
-        }
         $data = [
             'pageTitle'  => 'Create New Post | Admin',
             'formTitle'  => 'Create New Post',
@@ -117,9 +111,6 @@ class BlogController extends BaseController
 
     public function edit(int $id)
     {
-        if (!session()->get('is_admin')) {
-            return redirect()->to(url_to('home'));
-        }
         $post = $this->postModel->find($id);
         if (!$post) {
             throw PageNotFoundException::forPageNotFound();
@@ -136,9 +127,6 @@ class BlogController extends BaseController
 
     public function store()
     {
-        if (!session()->get('is_admin')) {
-            return redirect()->to(url_to('home'));
-        }
 
         if ($this->blogService->createPost($this->request->getPost())) {
             return redirect()->to(url_to('admin.blog.index'))->with('success', 'Post created successfully.');
@@ -149,9 +137,6 @@ class BlogController extends BaseController
 
     public function update(int $id)
     {
-        if (!session()->get('is_admin')) {
-            return redirect()->to(url_to('home'));
-        }
 
         if ($this->blogService->updatePost($id, $this->request->getPost())) {
             return redirect()->to(url_to('admin.blog.index'))->with('success', 'Post updated successfully.');

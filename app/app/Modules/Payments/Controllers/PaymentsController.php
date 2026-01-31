@@ -56,7 +56,7 @@ class PaymentsController extends BaseController
         $amount = (int) $this->request->getPost('amount');
         $userId = session()->get('userId');
 
-        $reference = 'PAY-' . Time::now()->getTimestamp() . '-' . bin2hex(random_bytes(5));
+        $reference = $this->paystackService->generateReference();
 
         $this->paymentModel->insert([
             'user_id'   => $userId,
