@@ -9,6 +9,8 @@ use App\Modules\Ollama\Entities\OllamaEntity;
 use App\Modules\Ollama\Entities\OllamaInteraction;
 use App\Modules\Ollama\Models\OllamaInteractionModel;
 use App\Modules\Ollama\Models\OllamaEntityModel;
+use App\Modules\Ollama\Libraries\OllamaEmbeddingService;
+use App\Modules\Ollama\Libraries\OllamaTokenService;
 
 /**
  * Ollama Memory Service
@@ -39,23 +41,25 @@ class OllamaMemoryService
      * @param Ollama|null $config Configuration object for memory tuning parameters
      * @param OllamaInteractionModel|null $interactionModel Manages chat history storage
      * @param OllamaEntityModel|null $entityModel Manages keyword/entity graph
-     * @param OllamaService|null $api Service for embeddings and chat completions
+     * @param OllamaService|null $ollamaService Service for chat completions
      * @param OllamaTokenService|null $tokenizer Service for text processing and keyword extraction
+     * @param OllamaEmbeddingService|null $embeddingService Service for generating vector embeddings
      */
     public function __construct(
         private int $userId,
         private ?Ollama $config = null,
         private ?OllamaInteractionModel $interactionModel = null,
         private ?OllamaEntityModel $entityModel = null,
-        private ?OllamaService $api = null,
-        private ?OllamaTokenService $tokenizer = null
+        private ?OllamaService $ollamaService = null,
+        private ?OllamaTokenService $tokenizer = null,
+        private ?OllamaEmbeddingService $embeddingService = null
     ) {
-        // Initialize all dependencies with defaults if not injected
         $this->config = $config ?? config(Ollama::class);
         $this->interactionModel = $interactionModel ?? new OllamaInteractionModel();
         $this->entityModel = $entityModel ?? new OllamaEntityModel();
-        $this->api = $api ?? new OllamaService();
-        $this->tokenizer = $tokenizer ?? new OllamaTokenService();
+        $this->ollamaService = $ollamaService ?? service('ollamaService');
+        $this->tokenizer = $tokenizer ?? service('ollamaTokenService');
+        $this->embeddingService = $embeddingService ?? service('ollamaEmbedding');
     }
 
     public function processChat(string $prompt, ?string $model = null, array $images = []): array
@@ -73,7 +77,7 @@ class OllamaMemoryService
             $userMessage
         ];
 
-        $result = $this->api->chat($messages, $model);
+        $result = $this->ollamaService->chat($messages, $model);
 
         // Handle new standardized return format
         if (isset($result['status']) && $result['status'] === 'error') {
@@ -136,7 +140,7 @@ class OllamaMemoryService
     private function _getRelevantContext(string $userInput): array
     {
         $semanticResults = [];
-        $embedResponse = $this->api->embed($userInput);
+        $embedResponse = $this->embeddingService->getEmbedding($userInput);
         $inputVector = ($embedResponse['status'] === 'success') ? $embedResponse['data'] : [];
 
         if (!empty($inputVector)) {
@@ -262,7 +266,7 @@ class OllamaMemoryService
 
         $cleanInput = strip_tags($input);
         $cleanResponse = strip_tags($response);
-        $embedResponse = $this->api->embed("User: $cleanInput | AI: $cleanResponse");
+        $embedResponse = $this->embeddingService->getEmbedding("User: $cleanInput | AI: $cleanResponse");
         $embedding = ($embedResponse['status'] === 'success') ? $embedResponse['data'] : [];
 
         if (empty($embedding)) {

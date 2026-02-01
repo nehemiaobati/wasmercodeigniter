@@ -10,7 +10,8 @@ use App\Modules\Ollama\Libraries\OllamaMemoryService;
 use App\Modules\Ollama\Libraries\OllamaDocumentService;
 use App\Modules\Ollama\Libraries\OllamaTokenService;
 use App\Modules\Ollama\Libraries\OllamaPayloadService;
-use App\Modules\Ollama\Libraries\PandocService;
+use App\Modules\Ollama\Libraries\OllamaEmbeddingService;
+use App\Modules\Ollama\Libraries\OllamaPandocService;
 
 /**
  * Ollama Module Services Configuration.
@@ -96,17 +97,32 @@ class Services extends BaseService
     }
 
     /**
+     * Embedding service for Ollama.
+     *
+     * @param bool $getShared
+     * @return OllamaEmbeddingService
+     */
+    public static function ollamaEmbedding(bool $getShared = true): OllamaEmbeddingService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('ollamaEmbedding');
+        }
+
+        return new OllamaEmbeddingService();
+    }
+
+    /**
      * Pandoc document conversion service.
      *
      * @param bool $getShared
-     * @return PandocService
+     * @return OllamaPandocService
      */
-    public static function ollamaPandocService(bool $getShared = true): PandocService
+    public static function ollamaPandocService(bool $getShared = true): OllamaPandocService
     {
         if ($getShared) {
             return static::getSharedInstance('ollamaPandocService');
         }
 
-        return new PandocService();
+        return new OllamaPandocService();
     }
 }

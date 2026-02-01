@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Ollama\Libraries;
 
-class PandocService
+class OllamaPandocService
 {
     /**
      * Safely checks if pandoc is available.

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Ollama\Models;
 
@@ -9,16 +11,17 @@ class OllamaInteractionModel extends Model
 {
     protected $table            = 'ollama_interactions';
     protected $primaryKey       = 'id';
+    protected $useAutoIncrement = true;
     protected $returnType       = OllamaInteraction::class;
     protected $useTimestamps    = true;
-    
+
     // Added missing fields from Migration
     protected $allowedFields    = [
-        'user_id', 
-        'prompt_hash', 
-        'user_input', 
-        'ai_response', 
-        'ai_model', 
+        'user_id',
+        'prompt_hash',
+        'user_input',
+        'ai_response',
+        'ai_model',
         'embedding',
         'relevance_score',
         'keywords'

@@ -12,31 +12,31 @@ use App\Modules\Ollama\Libraries\PandocService;
 /**
  * Ollama Document Service
  *
- * Generates professional documents (PDF/DOCX) from AI-generated markdown content.
- * Implements a multi-tier fallback strategy for maximum compatibility across environments.
+ * Handles professional document generation (PDF, DOCX) from AI-generated markdown.
+ * Provides a resilient multi-tier fallback strategy:
+ * 1. Pandoc (Standard tool for markdown conversion)
+ * 2. Dompdf (PHP-native fallback for PDF)
+ * 3. PHPWord (PHP-native fallback for DOCX)
  *
- * Generation Strategy (Priority Order):
- * 1. Pandoc + XeLaTeX (Primary): High-fidelity, production-grade PDFs with full Unicode support
- * 2. Dompdf (PDF Fallback): Pure PHP solution, no system dependencies required
- * 3. PHPWord (DOCX Fallback): Pure PHP Word document generation with workarounds for edge cases
- *
- * Refactoring Notes:
- * - Uses PHP 8.0 match expression for cleaner format selection (replaced if-elseif chain)
- * - Implements constructor property promotion for dependency injection
- * - Maintains all existing workarounds for PHPWord (ampersand bug, table nesting, code blocks)
+ * Implements premium styling and brand consistency across all exported formats.
  *
  * @package App\Modules\Ollama\Libraries
  */
 class OllamaDocumentService
 {
     /**
-     * Constructor with Property Promotion (PHP 8.0+)
+     * Constructor with service locators for "Parallel" architecture.
      *
-     * @param PandocService $pandocService Service for invoking Pandoc/XeLaTeX engine
+     * @param OllamaTokenService|null $tokenService Service for tokenization/metadata
+     * @param OllamaPandocService|null $pandocService Service for system-level conversion
      */
     public function __construct(
-        protected PandocService $pandocService = new PandocService()
-    ) {}
+        private ?OllamaTokenService $tokenService = null,
+        private ?OllamaPandocService $pandocService = null
+    ) {
+        $this->tokenService = $tokenService ?? service('ollamaTokenService');
+        $this->pandocService = $pandocService ?? service('ollamaPandocService');
+    }
 
     /**
      * Generate Document with Multi-Tier Fallback Strategy
@@ -79,7 +79,7 @@ class OllamaDocumentService
                 // Read, delete temp file, return binary data (ephemeral storage pattern)
                 $fileData = file_get_contents($pandocResult['filePath']);
                 if (!unlink($pandocResult['filePath'])) {
-                    log_message('error', "[OllamaDocumentService] Failed to delete Pandoc temporary file: " . $pandocResult['filePath']);
+                    log_message('error', "[DocumentService] Failed to delete Pandoc temporary file: " . $pandocResult['filePath']);
                 }
 
                 return [
@@ -88,7 +88,7 @@ class OllamaDocumentService
                 ];
             }
 
-            log_message('warning', '[OllamaDocumentService] Pandoc failed: ' . ($pandocResult['message'] ?? 'Unknown') . '. Attempting fallback.');
+            log_message('warning', '[DocumentService] Pandoc failed: ' . ($pandocResult['message'] ?? 'Unknown') . '. Attempting fallback.');
         }
 
         // Strategy 2 & 3: PHP Fallbacks (match expression - refactored from if-elseif)
@@ -136,7 +136,7 @@ class OllamaDocumentService
                 'fileData' => $dompdf->output()
             ];
         } catch (\Throwable $e) {
-            log_message('error', '[OllamaDocumentService] Dompdf error: ' . $e->getMessage());
+            log_message('error', '[DocumentService] Dompdf error: ' . $e->getMessage());
             return ['status' => 'error', 'message' => 'PDF generation failed.'];
         }
     }
