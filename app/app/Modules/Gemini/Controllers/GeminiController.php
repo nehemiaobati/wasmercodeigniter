@@ -250,12 +250,12 @@ class GeminiController extends BaseController
     public function publicPage(): string
     {
         $data = [
-            'pageTitle'       => 'AI Studio | Video, Image & Document Generation for Kenya',
+            'pageTitle'       => 'AI Studio | Video, Image & Document Generation',
             'metaDescription' => 'Scale your growth with cinematic video, professional images, and AI-driven document audits. Integrated with M-Pesa. Built for Nairobi\'s creators.',
             'canonicalUrl'    => url_to('gemini.public'),
             'robotsTag'       => 'index, follow',
-            'heroTitle'       => 'Intelligent Content & Document Analysis',
-            'heroSubtitle'    => 'Draft strategic reports in seconds, synthesize TikTok-ready videos, and audit PDFs using the latest Gemini models.'
+            'heroTitle'       => 'Intelligent Content generation & Document Analysis',
+            'heroSubtitle'    => 'Generate videos, images and text using Gemini.'
         ];
         return view('App\Modules\Gemini\Views\gemini\public_page.php', $data);
     }

@@ -42,15 +42,35 @@
             "@context": "https://schema.org",
             "@type": "SoftwareApplication",
             "name": "AFRIKENKID",
-            "applicationCategory": "DeveloperApplication",
+            "applicationCategory": "MultimediaApplication",
             "operatingSystem": "Web",
             "description": "<?= esc($metaDescription ?? 'Access powerful Generative AI tools and real-time blockchain analytics. Pay easily via M-Pesa or Credit Card. Your all-in-one platform for AI and Crypto insights.') ?>",
             "url": "<?= esc($canonicalUrl ?? current_url()) ?>",
+            "featureList": [
+                "Gemini AI",
+                "Video Synthesis",
+                "Image Generation (Imagen and Gemini)",
+                "Document Analysis & Auditing",
+                "Real-Time Blockchain Verification (BTC & LTC)",
+                "Secure M-Pesa & Airtel Money Payments"
+            ],
             "offers": {
                 "@type": "Offer",
                 "price": "0",
-                "priceCurrency": "KES"
-            }
+                "priceCurrency": "KES",
+                "description": "Credit-based pricing with secure M-Pesa top-ups."
+            },
+            "brand": {
+                "@type": "Brand",
+                "name": "Afrikenkid",
+                "logo": "<?= base_url('public/assets/images/afrikenkid_og_image.jpg') ?>"
+            },
+            "author": {
+                "@type": "Organization",
+                "name": "Afrikenkid AI Studio",
+                "url": "<?= base_url() ?>"
+            },
+            "keywords": "AI Video Generation Kenya, Gemini AI, M-Pesa Statement Analysis, Blockchain Data Verification, AI Studio Nairobi"
         }
     </script>
 
@@ -319,7 +339,7 @@
             <div class="row">
                 <div class="col-lg-4 col-md-6 mb-4">
                     <h5>AFRIKENKID</h5>
-                    <p class="small">Build smarter with a pay-as-you-go platform. Leverage Generative AI, query real-time BTC & LTC wallet data, and securely top up with M-Pesa. Built for creators, businesses, and developers in Kenya and Africa.</p>
+                    <p class="small">Build smarter with a pay-as-you-go platform. Leverage Generative AI, query real-time BTC & LTC wallet data, and securely top up with M-Pesa. Built for creators, businesses, and developers in Kenya, Africa & Beyond.</p>
                 </div>
                 <div class="col-lg-2 col-6">
                     <h5>Services</h5>

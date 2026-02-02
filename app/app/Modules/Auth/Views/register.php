@@ -103,7 +103,7 @@
                         <div class="illustration-content text-center">
                             <i class="bi bi-gift-fill text-primary illustration-icon"></i>
                             <h4>Join the Future</h4>
-                            <p>Get <strong>Ksh. 30</strong> in bonus credits for your first deposit. Try Africa's Premier AI Studio and Blockchain Audit tools today.</p>
+                            <p>Get <strong>Ksh. 30</strong> in bonus credits for your first deposit. Try Premier AI Studio and Blockchain Audit tools today.</p>
                         </div>
                     </div>
                 </div>

@@ -54,7 +54,7 @@
                         <div class="illustration-content text-center">
                             <i class="bi bi-box-arrow-in-right text-primary illustration-icon"></i>
                             <h4>Let's Get Back to It!</h4>
-                            <p>Access your Africa's Premier AI Studio. Generate, text, images, videos and audit data with blockchain certainty.</p>
+                            <p>Access Premier AI Studio. Generate text, images, videos and audit data with blockchain certainty.</p>
                         </div>
                     </div>
                     <div class="col-lg-6">

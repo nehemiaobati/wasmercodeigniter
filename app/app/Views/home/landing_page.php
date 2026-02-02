@@ -21,10 +21,10 @@
 <!-- Hero Section -->
 <section class="py-5 bg-body-tertiary">
     <div class="container py-5 text-center">
-        <h1 class="display-4 display-md-3 fw-bold mb-4">Multiply Your Growth with <br><span class="text-primary">Africa’s Premier AI Studio</span></h1>
+        <h1 class="display-4 display-md-3 fw-bold mb-4">Supercharge your Workflow with <br><span class="text-primary">Premier AI Studio</span></h1>
         <p class="lead mb-4 mx-auto" style="max-width: 800px;">
-            Generate cinematic videos, professional images, and intelligent business reports in seconds.
-            <span class="text-muted d-block mt-2 fs-6">Powered by Gemini 3.0 and secured by blockchain. Built for Nairobi’s ambitious creators.</span>
+            Generate videos, images, and text in seconds.
+            <span class="text-muted d-block mt-2 fs-6">Powered by Gemini and real-time blockchain.</span>
         </p>
         <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
             <a href="<?= url_to('register') ?>" class="btn btn-primary btn-lg px-5 fw-bold rounded-pill shadow-sm">Start Creating Free</a>
@@ -48,7 +48,7 @@
                     <div class="card-body p-4 p-sm-5 text-center d-flex flex-column justify-content-center">
                         <div class="fs-1 text-primary mb-3"><i class="bi bi-stars"></i></div>
                         <h3 class="fs-2 fw-bold mb-3">AI Studio</h3>
-                        <p class="lead text-body-secondary mb-0">Your all-in-one creative partner. Synthesize TikTok-ready videos, draft strategic reports, and audit PDFs using the latest Gemini models.</p>
+                        <p class="lead text-body-secondary mb-0">Your all-in-one creative partner. Generate videos, images, and text using the latest Gemini models.</p>
                     </div>
                 </div>
             </div>

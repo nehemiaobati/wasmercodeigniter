@@ -215,17 +215,17 @@
                                                             <!-- Theme Aware: bg-danger-subtle provides correct tint in dark mode -->
                                                             <li class="list-group-item bg-danger-subtle text-danger-emphasis">
                                                                 <small class="fw-bold">FROM</small>
-                                                                <?php foreach ($tx['sending_addresses'] as $s_addr): ?>
+                                                                <?php foreach ((array)($tx['sending_addresses'] ?? []) as $s_addr): ?>
                                                                     <div class="crypto-address small text-truncate"><?= esc($s_addr) ?></div>
                                                                 <?php endforeach; ?>
                                                             </li>
                                                             <!-- Theme Aware: bg-success-subtle -->
                                                             <li class="list-group-item bg-success-subtle text-success-emphasis">
                                                                 <small class="fw-bold">TO</small>
-                                                                <?php foreach ($tx['receiving_addresses'] as $r_addr): ?>
+                                                                <?php foreach ((array)($tx['receiving_addresses'] ?? []) as $r_addr): ?>
                                                                     <div class="d-flex justify-content-between align-items-center">
-                                                                        <span class="crypto-address small text-truncate" style="max-width: 70%;"><?= esc($r_addr['address']) ?></span>
-                                                                        <span class="fw-bold small"><?= esc($r_addr['amount']) ?></span>
+                                                                        <span class="crypto-address small text-truncate" style="max-width: 70%;"><?= esc($r_addr['address'] ?? 'N/A') ?></span>
+                                                                        <span class="fw-bold small"><?= esc($r_addr['amount'] ?? '0') ?></span>
                                                                     </div>
                                                                 <?php endforeach; ?>
                                                             </li>
@@ -472,17 +472,17 @@
 
                         // Sending Addresses
                         let senders = '';
-                        (tx.sending_addresses || []).forEach(addr => {
+                        (Array.isArray(tx.sending_addresses) ? tx.sending_addresses : []).forEach(addr => {
                             senders += `<div class="crypto-address small text-truncate">${this.escapeHtml(addr)}</div>`;
                         });
 
                         // Receiving Addresses
                         let receivers = '';
-                        (tx.receiving_addresses || []).forEach(r => {
+                        (Array.isArray(tx.receiving_addresses) ? tx.receiving_addresses : []).forEach(r => {
                             receivers += `
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <span class="crypto-address small text-truncate" style="max-width: 70%;">${this.escapeHtml(r.address)}</span>
-                                    <span class="fw-bold small">${this.escapeHtml(r.amount)}</span>
+                                    <span class="crypto-address small text-truncate" style="max-width: 70%;">${this.escapeHtml(r.address || 'N/A')}</span>
+                                    <span class="fw-bold small">${this.escapeHtml(r.amount || '0')}</span>
                                 </div>
                             `;
                         });

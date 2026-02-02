@@ -86,8 +86,8 @@
                                 <i class="bi bi-camera-reels-fill fs-4"></i>
                             </span>
                         </div>
-                        <h3 class="fw-bold mb-3">TikTok-Ready Video Synthesis</h3>
-                        <p class="text-muted mb-0">Produce engaging short-form video content with sound. Perfect for rapid social media storytelling and digital marketing campaigns.</p>
+                        <h3 class="fw-bold mb-3">Video Synthesis</h3>
+                        <p class="text-muted mb-0">Produce video content. Perfect for media storytelling and digital marketing campaigns.</p>
                     </div>
                 </div>
             </div>
