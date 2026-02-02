@@ -65,7 +65,7 @@
                 <div class="row g-0">
                     <div class="col-lg-6">
                         <div class="card-body p-4 p-md-5">
-                            <h3 class="text-center mb-4 fw-bold">Unlock Your Digital Toolkit</h3>
+                            <h3 class="text-center mb-4 fw-bold">Start Your Growth</h3>
 
                             <form action="<?= url_to('register.store') ?>" method="post">
                                 <?= csrf_field() ?>
@@ -102,8 +102,8 @@
                     <div class="col-lg-6 d-none d-lg-block auth-illustration">
                         <div class="illustration-content text-center">
                             <i class="bi bi-gift-fill text-primary illustration-icon"></i>
-                            <h4>Join Our Platform</h4>
-                            <p>Get <strong>Ksh. 30</strong> in starter credits when you make your first deposit to try our AI and Crypto tools right away.</p>
+                            <h4>Join the Future</h4>
+                            <p>Get <strong>Ksh. 30</strong> in bonus credits for your first deposit. Try Africa's Premier AI Studio and Blockchain Audit tools today.</p>
                         </div>
                     </div>
                 </div>
