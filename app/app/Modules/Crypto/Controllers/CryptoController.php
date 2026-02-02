@@ -41,7 +41,7 @@ class CryptoController extends BaseController
     {
         $data = [
             'pageTitle'       => 'Blockchain Audit & Verification Tools | Afrikenkid',
-            'metaDescription' => 'Verify data integrity and audit business records with our immutable blockchain ledger tools. 100% anonymous and secure.',
+            'metaDescription' => 'Verify data integrity and audit records with our immutable blockchain ledger tools. 100% anonymous and secure.',
             'canonicalUrl'    => url_to('crypto.public'),
             'robotsTag'       => 'index, follow',
         ];
