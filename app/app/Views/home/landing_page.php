@@ -28,7 +28,7 @@
         </p>
         <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
             <a href="<?= url_to('register') ?>" class="btn btn-primary btn-lg px-5 fw-bold rounded-pill shadow-sm">Start Creating Free</a>
-            <a href="<?= url_to('crypto.public') ?>" class="btn btn-outline-secondary btn-lg px-5 rounded-pill">Audit Your Data Truth</a>
+            <a href="<?= url_to('crypto.public') ?>" class="btn btn-outline-secondary btn-lg px-5 rounded-pill">Audit Your Wallet</a>
         </div>
     </div>
 </section>

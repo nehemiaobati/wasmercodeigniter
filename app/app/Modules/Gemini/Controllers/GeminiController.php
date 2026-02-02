@@ -251,7 +251,7 @@ class GeminiController extends BaseController
     {
         $data = [
             'pageTitle'       => 'AI Studio | Video, Image & Document Generation',
-            'metaDescription' => 'Scale your growth with cinematic video, professional images, and AI-driven document audits. Integrated with M-Pesa. Built for Nairobi\'s creators.',
+            'metaDescription' => 'Generate videos, images and text using Gemini. Integrated with M-Pesa, Airtel Money and Card payments. Built for creators.',
             'canonicalUrl'    => url_to('gemini.public'),
             'robotsTag'       => 'index, follow',
             'heroTitle'       => 'Intelligent Content generation & Document Analysis',
