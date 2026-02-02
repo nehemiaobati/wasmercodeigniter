@@ -254,7 +254,7 @@ class GeminiController extends BaseController
             'metaDescription' => 'Generate videos, images and text using Gemini. Integrated with M-Pesa, Airtel Money and Card payments. Built for creators.',
             'canonicalUrl'    => url_to('gemini.public'),
             'robotsTag'       => 'index, follow',
-            'heroTitle'       => 'Intelligent Content generation & Document Analysis',
+            'heroTitle'       => 'Intelligent Content generation & Analysis',
             'heroSubtitle'    => 'Generate videos, images and text using Gemini.'
         ];
         return view('App\Modules\Gemini\Views\gemini\public_page.php', $data);
