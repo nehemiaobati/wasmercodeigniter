@@ -40,8 +40,8 @@ class CryptoController extends BaseController
     public function publicPage(): string
     {
         $data = [
-            'pageTitle'       => 'Crypto Wallet Insights & Analytics | BTC & LTC Tracker',
-            'metaDescription' => 'Track Bitcoin (BTC) and Litecoin (LTC) wallet activities instantly. Audit balances and visualize transaction histories with our professional blockchain analytics solution.',
+            'pageTitle'       => 'Blockchain Audit & Verification Tools | Afrikenkid',
+            'metaDescription' => 'Verify data integrity and audit business records with our immutable blockchain ledger tools. 100% anonymous and secure.',
             'canonicalUrl'    => url_to('crypto.public'),
             'robotsTag'       => 'index, follow',
         ];

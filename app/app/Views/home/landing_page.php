@@ -21,14 +21,14 @@
 <!-- Hero Section -->
 <section class="py-5 bg-body-tertiary">
     <div class="container py-5 text-center">
-        <h1 class="display-4 display-md-3 fw-bold mb-4">Supercharge your Workflow with <br><span class="text-primary">Generative AI</span></h1>
-        <p class="lead mb-4 mx-auto" style="max-width: 700px;">
-            Harness the power of Google's Gemini to write, code, and imagine.
-            <span class="text-muted d-block mt-2 fs-6">Plus, track real-time Bitcoin & Litecoin data on the side.</span>
+        <h1 class="display-4 display-md-3 fw-bold mb-4">Multiply Your Growth with <br><span class="text-primary">Africa’s Premier AI Studio</span></h1>
+        <p class="lead mb-4 mx-auto" style="max-width: 800px;">
+            Generate cinematic videos, professional images, and intelligent business reports in seconds.
+            <span class="text-muted d-block mt-2 fs-6">Powered by Gemini 3.0 and secured by blockchain. Built for Nairobi’s ambitious creators.</span>
         </p>
         <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
-            <a href="<?= url_to('register') ?>" class="btn btn-primary btn-lg px-5 fw-bold rounded-pill shadow-sm">Try AI Studio</a>
-            <a href="#features" class="btn btn-outline-secondary btn-lg px-5 rounded-pill">View Features</a>
+            <a href="<?= url_to('register') ?>" class="btn btn-primary btn-lg px-5 fw-bold rounded-pill shadow-sm">Start Creating Free</a>
+            <a href="<?= url_to('crypto.public') ?>" class="btn btn-outline-secondary btn-lg px-5 rounded-pill">Audit Your Data Truth</a>
         </div>
     </div>
 </section>
@@ -48,7 +48,7 @@
                     <div class="card-body p-4 p-sm-5 text-center d-flex flex-column justify-content-center">
                         <div class="fs-1 text-primary mb-3"><i class="bi bi-stars"></i></div>
                         <h3 class="fs-2 fw-bold mb-3">AI Studio</h3>
-                        <p class="lead text-body-secondary mb-0">Your all-in-one creative partner. Generate marketing copy, debug code, analyze PDFs, and create stunning images using the latest Gemini models.</p>
+                        <p class="lead text-body-secondary mb-0">Your all-in-one creative partner. Synthesize TikTok-ready videos, draft strategic reports, and audit PDFs using the latest Gemini models.</p>
                     </div>
                 </div>
             </div>
@@ -60,10 +60,10 @@
                     <div class="col-12 col-md-6 col-lg-12">
                         <div class="card h-100 border-0 shadow-sm hover-effect">
                             <div class="card-body p-4 d-flex align-items-center">
-                                <div class="fs-2 text-primary me-4"><i class="bi bi-graph-up-arrow"></i></div>
+                                <div class="fs-2 text-primary me-4"><i class="bi bi-shield-check"></i></div>
                                 <div>
-                                    <h3 class="fs-5 fw-bold mb-1">Crypto Insights</h3>
-                                    <p class="text-muted small mb-0">Check BTC/LTC balances and transactions instantly.</p>
+                                    <h3 class="fs-5 fw-bold mb-1">Data Trust Layer</h3>
+                                    <p class="text-muted small mb-0">Verify data integrity with our immutable Blockchain Audit tools.</p>
                                 </div>
                             </div>
                         </div>
@@ -95,7 +95,7 @@
             <div class="col-lg-5">
                 <span class="badge bg-info-subtle text-info-emphasis mb-2 rounded-pill px-3">Enterprise</span>
                 <h2 class="display-6 fw-bold mb-4">Need a Tailored Solution?</h2>
-                <p class="lead text-body-secondary mb-4">We build bespoke web applications to solve your unique business challenges using PHP framework and modern web standards. </p>
+                <p class="lead text-body-secondary mb-4">We build bespoke web applications to solve your unique business challenges using PHP framework and modern web standards.</p>
 
                 <ul class="list-unstyled mb-4">
                     <li class="mb-2 d-flex align-items-center"><i class="bi bi-check-circle-fill text-primary me-2"></i> Custom Web Apps</li>

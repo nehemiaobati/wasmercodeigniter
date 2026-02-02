@@ -17,13 +17,13 @@
 <!-- Hero Section -->
 <section class="py-5 bg-body-tertiary">
     <div class="container py-5 text-center">
-        <span class="badge bg-warning-subtle text-warning-emphasis mb-3 rounded-pill px-3 py-2 fw-bold">Live Blockchain Data</span>
-        <h1 class="display-3 fw-bold mb-4">Real-Time Crypto Insights</h1>
-        <p class="lead mb-5 mx-auto text-muted" style="max-width: 700px;">Instant balance checks and transaction history for Bitcoin (BTC) and Litecoin (LTC). No login required for basic queries.</p>
+        <span class="badge bg-warning-subtle text-warning-emphasis mb-3 rounded-pill px-3 py-2 fw-bold">Live Data Truth</span>
+        <h1 class="display-3 fw-bold mb-4">Blockchain Audit & Verification Tools</h1>
+        <p class="lead mb-5 mx-auto text-muted" style="max-width: 700px;">Ensure your business records are immutable and verifiable. Real-time transparency for Bitcoin and Litecoin. 100% Anonymous.</p>
 
         <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
-            <a href="<?= url_to('register') ?>" class="btn btn-warning btn-lg px-5 fw-bold rounded-pill shadow-sm text-dark">Get Full Access</a>
-            <a href="#features" class="btn btn-outline-secondary btn-lg px-5 rounded-pill">How It Works</a>
+            <a href="<?= url_to('register') ?>" class="btn btn-warning btn-lg px-5 fw-bold rounded-pill shadow-sm text-dark">Start Audit Free</a>
+            <a href="#features" class="btn btn-outline-secondary btn-lg px-5 rounded-pill">View Audit Trail</a>
         </div>
     </div>
 </section>
@@ -37,30 +37,30 @@
                 <div class="p-4 p-lg-5 bg-body-tertiary rounded-4 border hover-effect">
                     <!-- Mock UI -->
                     <div class="d-flex align-items-center mb-3">
-                        <div class="bg-warning rounded-circle p-2 me-3"><i class="bi bi-currency-bitcoin text-white fs-4"></i></div>
+                        <div class="bg-warning rounded-circle p-2 me-3"><i class="bi bi-shield-lock-fill text-white fs-4"></i></div>
                         <div>
-                            <div class="fw-bold">Bitcoin Wallet</div>
-                            <div class="small text-muted">bc1q...3xqa</div>
+                            <div class="fw-bold">Data Provenance</div>
+                            <div class="small text-muted">Hash: 8a...2f9c</div>
                         </div>
-                        <div class="ms-auto fw-bold text-success">+ 0.45 BTC</div>
+                        <div class="ms-auto fw-bold text-success">Verified</div>
                     </div>
                     <div class="d-flex align-items-center">
                         <div class="bg-secondary rounded-circle p-2 me-3"><i class="bi bi-clock-history text-white fs-4"></i></div>
                         <div>
-                            <div class="fw-bold">Latest Transaction</div>
-                            <div class="small text-muted">Confirmed 2 mins ago</div>
+                            <div class="fw-bold">Timestamp Audit</div>
+                            <div class="small text-muted">Confirmed on-chain</div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="col-12 col-md-6 order-md-1">
                 <div class="pe-md-5">
-                    <h2 class="display-6 fw-bold mb-3">Live Wallet Tracking</h2>
-                    <p class="lead text-muted mb-4">Monitor any public address. Get precise high-fidelity balance updates and confirmation status instantly.</p>
+                    <h2 class="display-6 fw-bold mb-3">Immutable Verification</h2>
+                    <p class="lead text-muted mb-4">Bridge the trust gap with cryptographic proof. Verify transaction integrity and maintain an audit trail that cannot be tampered with.</p>
                     <ul class="list-unstyled">
-                        <li class="mb-3 d-flex align-items-center"><i class="bi bi-check-circle-fill text-success me-3 fs-5"></i> Real-time Mempool Data</li>
-                        <li class="mb-3 d-flex align-items-center"><i class="bi bi-check-circle-fill text-success me-3 fs-5"></i> 100% Anonymous Queries</li>
-                        <li class="mb-3 d-flex align-items-center"><i class="bi bi-check-circle-fill text-success me-3 fs-5"></i> Exportable History</li>
+                        <li class="mb-3 d-flex align-items-center"><i class="bi bi-check-circle-fill text-success me-3 fs-5"></i> <strong>Data Provenance:</strong> Confirm origin of funds/data.</li>
+                        <li class="mb-3 d-flex align-items-center"><i class="bi bi-check-circle-fill text-success me-3 fs-5"></i> <strong>Accountability:</strong> Traceable audit trails.</li>
+                        <li class="mb-3 d-flex align-items-center"><i class="bi bi-check-circle-fill text-success me-3 fs-5"></i> <strong>Integrity:</strong> Cryptographic tamper-proofing.</li>
                     </ul>
                 </div>
             </div>

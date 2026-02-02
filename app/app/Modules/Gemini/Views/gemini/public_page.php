@@ -38,11 +38,11 @@
                     <div class="card-body p-5">
                         <div class="mb-4">
                             <span class="d-inline-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-circle" style="width: 3rem; height: 3rem;">
-                                <i class="bi bi-chat-square-text-fill fs-4"></i>
+                                <i class="bi bi-file-text-fill fs-4"></i>
                             </span>
                         </div>
-                        <h3 class="fw-bold mb-3">Intelligent Writing</h3>
-                        <p class="text-muted mb-0">Generate marketing copy, blog posts, and technical documentation with context-aware AI. Perfect for scaling your content strategy.</p>
+                        <h3 class="fw-bold mb-3">Draft Strategic Reports</h3>
+                        <p class="text-muted mb-0">Generate comprehensive business reports, technical documentation, and marketing strategies in seconds. Turn raw ideas into executive-ready documents.</p>
                     </div>
                 </div>
             </div>
@@ -56,8 +56,8 @@
                                 <i class="bi bi-images fs-4"></i>
                             </span>
                         </div>
-                        <h3 class="fw-bold mb-3">Image Synthesis</h3>
-                        <p class="text-muted mb-0">Turn text descriptions into stunning, high-resolution images. Create assets for ads, social media, and web design instantly.</p>
+                        <h3 class="fw-bold mb-3">High-Fidelity Image Engine</h3>
+                        <p class="text-muted mb-0">Create photorealistic assets for your brand. From product mockups to social media visuals, generate exactly what you imagine.</p>
                     </div>
                 </div>
             </div>
@@ -68,11 +68,11 @@
                     <div class="card-body p-5">
                         <div class="mb-4">
                             <span class="d-inline-flex align-items-center justify-content-center bg-danger-subtle text-danger rounded-circle" style="width: 3rem; height: 3rem;">
-                                <i class="bi bi-file-earmark-pdf-fill fs-4"></i>
+                                <i class="bi bi-file-earmark-check-fill fs-4"></i>
                             </span>
                         </div>
-                        <h3 class="fw-bold mb-3">Document Analysis</h3>
-                        <p class="text-muted mb-0">Upload PDFs and get instant summaries, key insights, and answers to complex questions. Turn heavy documentation into actionable data.</p>
+                        <h3 class="fw-bold mb-3">Upload & Audit (PDF/Receipts)</h3>
+                        <p class="text-muted mb-0">Transform "dead" data into actionable insights. Upload invoices, contracts, or tax documents and get instant audits and summaries.</p>
                     </div>
                 </div>
             </div>
@@ -83,11 +83,11 @@
                     <div class="card-body p-5">
                         <div class="mb-4">
                             <span class="d-inline-flex align-items-center justify-content-center bg-warning-subtle text-warning rounded-circle" style="width: 3rem; height: 3rem;">
-                                <i class="bi bi-mic-fill fs-4"></i>
+                                <i class="bi bi-camera-reels-fill fs-4"></i>
                             </span>
                         </div>
-                        <h3 class="fw-bold mb-3">Voice & Video</h3>
-                        <p class="text-muted mb-0">Synthesize natural-sounding speech and generate short video clips from text prompts. Bring your stories to life with multimedia.</p>
+                        <h3 class="fw-bold mb-3">TikTok-Ready Video Synthesis</h3>
+                        <p class="text-muted mb-0">Produce engaging short-form video content with sound. Perfect for rapid social media storytelling and digital marketing campaigns.</p>
                     </div>
                 </div>
             </div>
