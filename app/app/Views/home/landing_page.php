@@ -95,7 +95,7 @@
             <div class="col-lg-5">
                 <span class="badge bg-info-subtle text-info-emphasis mb-2 rounded-pill px-3">Enterprise</span>
                 <h2 class="display-6 fw-bold mb-4">Need a Tailored Solution?</h2>
-                <p class="lead text-body-secondary mb-4">We build bespoke web applications to solve your unique business challenges using PHP framework and modern web standards.</p>
+                <p class="lead text-body-secondary mb-4">We build bespoke web applications to solve your unique business challenges using PHP framework and modern web standards. </p>
 
                 <ul class="list-unstyled mb-4">
                     <li class="mb-2 d-flex align-items-center"><i class="bi bi-check-circle-fill text-primary me-2"></i> Custom Web Apps</li>
