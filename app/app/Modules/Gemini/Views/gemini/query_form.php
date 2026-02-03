@@ -2,7 +2,7 @@
 
 <?= $this->section('styles') ?>
 <!-- External Styles -->
-<link rel="stylesheet" href="<?= base_url('public/assets/highlight/styles/atom-one-dark.min.css') ?>">
+<link rel="stylesheet" href="<?= base_url('assets/highlight/styles/atom-one-dark.min.css') ?>">
 
 <style>
     /* 
@@ -585,12 +585,12 @@
                         </button>
                     </li>
                     <li class="nav-item">
-                        <button type="button" disabled class="nav-link py-2 px-3" data-bs-toggle="tab" data-type="image">
+                        <button type="button" class="nav-link py-2 px-3" data-bs-toggle="tab" data-type="image">
                             <i class="bi bi-image me-2"></i>Image
                         </button>
                     </li>
                     <li class="nav-item">
-                        <button type="button" disabled class="nav-link py-2 px-3" data-bs-toggle="tab" data-type="video">
+                        <button type="button" class="nav-link py-2 px-3" data-bs-toggle="tab" data-type="video">
                             <i class="bi bi-camera-video me-2"></i>Video
                         </button>
                     </li>
@@ -689,7 +689,7 @@
                     <label class="form-check-label fw-medium" for="assistantMode">Conversational Memory</label>
                 </div>
                 <div class="form-check form-switch mb-3">
-                    <input class="form-check-input setting-toggle" disabled type="checkbox" id="voiceOutput" data-key="voice_output_enabled" <?= $voice_output_enabled ? 'checked' : '' ?>>
+                    <input class="form-check-input setting-toggle" type="checkbox" id="voiceOutput" data-key="voice_output_enabled" <?= $voice_output_enabled ? 'checked' : '' ?>>
                     <label class="form-check-label fw-medium" for="voiceOutput">Voice Output (TTS)</label>
                 </div>
                 <div class="form-check form-switch mb-4">
@@ -793,9 +793,9 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
-<script src="<?= base_url('public/assets/highlight/highlight.js') ?>"></script>
-<script src="<?= base_url('public/assets/tinymce/tinymce.min.js') ?>"></script>
-<script src="<?= base_url('public/assets/marked/marked.min.js') ?>"></script>
+<script src="<?= base_url('assets/highlight/highlight.js') ?>"></script>
+<script src="<?= base_url('assets/tinymce/tinymce.min.js') ?>"></script>
+<script src="<?= base_url('assets/marked/marked.min.js') ?>"></script>
 <script>
     /**
      * ==========================================
@@ -1833,6 +1833,8 @@
     class StreamHandler {
         constructor(app) {
             this.app = app;
+            this.buffer = '';
+            this.firstChunk = true;
         }
 
         async start(formData) {
@@ -1843,11 +1845,12 @@
                 audio: document.getElementById('audio-player-container')
             };
 
-
             els.raw.value = '';
             els.audio.innerHTML = '';
 
-            // Flag to purge skeleton container on initial packet arrival
+            // Reset state for new stream
+            this.buffer = '';
+            this.firstChunk = true;
 
             try {
                 if (!formData.has(APP_CONFIG.csrfName)) formData.append(APP_CONFIG.csrfName, this.app.csrfHash);
@@ -1884,8 +1887,21 @@
                     const chunk = decoder.decode(value, {
                         stream: true
                     });
-                    accum = this.processChunk(chunk, accum, els);
+
+                    // Buffer and process lines
+                    this.buffer += chunk;
+                    const lines = this.buffer.split('\n');
+                    // Keep the last partial line in the buffer
+                    this.buffer = lines.pop();
+
+                    accum = this.processLines(lines, accum, els);
                 }
+
+                // Process any remaining buffer (though SSE should end with newline)
+                if (this.buffer.trim()) {
+                    accum = this.processLines([this.buffer], accum, els);
+                }
+
                 this.currentFullText = accum; // For history
                 this.app.ui.enableCodeFeatures();
             } catch (e) {
@@ -1894,8 +1910,7 @@
             this.app.uploader.clear();
         }
 
-        processChunk(chunk, accum, els) {
-            const lines = chunk.split('\n');
+        processLines(lines, accum, els) {
             lines.forEach(line => {
                 if (line.startsWith('data: ')) {
                     try {
@@ -1957,8 +1972,12 @@
 
         _preserveThinkingBlockWhileUpdating(bodyEl, updateFn) {
             const block = bodyEl.querySelector('.thinking-block');
+            const wasOpen = block ? block.open : false; // Preserve open state
             updateFn();
-            if (block) bodyEl.insertBefore(block, bodyEl.firstChild);
+            if (block) {
+                block.open = wasOpen; // Restore open state
+                bodyEl.insertBefore(block, bodyEl.firstChild);
+            }
         }
     }
     /**
