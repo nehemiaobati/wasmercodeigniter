@@ -565,7 +565,9 @@ class OllamaService
         foreach ($fileIds as $fileId) {
             $filePath = $userTempPath . basename($fileId);
             if (file_exists($filePath)) {
-                $images[] = base64_encode(file_get_contents($filePath));
+                $rawContent = file_get_contents($filePath);
+                $images[] = base64_encode($rawContent);
+                unset($rawContent);
                 if (!unlink($filePath)) {
                     log_message('error', "[OllamaService] Failed to delete temporary file during preparation: {$filePath}");
                 }

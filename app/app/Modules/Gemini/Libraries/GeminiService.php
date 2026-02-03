@@ -897,10 +897,12 @@ class GeminiService
                 return ['error' => "Unsupported file type."];
             }
 
+            $rawContent = file_get_contents($filePath);
             $parts[] = ['inlineData' => [
                 'mimeType' => $mimeType,
-                'data' => base64_encode(file_get_contents($filePath))
+                'data' => base64_encode($rawContent)
             ]];
+            unset($rawContent);
         }
         return ['parts' => $parts];
     }

@@ -23,7 +23,10 @@
                                 <i class="bi bi-clock-history me-2"></i>
                                 Next Healthy Send in: <span id="cooldownTimer" class="fw-bold">Calculating...</span>
                             </div>
-                            <p class="mt-2 text-muted small">You hit the daily limit of <?= esc($campaign->stop_at_count) ?> sends.</p>
+                            <p class="mt-2 text-muted small">
+                                You hit the daily limit of <?= esc($campaign->stop_at_count) ?> sends.
+                                <br>Resuming will top-up by <strong><?= esc($campaign->quota_increment) ?></strong> recipients.
+                            </p>
                         </div>
                         <p class="text-muted" id="statusMessage">
                             <?= $campaign->status === 'completed' ? 'Campaign completed successfully.' : 'Initializing batch process...' ?>

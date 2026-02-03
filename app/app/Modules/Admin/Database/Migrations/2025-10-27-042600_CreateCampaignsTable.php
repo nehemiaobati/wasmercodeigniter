@@ -13,10 +13,6 @@ class CreateCampaignsTable extends Migration
     /**
      * Creates the campaigns table.
      */
-
-    /**
-     * Creates the campaigns table.
-     */
     public function up(): void
     {
         // Campaigns Table
@@ -47,6 +43,7 @@ class CreateCampaignsTable extends Migration
             'error_count'       => ['type' => 'INT', 'default' => 0],
             'total_recipients'  => ['type' => 'INT', 'default' => 0],
             'stop_at_count'     => ['type' => 'INT', 'default' => 0],
+            'quota_increment'   => ['type' => 'INT', 'default' => 0],
             'max_user_id'       => ['type' => 'INT', 'unsigned' => true, 'default' => 0],
             'quota_hit_at'      => ['type' => 'DATETIME', 'null' => true],
             'created_at' => [

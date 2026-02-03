@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Entities;
+namespace App\Modules\Admin\Entities;
 
 use CodeIgniter\Entity\Entity;
 
@@ -16,6 +16,7 @@ use CodeIgniter\Entity\Entity;
  * @property int $error_count
  * @property int $total_recipients
  * @property int $stop_at_count
+ * @property int $quota_increment
  * @property int $max_user_id
  * @property string|null $quota_hit_at
  * @property string|null $created_at
@@ -34,6 +35,7 @@ class Campaign extends Entity
         'error_count'       => 'integer',
         'total_recipients'  => 'integer',
         'stop_at_count'     => 'integer',
+        'quota_increment'   => 'integer',
         'max_user_id'       => 'integer',
     ];
 }

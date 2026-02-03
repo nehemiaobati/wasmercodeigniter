@@ -184,8 +184,9 @@ class CampaignService
         $campaignData = [
             'subject'       => $data['subject'],
             'body'          => $data['message'],
-            'stop_at_count' => (int)($data['stop_at_count'] ?? 1000) ?: 1000,
-            'status'        => 'draft',
+            'stop_at_count'   => (int)($data['stop_at_count'] ?? 1000) ?: 1000,
+            'quota_increment' => (int)($data['stop_at_count'] ?? 1000) ?: 1000,
+            'status'          => 'draft',
         ];
 
         if (!empty($data['id'])) {
@@ -243,8 +244,9 @@ class CampaignService
         $campaignData = [
             'subject'       => $data['subject'],
             'body'          => $this->_prepareMessage($data['message']),
-            'status'        => 'draft', // Will be pending after initiation
-            'stop_at_count' => (int)($data['stop_at_count'] ?? 1000) ?: 1000
+            'status'          => 'draft', // Will be pending after initiation
+            'stop_at_count'   => (int)($data['stop_at_count'] ?? 1000) ?: 1000,
+            'quota_increment' => (int)($data['stop_at_count'] ?? 1000) ?: 1000
         ];
 
         $executionId = $this->campaignModel->insert($campaignData);
@@ -509,7 +511,11 @@ class CampaignService
 
         if ($campaign->quota_hit_at) {
             $updateData['quota_hit_at'] = null;
-            $updateData['stop_at_count'] = 0;
+
+            // Top-Up logic: If quota was hit, increment stop_at_count relative to current sent_count
+            $currentSent = (int)$campaign->sent_count;
+            $increment   = (int)($campaign->quota_increment ?: 1000);
+            $updateData['stop_at_count'] = $currentSent + $increment;
         }
 
         $this->campaignModel->update($campaignId, $updateData);
