@@ -381,7 +381,11 @@ class AffiliateLinkService
             $data['id'] = $id;
         }
 
-        return (bool) $this->categoryModel->save($data);
+        $this->categoryModel->db->transStart();
+        $result = (bool) $this->categoryModel->save($data);
+        $this->categoryModel->db->transComplete();
+
+        return $this->categoryModel->db->transStatus() !== false && $result;
     }
 
     /**
@@ -392,7 +396,11 @@ class AffiliateLinkService
      */
     public function deleteCategory(int $id): bool
     {
-        return (bool) $this->categoryModel->delete($id);
+        $this->categoryModel->db->transStart();
+        $result = (bool) $this->categoryModel->delete($id);
+        $this->categoryModel->db->transComplete();
+
+        return $this->categoryModel->db->transStatus() !== false && $result;
     }
 
     /**

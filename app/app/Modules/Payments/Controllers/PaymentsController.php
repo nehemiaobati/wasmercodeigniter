@@ -49,7 +49,7 @@ class PaymentsController extends BaseController
         ];
 
         if (! $this->validate($rules)) {
-            return redirect()->back()->withInput()->with('error', $this->validator->getErrors());
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
         $email  = $this->request->getPost('email');
@@ -58,6 +58,8 @@ class PaymentsController extends BaseController
 
         $reference = $this->paystackService->generateReference();
 
+        $this->paymentModel->db->transStart();
+
         $this->paymentModel->insert([
             'user_id'   => $userId,
             'email'     => $email,
@@ -65,6 +67,13 @@ class PaymentsController extends BaseController
             'reference' => $reference,
             'status'    => 'pending',
         ]);
+
+        $this->paymentModel->db->transComplete();
+
+        if ($this->paymentModel->db->transStatus() === false) {
+            log_message('error', "[PaymentsController] Payment record insertion failed for User ID {$userId}. Reference: {$reference}");
+            return redirect()->back()->withInput()->with('error', 'Failed to initiate payment. Please try again.');
+        }
 
         // Updated URL generation to use the route name for the verify action
         $callbackUrl = url_to('payment.verify') . '?app_reference=' . $reference;

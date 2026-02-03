@@ -16,53 +16,7 @@ class BlogService
         $this->postModel = $postModel ?? new PostModel();
     }
 
-    /**
-     * Creates a new post.
-     *
-     * @param array $data Raw POST data
-     * @return bool
-     */
-    public function createPost(array $data): bool
-    {
-        $payload = $this->preparePayload($data);
-        return (bool) $this->postModel->save($payload);
-    }
-
-    /**
-     * Updates an existing post.
-     *
-     * @param int $id Post ID
-     * @param array $data Raw POST data
-     * @return bool
-     */
-    public function updatePost(int $id, array $data): bool
-    {
-        $payload = $this->preparePayload($data);
-        $payload['id'] = $id;
-
-        return (bool) $this->postModel->save($payload);
-    }
-
-    /**
-     * Deletes a post.
-     *
-     * @param int $id Post ID
-     * @return bool
-     */
-    public function deletePost(int $id): bool
-    {
-        return (bool) $this->postModel->delete($id);
-    }
-
-    /**
-     * Returns the validation errors from the model.
-     *
-     * @return array
-     */
-    public function getErrors(): array
-    {
-        return $this->postModel->errors();
-    }
+    // --- Helper Methods ---
 
     /**
      * Prepares the data payload for saving.
@@ -70,7 +24,7 @@ class BlogService
      * @param array $data
      * @return array
      */
-    protected function preparePayload(array $data): array
+    private function _preparePayload(array $data): array
     {
         return [
             'title'              => $data['title'] ?? null,
@@ -81,7 +35,7 @@ class BlogService
             'category_name'      => $data['category_name'] ?? null,
             'author_name'        => $data['author_name'] ?? 'Nehemia Obati',
             'meta_description'   => $data['meta_description'] ?? null,
-            'body_content'       => $this->processContentBlocks($data)
+            'body_content'       => $this->_processContentBlocks($data)
         ];
     }
 
@@ -91,7 +45,7 @@ class BlogService
      * @param array $data
      * @return string JSON encoded string
      */
-    public function processContentBlocks(array $data): string
+    private function _processContentBlocks(array $data): string
     {
         $contentBlocks = [];
         $contentTypes = $data['content_type'] ?? [];
@@ -126,5 +80,69 @@ class BlogService
         }
 
         return json_encode($contentBlocks);
+    }
+
+    // --- Public methods ---
+
+    /**
+     * Creates a new post.
+     *
+     * @param array $data Raw POST data
+     * @return bool
+     */
+    public function createPost(array $data): bool
+    {
+        $this->postModel->db->transStart();
+
+        $payload = $this->_preparePayload($data);
+        $this->postModel->save($payload);
+
+        $this->postModel->db->transComplete();
+        return $this->postModel->db->transStatus();
+    }
+
+    /**
+     * Updates an existing post.
+     *
+     * @param int $id Post ID
+     * @param array $data Raw POST data
+     * @return bool
+     */
+    public function updatePost(int $id, array $data): bool
+    {
+        $this->postModel->db->transStart();
+
+        $payload = $this->_preparePayload($data);
+        $payload['id'] = $id;
+        $this->postModel->save($payload);
+
+        $this->postModel->db->transComplete();
+        return $this->postModel->db->transStatus();
+    }
+
+    /**
+     * Deletes a post.
+     *
+     * @param int $id Post ID
+     * @return bool
+     */
+    public function deletePost(int $id): bool
+    {
+        $this->postModel->db->transStart();
+
+        $this->postModel->delete($id);
+
+        $this->postModel->db->transComplete();
+        return $this->postModel->db->transStatus();
+    }
+
+    /**
+     * Returns the validation errors from the model.
+     *
+     * @return array
+     */
+    public function getErrors(): array
+    {
+        return $this->postModel->errors();
     }
 }

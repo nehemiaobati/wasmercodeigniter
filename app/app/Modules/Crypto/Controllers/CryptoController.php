@@ -150,7 +150,7 @@ class CryptoController extends BaseController
                     'status' => 'error',
                     'message' => $error,
                     'redirect' => url_to('payment.index'),
-                    'token' => csrf_hash()
+                    'csrf_token' => csrf_hash()
                 ])->setStatusCode(403);
             }
             return redirect()->back()->withInput()->with('error', $error);

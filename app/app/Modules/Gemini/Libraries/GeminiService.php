@@ -1013,11 +1013,17 @@ class GeminiService
      */
     public function updateUserSetting(int $userId, string $key, bool $value): bool
     {
+        $this->userSettingsModel->db->transStart();
+
         $existing = $this->userSettingsModel->where('user_id', $userId)->first();
         if ($existing) {
-            return $this->userSettingsModel->update($existing->id, [$key => $value]);
+            $this->userSettingsModel->update($existing->id, [$key => $value]);
+        } else {
+            $this->userSettingsModel->insert(['user_id' => $userId, $key => $value]);
         }
-        return (bool) $this->userSettingsModel->insert(['user_id' => $userId, $key => $value]);
+
+        $this->userSettingsModel->db->transComplete();
+        return $this->userSettingsModel->db->transStatus();
     }
 
     /**
@@ -1040,8 +1046,13 @@ class GeminiService
      */
     public function addPrompt(int $userId, array $data)
     {
+        $this->promptModel->db->transStart();
+
         $data['user_id'] = $userId;
-        return $this->promptModel->insert($data);
+        $id = $this->promptModel->insert($data);
+
+        $this->promptModel->db->transComplete();
+        return $this->promptModel->db->transStatus() !== false ? $id : false;
     }
 
     /**
@@ -1092,10 +1103,15 @@ class GeminiService
      */
     public function deletePrompt(int $userId, int $promptId): bool
     {
-        return $this->promptModel
+        $this->promptModel->db->transStart();
+
+        $result = (bool) $this->promptModel
             ->where('user_id', $userId)
             ->where('id', $promptId)
             ->delete();
+
+        $this->promptModel->db->transComplete();
+        return $this->promptModel->db->transStatus() !== false && $result;
     }
 
     /**

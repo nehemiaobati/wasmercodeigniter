@@ -334,6 +334,8 @@ class MemoryService
      */
     public function updateMemory(string $userInput, string $aiOutput, array|string $aiOutputRaw, array $usedInteractionIds): string
     {
+        $this->interactionModel->db->transStart();
+
         // 1. Reward used interactions
         if (!empty($usedInteractionIds)) {
             $this->interactionModel
@@ -411,6 +413,13 @@ class MemoryService
 
         $this->_updateEntitiesFromInteraction($keywords, $newId);
         $this->_pruneMemory();
+
+        $this->interactionModel->db->transComplete();
+
+        if ($this->interactionModel->db->transStatus() === false) {
+            throw new \RuntimeException('Failed to update memory due to transaction error.');
+        }
+
         return $newId;
     }
 
@@ -531,10 +540,15 @@ XML;
      */
     public function deleteInteraction(int $userId, string $uniqueId): bool
     {
+        $this->interactionModel->db->transStart();
+
         // Verify ownership and delete
-        return $this->interactionModel
+        $result = (bool) $this->interactionModel
             ->where('user_id', $userId)
             ->where('unique_id', $uniqueId)
             ->delete();
+
+        $this->interactionModel->db->transComplete();
+        return $this->interactionModel->db->transStatus() !== false && $result;
     }
 }
