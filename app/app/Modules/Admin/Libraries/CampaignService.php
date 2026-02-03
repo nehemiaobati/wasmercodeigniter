@@ -498,7 +498,7 @@ class CampaignService
         $campaign = $this->campaignModel->find($campaignId);
 
         if (!$campaign) {
-            return ['success' => false, 'message' => 'Campaign not found.'];
+            return ['status' => 'error', 'message' => 'Campaign not found.'];
         }
 
         $this->db->transStart();
@@ -521,7 +521,7 @@ class CampaignService
         $this->campaignModel->update($campaignId, $updateData);
         $this->db->transComplete();
 
-        return ['success' => true, 'message' => 'Campaign resumed.'];
+        return ['status' => 'success', 'message' => 'Campaign resumed.'];
     }
 
     /**
