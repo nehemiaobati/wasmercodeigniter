@@ -339,7 +339,7 @@
             <div class="row">
                 <div class="col-lg-4 col-md-6 mb-4">
                     <h5>AFRIKENKID</h5>
-                    <p class="small">Build smarter with a pay-as-you-go platform. Leverage Generative AI, query real-time BTC & LTC wallet data, and securely top up with Mobile Money (M-Pesa, Airtel Money, etc.). Built for creators, businesses, and developers in Kenya, Africa & Beyond.</p>
+                    <p class="small">Build smarter with a pay-as-you-go platform. <br> Leverage Generative AI and query real-time BTC & LTC wallet data. Securely top up with Mobile Money (M-Pesa, Airtel Money, etc.). Built for creators, businesses, and developers in Kenya, Africa & Beyond.</p>
                 </div>
                 <div class="col-lg-2 col-6">
                     <h5>Services</h5>
