@@ -2,7 +2,7 @@
 
 <?= $this->section('styles') ?>
 <!-- External Styles -->
-<link rel="stylesheet" href="<?= base_url('assets/highlight/styles/atom-one-dark.min.css') ?>">
+<link rel="stylesheet" href="<?= base_url('public/assets/highlight/styles/atom-one-dark.min.css') ?>">
 
 <style>
     /* 
@@ -585,12 +585,12 @@
                         </button>
                     </li>
                     <li class="nav-item">
-                        <button type="button" class="nav-link py-2 px-3" data-bs-toggle="tab" data-type="image">
+                        <button type="button" disabled class="nav-link py-2 px-3" data-bs-toggle="tab" data-type="image">
                             <i class="bi bi-image me-2"></i>Image
                         </button>
                     </li>
                     <li class="nav-item">
-                        <button type="button" class="nav-link py-2 px-3" data-bs-toggle="tab" data-type="video">
+                        <button type="button" disabled class="nav-link py-2 px-3" data-bs-toggle="tab" data-type="video">
                             <i class="bi bi-camera-video me-2"></i>Video
                         </button>
                     </li>
@@ -689,7 +689,7 @@
                     <label class="form-check-label fw-medium" for="assistantMode">Conversational Memory</label>
                 </div>
                 <div class="form-check form-switch mb-3">
-                    <input class="form-check-input setting-toggle" type="checkbox" id="voiceOutput" data-key="voice_output_enabled" <?= $voice_output_enabled ? 'checked' : '' ?>>
+                    <input class="form-check-input setting-toggle" disabled type="checkbox" id="voiceOutput" data-key="voice_output_enabled" <?= $voice_output_enabled ? 'checked' : '' ?>>
                     <label class="form-check-label fw-medium" for="voiceOutput">Voice Output (TTS)</label>
                 </div>
                 <div class="form-check form-switch mb-4">
@@ -793,9 +793,9 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
-<script src="<?= base_url('assets/highlight/highlight.js') ?>"></script>
-<script src="<?= base_url('assets/tinymce/tinymce.min.js') ?>"></script>
-<script src="<?= base_url('assets/marked/marked.min.js') ?>"></script>
+<script src="<?= base_url('public/assets/highlight/highlight.js') ?>"></script>
+<script src="<?= base_url('public/assets/tinymce/tinymce.min.js') ?>"></script>
+<script src="<?= base_url('public/assets/marked/marked.min.js') ?>"></script>
 <script>
     /**
      * ==========================================
