@@ -10,7 +10,7 @@ $routes->group('', ['namespace' => 'App\Modules\Gemini\Controllers'], static fun
 
     // Public Routes
     $routes->get('ai-studio', 'GeminiController::publicPage', ['as' => 'gemini.public']);
-    $routes->get('/', 'GeminiController::index', ['as' => 'gemini.index']);
+    $routes->get('gemini', 'GeminiController::index', ['as' => 'gemini.index']);
 
     // Authenticated Routes
     $routes->group('gemini', ['filter' => 'auth'], static function ($routes) {
