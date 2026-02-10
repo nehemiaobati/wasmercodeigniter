@@ -215,6 +215,8 @@ class OllamaController extends BaseController
         session_write_close();
 
         $this->response->sendHeaders();
+        if (ob_get_level() > 0) ob_end_flush();
+
         echo "data: " . json_encode(['csrf_token' => csrf_hash()]) . "\n\n";
         flush();
 
