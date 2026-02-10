@@ -123,7 +123,10 @@ class ModelPayloadService
                         "topP" => 0.95,
                         "maxOutputTokens" => 64000,
                     ],
-                    "tools" => [["googleSearch" => new stdClass()]],
+                    "tools" => [
+                        ["googleSearch" => new stdClass()],
+                        ["urlContext" => new stdClass()]
+                    ],
                 ]
             ],
             'gemini-2.5-pro' => [
@@ -136,7 +139,10 @@ class ModelPayloadService
                         "topP" => 0.95,
                         "maxOutputTokens" => 64000,
                     ],
-                    "tools" => [["googleSearch" => new stdClass()]],
+                    "tools" => [
+                        ["googleSearch" => new stdClass()],
+                        ["urlContext" => new stdClass()]
+                    ],
                 ]
             ],
 
@@ -154,7 +160,10 @@ class ModelPayloadService
                         "topP" => 0.95,
                         "maxOutputTokens" => 64000,
                     ],
-                    "tools" => [["googleSearch" => new stdClass()]],
+                    "tools" => [
+                        ["googleSearch" => new stdClass()],
+                        ["urlContext" => new stdClass()]
+                    ],
                 ]
             ],
 
@@ -195,7 +204,10 @@ class ModelPayloadService
                         "topP" => 0.95,
                         "maxOutputTokens" => 64000,
                     ],
-                    "tools" => [["googleSearch" => new stdClass()]],
+                    "tools" => [
+                        ["googleSearch" => new stdClass()],
+                        ["urlContext" => new stdClass()]
+                    ],
                 ]
             ],
             'gemini-2.5-flash-image',

@@ -72,6 +72,18 @@ class OllamaController extends BaseController
         return view('App\Modules\Ollama\Views\ollama\query_form', $data);
     }
 
+    public function publicPage(): string
+    {
+        return view('App\Modules\Ollama\Views\ollama\public_page', [
+            'pageTitle'       => 'Private, Local AI Workspace | Ollama',
+            'metaDescription' => 'Run powerful LLMs directly on your server. Private, secure, and always available.',
+            'canonicalUrl'    => url_to('ollama.public'),
+            'robotsTag'       => 'index, follow',
+            'heroTitle'       => 'Private, Local AI Workspace',
+            'heroSubtitle'    => 'Run powerful LLMs directly on your server. Private, secure, and always available.'
+        ]);
+    }
+
     // --- Media Handling ---
 
     public function uploadMedia(): ResponseInterface

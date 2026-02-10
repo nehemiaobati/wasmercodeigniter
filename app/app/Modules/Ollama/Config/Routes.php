@@ -6,6 +6,11 @@ namespace App\Modules\Ollama\Config;
  * @var \CodeIgniter\Router\RouteCollection $routes
  */
 
+// Public Routes
+$routes->group('ollama', ['namespace' => 'App\Modules\Ollama\Controllers'], static function ($routes) {
+    $routes->get('intro', 'OllamaController::publicPage', ['as' => 'ollama.public']);
+});
+
 $routes->group('ollama', ['namespace' => 'App\Modules\Ollama\Controllers', 'filter' => 'auth'], static function ($routes) {
     $routes->get('/', 'OllamaController::index', ['as' => 'ollama.index']);
 
